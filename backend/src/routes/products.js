@@ -1,18 +1,14 @@
 const express = require('express');
 const { Op } = require('sequelize');
 const { Product, Category, Supplier, Inventory, Shop } = require('../models');
-const { authMiddleware } = require('../middleware/authMiddleware');
+const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 const { NotFoundError, ValidationError, AuthenticationError } = require('../utils/errors');
 
 const router = express.Router();
 
 // POST /api/products - Create product (admin only)
-router.post('/', authMiddleware, async (req, res, next) => {
+router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
-    // Check admin role
-    if (req.user.userType !== 'admin') {
-      throw new AuthenticationError('Only admins can create products');
-    }
 
     const {
       name,
@@ -156,7 +152,7 @@ router.get('/:productId', async (req, res, next) => {
     const product = await Product.findByPk(productId, {
       include: [
         { model: Category, attributes: ['id', 'name', 'hue', 'blurb'] },
-        { model: Supplier, attributes: ['id', 'name', 'type', 'leadTime', 'email', 'phone'] },
+        { model: Supplier, attributes: ['id', 'name', 'type', 'leadTime'] },
         // Include inventory if shopId provided
         shopId ? {
           model: Inventory,
@@ -227,12 +223,8 @@ router.get('/:productId/availability', async (req, res, next) => {
 });
 
 // PUT /api/products/:productId - Update product (admin only)
-router.put('/:productId', authMiddleware, async (req, res, next) => {
+router.put('/:productId', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
-    // Check admin role
-    if (req.user.userType !== 'admin') {
-      throw new AuthenticationError('Only admins can update products');
-    }
 
     const { productId } = req.params;
     const product = await Product.findByPk(productId);

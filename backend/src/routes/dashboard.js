@@ -10,7 +10,13 @@ const {
   Category,
 } = require('../models');
 const { authMiddleware } = require('../middleware/authMiddleware');
-const { NotFoundError } = require('../utils/errors');
+const { NotFoundError, AuthorizationError } = require('../utils/errors');
+
+function assertShopAccess(req, shopId) {
+  if (req.user.userType !== 'admin' && req.user.shopId !== shopId) {
+    throw new AuthorizationError('Staff can only access their own shop data');
+  }
+}
 
 const router = express.Router();
 
@@ -25,6 +31,7 @@ function getStockStatus(stock, par) {
 router.get('/shops/:shopId/dashboard', authMiddleware, async (req, res, next) => {
   try {
     const { shopId } = req.params;
+    assertShopAccess(req, shopId);
 
     const shop = await Shop.findByPk(shopId);
     if (!shop) {
@@ -151,6 +158,8 @@ router.get('/shops/:shopId/dashboard', authMiddleware, async (req, res, next) =>
 // GET /api/shops/:shopId/orders/daily-summary
 router.get('/shops/:shopId/orders/daily-summary', authMiddleware, async (req, res, next) => {
   try {
+    const targetShopId = req.params.shopId || req.query.shopId;
+    assertShopAccess(req, targetShopId);
     const { shopId, date } = req.query;
 
     if (!date) {

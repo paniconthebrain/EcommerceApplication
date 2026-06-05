@@ -1,21 +1,9 @@
 const express = require('express');
 const { Supplier } = require('../models');
-const { authMiddleware } = require('../middleware/authMiddleware');
+const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 const { AuthenticationError } = require('../utils/errors');
 
 const router = express.Router();
-
-// Middleware: Check if user is admin
-async function adminOnly(req, res, next) {
-  try {
-    if (req.user.userType !== 'admin') {
-      throw new AuthenticationError('Only admin can access this resource');
-    }
-    next();
-  } catch (error) {
-    next(error);
-  }
-}
 
 // GET all suppliers
 router.get('/', authMiddleware, async (req, res, next) => {
@@ -44,7 +32,7 @@ router.get('/', authMiddleware, async (req, res, next) => {
 });
 
 // POST create new supplier
-router.post('/', authMiddleware, adminOnly, async (req, res, next) => {
+router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const {
       name,
@@ -90,7 +78,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // PUT update supplier
-router.put('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.put('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
@@ -131,7 +119,7 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // DELETE supplier
-router.delete('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.delete('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const supplier = await Supplier.findByPk(id);

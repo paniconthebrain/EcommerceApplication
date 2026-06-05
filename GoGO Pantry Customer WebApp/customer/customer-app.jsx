@@ -1,8 +1,10 @@
 /* GoGO Pantry — Customer app root */
 function CustomerApp() {
   const [user, setUser] = useState(() => {
+    const token = localStorage.getItem("customerToken");
     const stored = localStorage.getItem("customerAuth");
-    return stored ? JSON.parse(stored) : null;
+    if (!token || !stored) return null;
+    try { return JSON.parse(stored); } catch { return null; }
   });
   const [authPage, setAuthPage] = useState("login"); // login, signup, forgot
   const [page, setPage] = useState("home");
@@ -52,7 +54,19 @@ function CustomerApp() {
     setUser(userData);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Call backend logout to blacklist the current token
+    const token = localStorage.getItem("customerToken");
+    if (token) {
+      try {
+        await fetch(`${API_BASE}/customers/auth/logout`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+      } catch { /* ignore network error on logout */ }
+    }
+    localStorage.removeItem("customerToken");
+    localStorage.removeItem("customerRefreshToken");
     localStorage.removeItem("customerAuth");
     setUser(null);
     setPage("home");

@@ -60,9 +60,12 @@
 </head>
 <body>
   <div id="root"></div>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"
+          integrity="sha384-MhvFknC0AhqKZXwSCyPeIirpE1IhTafmLXTvTCai5pxjAqFcqEAAqKH/2lXrFVPn" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+          integrity="sha384-VQePqH/QE94Buf4g/4MI5NrqDYjdqT7JW6KzhieQUlw6w7U7VD59fPqCAunpXEu6" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"
+          integrity="sha384-v4LZQvzduxIAwokUM+ItjOZKCVVstXSLSshmi7mAmakMq1hffVMVk+VkXpXQBQ2X" crossorigin="anonymous"></script>
 
   <script type="text/babel">
     console.log("🚀 Staff App starting...");
@@ -134,7 +137,47 @@
     window.G.currentUser = JSON.parse(sessionStorage.getItem("staff_user") || "null");
 
     function authHeaders() {
-      return window.G.token ? { Authorization: `Bearer ${window.G.token}` } : {};
+      return window.G.token
+        ? { Authorization: `Bearer ${window.G.token}`, "Content-Type": "application/json" }
+        : { "Content-Type": "application/json" };
+    }
+
+    async function apiFetch(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: { ...authHeaders(), ...(options.headers || {}) },
+      });
+
+      if (res.status === 401) {
+        // Try to refresh the token once
+        const refreshToken = sessionStorage.getItem("staff_refresh_token");
+        if (refreshToken) {
+          try {
+            const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refreshToken }),
+            });
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              window.G.token = refreshData.token;
+              sessionStorage.setItem("staff_token", refreshData.token);
+              // Retry the original request with the new token
+              return fetch(url, {
+                ...options,
+                headers: { ...authHeaders(), ...(options.headers || {}) },
+              });
+            }
+          } catch (_) { /* fall through to logout */ }
+        }
+        // Refresh failed — force re-login
+        sessionStorage.clear();
+        window.G.token = null;
+        window.G.currentUser = null;
+        window.location.reload();
+        return null;
+      }
+      return res;
     }
 
     // Fetch data from backend
@@ -317,6 +360,7 @@
           }
           const { token, user } = data;
           sessionStorage.setItem("staff_token", token);
+          sessionStorage.setItem("staff_refresh_token", data.refreshToken || "");
           sessionStorage.setItem("staff_user", JSON.stringify(user));
           window.G.token = token;
           window.G.currentUser = user;
@@ -359,13 +403,23 @@
               </Btn>
             </form>
 
-            <p style={{ marginTop: 18, fontSize: 12.5, color: "var(--text-3)", textAlign: "center", lineHeight: 1.6 }}>
-              Demo: <code>admin@gogopantry.com</code> / <code>123456</code><br/>
-              or <code>staff@gogopantry.com</code> / <code>password123</code>
-            </p>
           </div>
         </div>
       );
+    }
+
+    function AdminOnly({ user, children }) {
+      if (!user || user.userType !== "admin") {
+        return (
+          <div style={{ padding: 60, textAlign: "center" }}>
+            <h2 style={{ color: "var(--red-700)", marginBottom: 12 }}>Access Denied</h2>
+            <p style={{ color: "var(--text-2)", fontSize: 14 }}>
+              This section requires admin privileges.
+            </p>
+          </div>
+        );
+      }
+      return children;
     }
 
     function Shell({ shopId, route, setRoute, onLogout, user, children }) {
@@ -1587,8 +1641,18 @@
         navigate("dashboard");
       };
 
-      const handleLogout = () => {
+      const handleLogout = async () => {
+        const token = sessionStorage.getItem("staff_token");
+        if (token) {
+          try {
+            await fetch(`${API_BASE}/auth/logout`, {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${token}` },
+            });
+          } catch { /* ignore network error on logout */ }
+        }
         sessionStorage.removeItem("staff_token");
+        sessionStorage.removeItem("staff_refresh_token");
         sessionStorage.removeItem("staff_user");
         window.G.token = null;
         window.G.currentUser = null;
@@ -1603,9 +1667,9 @@
         fulfill: () => <FulfillScreen shopId={shopId} setRoute={navigate} />,
         receive: () => <ReceiveScreen shopId={shopId} setRoute={navigate} />,
         transfer: () => <TransferScreen shopId={shopId} setRoute={navigate} />,
-        "manage-shops": () => <ManageShopsScreen />,
-        "manage-staff": () => <ManageStaffScreen />,
-        "manage-categories": () => <ManageCategoriesScreen />,
+        "manage-shops":      () => <AdminOnly user={window.G.currentUser}><ManageShopsScreen /></AdminOnly>,
+        "manage-staff":      () => <AdminOnly user={window.G.currentUser}><ManageStaffScreen /></AdminOnly>,
+        "manage-categories": () => <AdminOnly user={window.G.currentUser}><ManageCategoriesScreen /></AdminOnly>,
       };
 
       const renderScreen = screenMap[route] || screenMap.dashboard;

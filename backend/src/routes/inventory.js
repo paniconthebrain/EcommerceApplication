@@ -1,7 +1,13 @@
 const express = require('express');
 const { Inventory, Product, Shop, Supplier } = require('../models');
-const { authMiddleware } = require('../middleware/authMiddleware');
-const { NotFoundError, ValidationError, AuthenticationError } = require('../utils/errors');
+const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+const { NotFoundError, ValidationError, AuthenticationError, AuthorizationError } = require('../utils/errors');
+
+function assertShopAccess(req, shopId) {
+  if (req.user.userType !== 'admin' && req.user.shopId !== shopId) {
+    throw new AuthorizationError('Staff can only access their own shop data');
+  }
+}
 
 const router = express.Router();
 
@@ -37,12 +43,8 @@ function calculateReorderPoint(par, leadTimeDays) {
 }
 
 // POST /api/shops/:shopId/inventory - Initialize inventory (admin only)
-router.post('/shops/:shopId/inventory', authMiddleware, async (req, res, next) => {
+router.post('/shops/:shopId/inventory', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
-    // Check admin role
-    if (req.user.userType !== 'admin') {
-      throw new AuthenticationError('Only admins can initialize inventory');
-    }
 
     const { shopId } = req.params;
     const { productId, stock, par } = req.body;
@@ -98,6 +100,7 @@ router.post('/shops/:shopId/inventory', authMiddleware, async (req, res, next) =
 router.get('/shops/:shopId/inventory', authMiddleware, async (req, res, next) => {
   try {
     const { shopId } = req.params;
+    assertShopAccess(req, shopId);
 
     const inventory = await Inventory.findAll({
       where: { shopId },
@@ -242,6 +245,7 @@ router.get('/inventory/:productId/across-shops', authMiddleware, async (req, res
 router.get('/shops/:shopId/inventory/low-stock', authMiddleware, async (req, res, next) => {
   try {
     const { shopId } = req.params;
+    assertShopAccess(req, shopId);
     const { reorderOnly } = req.query; // ?reorderOnly=true to filter only items that need reorder
 
     const inventory = await Inventory.findAll({
@@ -298,6 +302,7 @@ router.get('/shops/:shopId/inventory/low-stock', authMiddleware, async (req, res
 router.get('/shops/:shopId/inventory/reorder-alerts', authMiddleware, async (req, res, next) => {
   try {
     const { shopId } = req.params;
+    assertShopAccess(req, shopId);
 
     const inventory = await Inventory.findAll({
       where: { shopId },

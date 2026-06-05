@@ -1,21 +1,9 @@
 const express = require('express');
 const { Shop } = require('../models');
-const { authMiddleware } = require('../middleware/authMiddleware');
+const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 const { AuthenticationError, ValidationError } = require('../utils/errors');
 
 const router = express.Router();
-
-// Middleware: Check if user is admin
-async function adminOnly(req, res, next) {
-  try {
-    if (req.user.userType !== 'admin') {
-      throw new AuthenticationError('Only admin can access this resource');
-    }
-    next();
-  } catch (error) {
-    next(error);
-  }
-}
 
 // GET /api/shops - List all shops (public endpoint for login page)
 router.get('/', async (req, res, next) => {
@@ -31,7 +19,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // GET /api/shops/:id - Get shop details (admin only)
-router.get('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.get('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const shop = await Shop.findByPk(req.params.id);
 
@@ -46,7 +34,7 @@ router.get('/:id', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // POST /api/shops - Create new shop (admin only)
-router.post('/', authMiddleware, adminOnly, async (req, res, next) => {
+router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { id, name, city, code, hours, tint } = req.body;
 
@@ -83,7 +71,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // PUT /api/shops/:id - Update shop (admin only)
-router.put('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.put('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { name, city, code, hours, tint } = req.body;
 
@@ -117,7 +105,7 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // DELETE /api/shops/:id - Delete shop (admin only)
-router.delete('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.delete('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const shop = await Shop.findByPk(req.params.id);
 

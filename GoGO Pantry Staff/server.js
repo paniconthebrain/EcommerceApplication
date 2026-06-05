@@ -1,25 +1,30 @@
 const express = require('express');
 const path = require('path');
+const helmet = require('helmet');
+
 const app = express();
 
-// Serve static files from the current directory
-app.use(express.static(__dirname));
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://unpkg.com", "'unsafe-inline'"],
+      styleSrc:  ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'", "http://localhost:3000"],
+      imgSrc:    ["'self'", "data:"],
+    },
+  },
+}));
 
-// Serve staff files
+// Only serve the staff/ subfolder and index.html — NOT the whole project directory
 app.use('/staff', express.static(path.join(__dirname, 'staff')));
 
-// Main route - serve index.html for root
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Use middleware to serve index.html for all other routes (SPA fallback)
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+// Serve index.html explicitly for root and SPA fallback
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.use((req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const PORT = process.env.PORT || 3002;
-
 app.listen(PORT, () => {
   console.log(`✓ GoGO Pantry Staff App running on http://localhost:${PORT}`);
 });

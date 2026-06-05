@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 const { sequelize } = require('./models');
@@ -23,6 +24,9 @@ const deliverySlotsRoutes = require('./routes/deliverySlots');
 
 const app = express();
 
+// Security headers — applied before all other middleware
+app.use(helmet());
+
 // Rate limiting for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -42,8 +46,7 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ limit: '5mb', extended: true }));
+app.use(express.json({ limit: '50kb' }));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -100,7 +103,11 @@ async function startServer() {
     console.log('✓ Database connection established');
 
     // Sync models — alter only in development to avoid schema corruption in production
-    const syncOptions = process.env.NODE_ENV === 'production' ? {} : { alter: true };
+    const env = process.env.NODE_ENV;
+    if (!env) console.warn('WARNING: NODE_ENV is not set — defaulting to development mode');
+    const isProduction = env === 'production';
+    const syncOptions = isProduction ? {} : { alter: true };
+    if (!isProduction) console.warn('DB sync: alter:true is active — never use in production');
     await sequelize.sync(syncOptions);
     console.log('✓ Database synced');
 

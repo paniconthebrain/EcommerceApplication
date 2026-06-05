@@ -1,4 +1,5 @@
 const { verifyToken } = require('../utils/jwt');
+const { isBlacklisted } = require('../utils/tokenBlacklist');
 const { AuthenticationError, AuthorizationError } = require('../utils/errors');
 
 function authMiddleware(req, res, next) {
@@ -9,18 +10,22 @@ function authMiddleware(req, res, next) {
     }
 
     const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
 
+    if (isBlacklisted(token)) {
+      throw new AuthenticationError('Token has been revoked — please log in again');
+    }
+
+    const decoded = verifyToken(token);
     if (!decoded) {
       throw new AuthenticationError('Invalid or expired token');
     }
 
-    // Reject customer tokens on staff endpoints
     if (!decoded.userType) {
-      throw new AuthenticationError('Invalid token type - staff access required');
+      throw new AuthenticationError('Invalid token type — staff access required');
     }
 
     req.user = decoded;
+    req.token = token;
     next();
   } catch (error) {
     next(error);
@@ -32,16 +37,11 @@ function requireRole(...roles) {
     if (!req.user) {
       return next(new AuthenticationError('Authentication required'));
     }
-
     if (!roles.includes(req.user.userType)) {
       return next(new AuthorizationError('Insufficient permissions'));
     }
-
     next();
   };
 }
 
-module.exports = {
-  authMiddleware,
-  requireRole,
-};
+module.exports = { authMiddleware, requireRole };

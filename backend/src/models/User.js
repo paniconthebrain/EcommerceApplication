@@ -18,19 +18,22 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
     validate: {
-      len: {
-        args: [6, 255],
-        msg: 'Password must be at least 6 characters long',
-      },
+      len: { args: [8, 255], msg: 'Password must be at least 8 characters long' },
     },
   },
   name: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      len: { args: [1, 100], msg: 'Name must be between 1 and 100 characters' },
+    },
   },
   phone: {
     type: DataTypes.STRING,
     allowNull: true,
+    validate: {
+      len: { args: [0, 20], msg: 'Phone must be 20 characters or fewer' },
+    },
   },
   userType: {
     type: DataTypes.ENUM('admin', 'staff'),
@@ -50,23 +53,29 @@ const User = sequelize.define('User', {
     field: 'last_login',
     allowNull: true,
   },
+  failedLoginAttempts: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    field: 'failed_login_attempts',
+  },
+  lockedUntil: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'locked_until',
+  },
 }, {
   tableName: 'users',
   timestamps: true,
-  indexes: [
-    { fields: ['email'], unique: true },
-  ],
+  indexes: [{ fields: ['email'], unique: true }],
   hooks: {
     beforeCreate: async (user) => {
       if (user.password) {
-        const hashedPassword = await bcryptjs.hash(user.password, 10);
-        user.password = hashedPassword;
+        user.password = await bcryptjs.hash(user.password, 12);
       }
     },
     beforeUpdate: async (user) => {
       if (user.changed('password')) {
-        const hashedPassword = await bcryptjs.hash(user.password, 10);
-        user.password = hashedPassword;
+        user.password = await bcryptjs.hash(user.password, 12);
       }
     },
   },

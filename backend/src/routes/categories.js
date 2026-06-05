@@ -1,21 +1,9 @@
 const express = require('express');
 const { Category, Department } = require('../models');
-const { authMiddleware } = require('../middleware/authMiddleware');
+const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 const { AuthenticationError } = require('../utils/errors');
 
 const router = express.Router();
-
-// Middleware: Check if user is admin
-async function adminOnly(req, res, next) {
-  try {
-    if (req.user.userType !== 'admin') {
-      throw new AuthenticationError('Only admin can access this resource');
-    }
-    next();
-  } catch (error) {
-    next(error);
-  }
-}
 
 // GET all categories or filter by department (public)
 router.get('/', async (req, res, next) => {
@@ -37,7 +25,7 @@ router.get('/', async (req, res, next) => {
 });
 
 // POST create new category
-router.post('/', authMiddleware, adminOnly, async (req, res, next) => {
+router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { departmentId, name, hue, blurb, isRestricted18Plus } = req.body;
 
@@ -81,7 +69,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // PUT update category
-router.put('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.put('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const { name, hue, blurb, isRestricted18Plus } = req.body;
@@ -105,7 +93,7 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // DELETE category
-router.delete('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.delete('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
     const category = await Category.findByPk(id);

@@ -4,10 +4,12 @@ function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
   const [step, setStep] = useState(1); // 1: delivery type, 2: time slot, 3: payment
   const [deliveryType, setDeliveryType] = useState("delivery");
   const [slot, setSlot] = useState(null);
-  const [email, setEmail] = useState("maya@example.com");
-  const [name, setName] = useState("Maya Thompson");
-  const [address, setAddress] = useState("21st & Valencia St, San Francisco, CA 94103");
+  const storedCustomer = JSON.parse(localStorage.getItem("customerAuth") || "{}");
+  const [email] = useState(storedCustomer.email || "");
+  const [name] = useState(storedCustomer.name || "");
+  const [address, setAddress] = useState(storedCustomer.address || "");
   const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState("");
 
   const cartProducts = Object.entries(cartItems).filter(([, qty]) => qty > 0).map(([id, qty]) => {
     const p = G.PRODUCTS.find(x => x.id === id);
@@ -37,10 +39,39 @@ function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
     if (step === 1 && !deliveryType) return;
     if (step === 2 && !slot) return;
     if (step === 3) {
+      if (!address && deliveryType === "delivery") {
+        setError("Please enter your delivery address");
+        return;
+      }
       setProcessing(true);
-      setTimeout(() => {
-        onConfirm({ deliveryType, slot, email, name, address, total });
-      }, 800);
+      setError("");
+      try {
+        const cartEntries = Object.entries(cartItems).filter(([, qty]) => qty > 0);
+        const orderItems = cartEntries.map(([productId, qty]) => ({ productId, qty }));
+
+        const res = await customerFetch(`${API_BASE}/orders`, {
+          method: "POST",
+          body: JSON.stringify({
+            shopId,
+            items: orderItems,
+            orderType: deliveryType,
+            timeSlot: slots.find(s => s.id === slot)?.display || slot,
+            deliveryAddress: deliveryType === "delivery" ? address : null,
+          }),
+        });
+
+        if (!res) { setProcessing(false); return; } // 401 handled by customerFetch
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "Failed to place order. Please try again.");
+          setProcessing(false);
+          return;
+        }
+        onConfirm({ ...data, deliveryType, slot, total });
+      } catch {
+        setError("Cannot connect to server. Please try again.");
+        setProcessing(false);
+      }
       return;
     }
     setStep(step + 1);
@@ -149,6 +180,14 @@ function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
               </div>
             </div>
           </div>
+
+          {error && (
+            <div style={{ background:"var(--red-100)", color:"var(--red-700)",
+              padding:"12px 14px", borderRadius:10, fontSize:13, marginBottom:16,
+              border:"1px solid var(--red-300)" }}>
+              {error}
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: 12 }}>
             <BtnC variant="ghost" full onClick={onBack}>Cancel</BtnC>

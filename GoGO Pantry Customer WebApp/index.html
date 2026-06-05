@@ -71,9 +71,12 @@
 </head>
 <body>
   <div id="root"></div>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"
+          integrity="sha384-MhvFknC0AhqKZXwSCyPeIirpE1IhTafmLXTvTCai5pxjAqFcqEAAqKH/2lXrFVPn" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+          integrity="sha384-VQePqH/QE94Buf4g/4MI5NrqDYjdqT7JW6KzhieQUlw6w7U7VD59fPqCAunpXEu6" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"
+          integrity="sha384-v4LZQvzduxIAwokUM+ItjOZKCVVstXSLSshmi7mAmakMq1hffVMVk+VkXpXQBQ2X" crossorigin="anonymous"></script>
 
   <script type="text/babel">
     // ═══════════════════════════════════════════════════════════════════
@@ -96,6 +99,48 @@
 
     // API BASE URL
     const API_BASE = "http://localhost:3000/api";
+
+    function customerAuthHeaders() {
+      const token = localStorage.getItem("customerToken");
+      return token
+        ? { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" }
+        : { "Content-Type": "application/json" };
+    }
+
+    async function customerFetch(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: { ...customerAuthHeaders(), ...(options.headers || {}) },
+      });
+
+      if (res.status === 401) {
+        const refreshToken = localStorage.getItem("customerRefreshToken");
+        if (refreshToken) {
+          try {
+            const rr = await fetch(`${API_BASE}/customers/auth/refresh`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refreshToken }),
+            });
+            if (rr.ok) {
+              const rd = await rr.json();
+              localStorage.setItem("customerToken", rd.token);
+              return fetch(url, {
+                ...options,
+                headers: { ...customerAuthHeaders(), ...(options.headers || {}) },
+              });
+            }
+          } catch (_) { /* fall through */ }
+        }
+        // Refresh failed — force re-login
+        localStorage.removeItem("customerToken");
+        localStorage.removeItem("customerRefreshToken");
+        localStorage.removeItem("customerAuth");
+        window.dispatchEvent(new CustomEvent("customerLogout"));
+        return null;
+      }
+      return res;
+    }
 
     // Fetch data from backend
     async function initializeAppData() {

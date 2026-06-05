@@ -1,25 +1,28 @@
 const express = require('express');
 const path = require('path');
+const helmet = require('helmet');
+
 const app = express();
 
-// Serve static files from the current directory
-app.use(express.static(__dirname));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'", "https://unpkg.com", "'unsafe-inline'"],
+      styleSrc:   ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'", "http://localhost:3000"],
+      imgSrc:     ["'self'", "data:"],
+    },
+  },
+}));
 
-// Serve customer files
+// Only expose the customer/ subfolder and index.html
 app.use('/customer', express.static(path.join(__dirname, 'customer')));
 
-// Main route - serve index.html for root
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Use middleware to serve index.html for all other routes (SPA fallback)
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.use((req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const PORT = process.env.PORT || 3001;
-
 app.listen(PORT, () => {
   console.log(`✓ GoGO Pantry Customer App running on http://localhost:${PORT}`);
 });

@@ -8,11 +8,11 @@ const { Op } = require('sequelize');
 
 const router = express.Router();
 
-// Helper to generate order ID
+const crypto = require('crypto');
+
+// Cryptographically random order ID — not guessable/sequential
 function generateOrderId() {
-  const timestamp = Date.now().toString().slice(-4);
-  const random = Math.floor(Math.random() * 10000);
-  return `GG-${random.toString().padStart(4, '0')}`;
+  return `GG-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 }
 
 // GET /api/orders
@@ -21,7 +21,12 @@ router.get('/', authMiddleware, async (req, res, next) => {
     const { shopId, status, date, limit = 20, offset = 0 } = req.query;
 
     const where = {};
-    if (shopId) where.shopId = shopId;
+    // Staff are always restricted to their own shop; admins can filter freely
+    if (req.user.userType === 'staff') {
+      where.shopId = req.user.shopId;
+    } else if (shopId) {
+      where.shopId = shopId;
+    }
     if (status) where.status = status;
 
     const orders = await Order.findAll({
@@ -330,7 +335,7 @@ router.get('/:orderId/track', async (req, res, next) => {
       include: [
         {
           model: Customer,
-          attributes: ['id', 'name', 'email', 'phone'],
+          attributes: [],   // No customer PII on public tracking
         },
         {
           model: Shop,
@@ -350,7 +355,6 @@ router.get('/:orderId/track', async (req, res, next) => {
       orderId: order.id,
       status: order.status,
       orderType: order.orderType,
-      customer: order.Customer,
       shop: order.Shop,
       items: order.items,
       pricing: order.pricing,

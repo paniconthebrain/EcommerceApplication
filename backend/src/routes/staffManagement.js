@@ -1,24 +1,12 @@
 const express = require('express');
 const { User } = require('../models');
-const { authMiddleware } = require('../middleware/authMiddleware');
-const { AuthenticationError, ValidationError } = require('../utils/errors');
+const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+const { ValidationError } = require('../utils/errors');
 
 const router = express.Router();
 
-// Middleware: Check if user is admin
-async function adminOnly(req, res, next) {
-  try {
-    if (req.user.userType !== 'admin') {
-      throw new AuthenticationError('Only admin can access this resource');
-    }
-    next();
-  } catch (error) {
-    next(error);
-  }
-}
-
 // GET /api/staff - List all staff users (admin only)
-router.get('/', authMiddleware, adminOnly, async (req, res, next) => {
+router.get('/', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const staff = await User.findAll({
       where: { userType: 'staff' },
@@ -33,7 +21,7 @@ router.get('/', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // GET /api/staff/:id - Get staff user details (admin only)
-router.get('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.get('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const staff = await User.findOne({
       where: { id: req.params.id, userType: 'staff' },
@@ -51,7 +39,7 @@ router.get('/:id', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // POST /api/staff - Create new staff user (admin only)
-router.post('/', authMiddleware, adminOnly, async (req, res, next) => {
+router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { email, password, name, phone, shopId } = req.body;
 
@@ -59,8 +47,11 @@ router.post('/', authMiddleware, adminOnly, async (req, res, next) => {
       throw new ValidationError('Email, password, name, and shopId are required');
     }
 
-    if (password.length < 6) {
-      throw new ValidationError('Password must be at least 6 characters');
+    const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!PASSWORD_REGEX.test(password)) {
+      throw new ValidationError(
+        'Password must be at least 8 characters with uppercase, lowercase, and a number'
+      );
     }
 
     // Check if email already exists
@@ -95,7 +86,7 @@ router.post('/', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // PUT /api/staff/:id - Update staff user (admin only)
-router.put('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.put('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { name, phone, shopId, status } = req.body;
 
@@ -132,7 +123,7 @@ router.put('/:id', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // DELETE /api/staff/:id - Delete staff user (admin only)
-router.delete('/:id', authMiddleware, adminOnly, async (req, res, next) => {
+router.delete('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const staff = await User.findOne({
       where: { id: req.params.id, userType: 'staff' },
@@ -144,6 +135,7 @@ router.delete('/:id', authMiddleware, adminOnly, async (req, res, next) => {
 
     await staff.destroy();
 
+    console.log(`[AUDIT] ${new Date().toISOString()} | DELETE staff ${staff.email} | by admin ${req.user.email}`);
     res.json({ success: true, message: 'Staff user deleted successfully' });
   } catch (error) {
     next(error);
@@ -151,7 +143,7 @@ router.delete('/:id', authMiddleware, adminOnly, async (req, res, next) => {
 });
 
 // POST /api/staff/:id/reset-password - Reset staff password (admin only)
-router.post('/:id/reset-password', authMiddleware, adminOnly, async (req, res, next) => {
+router.post('/:id/reset-password', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const staff = await User.findOne({
       where: { id: req.params.id, userType: 'staff' },
@@ -167,11 +159,12 @@ router.post('/:id/reset-password', authMiddleware, adminOnly, async (req, res, n
     staff.password = tempPassword;
     await staff.save();
 
+    // Log to server console only (replace with email service in production)
+    console.log(`[AUDIT] ${new Date().toISOString()} | TEMP PASSWORD for ${staff.email} | by admin ${req.user.email} | temp: ${tempPassword}`);
     res.json({
       success: true,
-      message: 'Password reset successfully. Share the temporary password securely.',
+      message: `Password reset. Please deliver the new credentials to ${staff.email} via a secure channel.`,
       email: staff.email,
-      temporaryPassword: tempPassword,
     });
   } catch (error) {
     next(error);
