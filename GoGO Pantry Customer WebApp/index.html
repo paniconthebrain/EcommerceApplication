@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoGO Pantry — Fresh Groceries Delivered</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px oklch(0 0 0 / 0.07);
+      --shadow-lg: 0 10px 24px oklch(0 0 0 / 0.12);
+      --bg: oklch(0.98 0 0);
+      --surface: oklch(1 0 0);
+      --surface-2: oklch(0.96 0.001 215);
+      --bg-sunken: oklch(0.93 0.002 215);
+      --line: oklch(0.88 0.003 215);
+      --line-strong: oklch(0.8 0.005 215);
+      --text: oklch(0.2 0.004 215);
+      --text-2: oklch(0.5 0.005 215);
+      --text-3: oklch(0.65 0.004 215);
+      --primary: oklch(0.55 0.17 152);
+      --primary-ink: oklch(1 0 0);
+      --green-100: oklch(0.97 0.04 152);
+      --green-300: oklch(0.9 0.08 152);
+      --green-500: oklch(0.68 0.13 152);
+      --green-600: oklch(0.55 0.17 152);
+      --green-700: oklch(0.42 0.14 152);
+      --red-100: oklch(0.97 0.04 25);
+      --red-300: oklch(0.9 0.08 25);
+      --red-500: oklch(0.65 0.15 25);
+      --red-700: oklch(0.42 0.14 25);
+      --amber-100: oklch(0.98 0.03 78);
+      --amber-500: oklch(0.75 0.13 78);
+      --blue-100: oklch(0.97 0.04 245);
+      --blue-500: oklch(0.6 0.15 245);
+      --warm-100: oklch(0.98 0.03 45);
+      --warm-500: oklch(0.75 0.13 45);
+      --warm-600: oklch(0.65 0.15 45);
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    body.theme-dark {
+      --bg: oklch(0.15 0.02 215);
+      --surface: oklch(0.2 0.02 215);
+      --surface-2: oklch(0.25 0.02 215);
+      --bg-sunken: oklch(0.12 0.02 215);
+      --line: oklch(0.3 0.02 215);
+      --line-strong: oklch(0.4 0.02 215);
+      --text: oklch(0.95 0.01 215);
+      --text-2: oklch(0.7 0.02 215);
+      --text-3: oklch(0.5 0.02 215);
+    }
+    @keyframes gg-scale-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px oklch(0.6 0.1 152 / 0.1);
+    }
+    button:active { transform: scale(0.98); }
+    @media (max-width: 640px) { .hideOnMobile { display: none; } }
+  </style>
+  <link rel="stylesheet" href="./customer/customer-styles.css">
+</head>
+<body>
+  <div id="root"></div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    // ═══════════════════════════════════════════════════════════════════
+    // GLOBAL CONFIG — Toggle features here
+    // ═══════════════════════════════════════════════════════════════════
+    window.APP_CONFIG = {
+      deliveryEnabled: false,  // Set to true to show delivery features (pickup-only mode when false)
+    };
+    console.log("🚀 Script starting...");
+    const { useState, useEffect, useMemo } = React;
+    console.log("✅ React hooks loaded");
+
+    // Initialize with empty data - will be populated from API
+    window.GOGO = {
+      SHOPS: [],
+      CATEGORIES: [],
+      PRODUCTS: [],
+      ORDERS: [],
+    };
+
+    // API BASE URL
+    const API_BASE = "http://localhost:3000/api";
+
+    // Fetch data from backend
+    async function initializeAppData() {
+      try {
+        console.log("📡 Fetching data from backend...");
+
+        // Fetch shops
+        const shopsRes = await fetch(`${API_BASE}/shops`);
+        if (shopsRes.ok) {
+          const shopsData = await shopsRes.json();
+          const tintFallbacks = [152, 25, 245, 45, 78, 215];
+          window.GOGO.SHOPS = shopsData.map((shop, idx) => ({
+            ...shop,
+            // Use admin-set tint if numeric, convert hex colour to a hue angle, else fallback
+            tint: (() => {
+              const t = shop.tint;
+              if (!t) return tintFallbacks[idx % tintFallbacks.length];
+              if (typeof t === "number") return t;
+              // hex '#3498db' → parse as integer → NaN, use index fallback
+              const n = parseInt(t);
+              return isNaN(n) ? tintFallbacks[idx % tintFallbacks.length] : n;
+            })()
+          }));
+          console.log("✅ Shops loaded:", window.GOGO.SHOPS.length);
+        }
+
+        // Fetch categories
+        const catsRes = await fetch(`${API_BASE}/categories`);
+        if (catsRes.ok) {
+          const catsData = await catsRes.json();
+          const fallbackHues = [152, 25, 215, 45, 78, 245, 300, 190];
+          window.GOGO.CATEGORIES = catsData.map((cat, idx) => ({
+            id: cat.id,
+            name: cat.name,
+            hue: cat.hue ? parseInt(cat.hue) : fallbackHues[idx % fallbackHues.length],
+            blurb: cat.blurb || ""
+          }));
+          // Keep G helper in sync
+          window.GOGO.catOf = (catId) => {
+            const c = window.GOGO.CATEGORIES.find(x => x.id === catId);
+            return c || { id: "default", name: "General", hue: 152 };
+          };
+          console.log("✅ Categories loaded:", window.GOGO.CATEGORIES.length);
+        }
+
+        // Fetch products
+        const productsRes = await fetch(`${API_BASE}/products`);
+        if (productsRes.ok) {
+          const productsData = await productsRes.json();
+          window.GOGO.PRODUCTS = productsData.map(p => ({
+            id: p.id,
+            name: p.name,
+            brand: p.brand || null,
+            cat: p.categoryId || p.category_id || "",
+            unit: p.unit || "per unit",
+            price: parseFloat(p.price) || 0,
+            stock: parseInt(p.stock) || 50,
+            tag: p.tag || null,
+            image: p.featuredImage || p.image || null,
+            description: p.description || p.shortDescription || null,
+            size: p.size || null,
+            weight: p.weight || null,
+            par: p.par || 10,
+          }));
+          console.log("✅ Products loaded:", window.GOGO.PRODUCTS.length);
+        }
+
+        // Reinitialize G alias after loading
+        window.G = window.GOGO;
+
+        // Dispatch custom event to notify app data is ready
+        window.dispatchEvent(new CustomEvent('dataLoaded'));
+        console.log("✅ All data loaded successfully!");
+      } catch (error) {
+        console.error("❌ Error loading data:", error);
+        console.log("⚠️ Backend not reachable — check that it is running on port 3000.");
+        // Mutate in-place so helper functions on window.GOGO are preserved
+        window.GOGO.SHOPS = [];
+        window.GOGO.CATEGORIES = [];
+        window.GOGO.PRODUCTS = [];
+        window.GOGO.ORDERS = [];
+        window.G = window.GOGO;
+        window.dispatchEvent(new CustomEvent('dataLoaded'));
+      }
+    }
+
+    // Start loading data immediately
+    initializeAppData();
+
+    // Helper functions for G object
+    window.GOGO.catOf = (catId) => {
+      const cat = window.GOGO.CATEGORIES.find(c => c.id === catId);
+      return cat || { id: "default", name: "Default", hue: 152 };
+    };
+
+    window.GOGO.productsByCat = (catId) => {
+      if (!catId || catId === "all") return window.GOGO.PRODUCTS;
+      return window.GOGO.PRODUCTS.filter(p => p.cat === catId);
+    };
+
+    window.GOGO.stockState = (stock, par = 5) => {
+      if (stock <= 0) return "out";
+      if (stock <= par) return "low";
+      return "ok";
+    };
+
+    window.GOGO.shopStock = (productId, shopId) => {
+      // Simulate shop-specific stock variations
+      const product = window.GOGO.PRODUCTS.find(p => p.id === productId);
+      if (!product) return 0;
+      // Add some variation based on shop ID
+      const variation = shopId.charCodeAt(0) % 5;
+      return Math.max(0, product.stock - variation);
+    };
+
+    window.GOGO.money = (amount) => {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    };
+
+    // Create alias for easier access
+    window.G = window.GOGO;
+
+    // ICONS
+    const ICONS_CUSTOMER = {
+      home: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z",
+      search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM21 21l-4.3-4.3",
+      heart: "M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78Z",
+      user: "M20 21a8 8 0 1 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+      cart: "M2 3h2l2.4 12.4a1 1 0 0 0 1 .8h9.7a1 1 0 0 0 1-.8L21 6H6M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM18 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z",
+      pin: "M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11ZM12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
+      leaf: "M11 20A7 7 0 0 1 4 13c0-6 5-9 16-9 0 9-4 12-9 12ZM4 20c2-3 5-6 9-8",
+      chevR: "M9 6l6 6-6 6",
+      chevD: "M6 9l6 6 6-6",
+      x: "M18 6 6 18M6 6l12 12",
+      check: "M20 6L9 17l-5-5",
+      star: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z",
+      clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2",
+      truck: "M3 4h11v10H3zM14 8h4l3 3v3h-7M5.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
+      alert: "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z",
+      checkCircle: "M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4l-8.97 8.97",
+      plus: "M12 5v14M5 12h14",
+      minus: "M5 12h14",
+      bell: "M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+      box: "M3 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4Z",
+    };
+
+    function IconC({ name, size = 20, stroke = 2, fill = "none", style }) {
+      const d = ICONS_CUSTOMER[name] || "";
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill === "current" ? "currentColor" : "none"}
+          stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style}>
+          {d.split("M").filter(Boolean).map((seg, i) => <path key={i} d={"M" + seg} />)}
+        </svg>
+      );
+    }
+
+    function LogoCustomer({ size = 28, onClick }) {
+      return (
+        <button onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: onClick ? "pointer" : "default", padding: 0, fontFamily: "inherit" }}>
+          <div style={{
+            width: size, height: size, borderRadius: 7, background: "var(--green-500)",
+            display: "grid", placeItems: "center", color: "#fff", flexShrink: 0, boxShadow: "0 2px 8px oklch(0.68 0.13 152 / 0.2)"
+          }}>
+            <IconC name="leaf" size={size * 0.6} stroke={2.2} />
+          </div>
+          <span style={{ fontWeight: 800, fontSize: size * 0.7, letterSpacing: "-0.02em", color: "var(--text)" }}>
+            GoGO<span style={{ color: "var(--primary)" }}>Pantry</span>
+          </span>
+        </button>
+      );
+    }
+
+    function BtnC({ children, variant = "primary", size = "md", icon, onClick, full, style, type }) {
+      const base = {
+        display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+        fontFamily: "var(--font-sans)", fontWeight: 700, cursor: "pointer", border: "none",
+        borderRadius: 11, transition: "all .16s var(--ease)", width: full ? "100%" : "auto",
+        fontSize: size === "sm" ? 13 : 14, padding: size === "sm" ? "8px 14px" : "12px 20px", whiteSpace: "nowrap",
+      };
+      const variants = {
+        primary: { background: "var(--primary)", color: "var(--primary-ink)" },
+        ghost:   { background: "transparent", color: "var(--text)", border: "1px solid var(--line)" },
+        soft:    { background: "var(--surface-2)", color: "var(--text)" },
+      };
+      return (
+        <button type={type} onClick={onClick} onMouseEnter={e => e.currentTarget.style.filter = "brightness(1.06)"} onMouseLeave={e => e.currentTarget.style.filter = "none"}
+          style={{ ...base, ...variants[variant], ...style }}>
+          {icon && <IconC name={icon} size={size === "sm" ? 16 : 18} />}
+          {children}
+        </button>
+      );
+    }
+
+    function BadgeC({ children, tone = "neutral", size = "md", style }) {
+      const baseStyle = {
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        borderRadius: 6, fontWeight: 700, fontFamily: "var(--font-sans)", whiteSpace: "nowrap"
+      };
+      const sizes = {
+        sm: { padding: "4px 8px", fontSize: 11 },
+        md: { padding: "6px 12px", fontSize: 12 },
+        lg: { padding: "8px 16px", fontSize: 13 }
+      };
+      const tones = {
+        neutral: { background: "var(--surface-2)", color: "var(--text)" },
+        info: { background: "oklch(0.6 0.1 245 / 0.1)", color: "var(--blue-500)" },
+        success: { background: "oklch(0.6 0.1 152 / 0.1)", color: "var(--green-600)" },
+        warn: { background: "oklch(0.6 0.1 78 / 0.1)", color: "var(--warm-600)" },
+        critical: { background: "oklch(0.6 0.1 25 / 0.1)", color: "var(--red-700)" }
+      };
+      return (
+        <span style={{ ...baseStyle, ...sizes[size], ...tones[tone], ...style }}>
+          {children}
+        </span>
+      );
+    }
+
+    function AuthField({ label, children }) {
+      return (
+        <label style={{ display: "block", marginBottom: 16 }}>
+          <span style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>{label}</span>
+          {children}
+        </label>
+      );
+    }
+
+    const authInputStyle = {
+      width: "100%", padding: "12px 14px", borderRadius: 11, border: "1px solid var(--line)",
+      background: "var(--surface)", color: "var(--text)", fontSize: 15, fontFamily: "var(--font-sans)", outline: "none",
+    };
+
+    const authContainerStyle = {
+      minHeight: "100vh", display: "grid", placeItems: "center", background: "var(--bg)", padding: "20px",
+      backgroundImage: "radial-gradient(80% 80% at 50% 0%, oklch(0.24 0.025 152) 0%, var(--bg) 60%)"
+    };
+
+    const authCardStyle = {
+      width: "100%", maxWidth: "420px", background: "var(--surface)", border: "1px solid var(--line)",
+      borderRadius: "20px", padding: "40px 36px", boxShadow: "var(--shadow-lg)"
+    };
+
+    const authHeadingStyle = { fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em", margin: "0 0 8px", color: "var(--text)", textAlign: "center" };
+    const authSubtitleStyle = { color: "var(--text-2)", margin: "0 0 24px", fontSize: 14.5, textAlign: "center", lineHeight: 1.5 };
+
+    // AUTHENTICATION COMPONENTS
+    function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick }) {
+      const [email, setEmail] = useState("");
+      const [password, setPassword] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState("");
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+
+        if (!email || !password) {
+          setError("Please fill in all fields");
+          setLoading(false);
+          return;
+        }
+
+        setTimeout(() => {
+          if (email && password.length >= 6) {
+            const userData = { id: Date.now(), email, name: email.split("@")[0] };
+            localStorage.setItem("customerAuth", JSON.stringify(userData));
+            onLoginSuccess(userData);
+          } else {
+            setError("Invalid email or password");
+          }
+          setLoading(false);
+        }, 600);
+      };
+
+      return (
+        <div style={authContainerStyle}>
+          <div style={authCardStyle}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+              <LogoCustomer size={32} />
+            </div>
+            <h1 style={authHeadingStyle}>Sign in to your account</h1>
+            <p style={authSubtitleStyle}>Welcome back! Order fresh groceries delivered to your door.</p>
+
+            {error && (
+              <div style={{
+                background: "var(--red-100)", color: "var(--red-700)", padding: "12px 14px", borderRadius: 10,
+                fontSize: 13, marginBottom: 16, border: "1px solid var(--red-300)"
+              }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <AuthField label="Email address">
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" style={authInputStyle} />
+              </AuthField>
+
+              <AuthField label="Password">
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" style={authInputStyle} />
+              </AuthField>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, fontSize: 13 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                  <input type="checkbox" style={{ cursor: "pointer" }} />
+                  <span style={{ color: "var(--text-2)" }}>Remember me</span>
+                </label>
+                <button onClick={onForgotClick} style={{ background: "none", border: "none", color: "var(--primary)", textDecoration: "none", fontWeight: 600, cursor: "pointer", fontSize: 13, fontFamily: "var(--font-sans)" }}>
+                  Forgot password?
+                </button>
+              </div>
+
+              <BtnC full type="submit" style={{ marginBottom: 16, opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Signing in..." : "Sign in"}
+              </BtnC>
+            </form>
+
+            <div style={{ textAlign: "center", color: "var(--text-2)", fontSize: 13 }}>
+              Don't have an account?{" "}
+              <button onClick={onSignupClick} style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 700, textDecoration: "none", cursor: "pointer", fontSize: 13, fontFamily: "var(--font-sans)" }}>
+                Sign up
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function CustomerSignup({ onSignupSuccess, onLoginClick }) {
+      const [step, setStep] = useState(1);
+      const [formData, setFormData] = useState({ name: "", email: "", phone: "", password: "", confirmPassword: "" });
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState("");
+
+      const handleChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+        setError("");
+      };
+
+      const validateForm = () => {
+        if (!formData.name.trim()) return "Name is required";
+        if (!formData.email.includes("@")) return "Valid email is required";
+        if (!formData.phone.match(/^\d{10}$/)) return "Phone must be 10 digits";
+        if (formData.password.length < 6) return "Password must be at least 6 characters";
+        if (formData.password !== formData.confirmPassword) return "Passwords don't match";
+        return null;
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        const validationError = validateForm();
+        if (validationError) {
+          setError(validationError);
+          return;
+        }
+        setLoading(true);
+        setTimeout(() => {
+          setStep(2);
+          setLoading(false);
+        }, 600);
+      };
+
+      const handleVerify = () => {
+        setLoading(true);
+        setTimeout(() => {
+          const userData = { id: Date.now(), email: formData.email, name: formData.name };
+          localStorage.setItem("customerAuth", JSON.stringify(userData));
+          onSignupSuccess(userData);
+        }, 600);
+      };
+
+      if (step === 2) {
+        return (
+          <div style={authContainerStyle}>
+            <div style={authCardStyle}>
+              <div style={{ textAlign: "center", marginBottom: 28 }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>📧</div>
+                <h1 style={authHeadingStyle}>Verify your email</h1>
+                <p style={authSubtitleStyle}>We've sent a verification link to {formData.email}</p>
+              </div>
+
+              <div style={{ background: "var(--surface-2)", padding: "20px", borderRadius: 12, marginBottom: 20, textAlign: "center", fontSize: 13, color: "var(--text-2)" }}>
+                Check your inbox and click the verification link to complete signup.
+              </div>
+
+              <BtnC full onClick={handleVerify} style={{ marginBottom: 12, opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Completing..." : "I've verified my email"}
+              </BtnC>
+
+              <button onClick={() => setStep(1)} style={{ width: "100%", padding: "11px 16px", background: "transparent", color: "var(--primary)", border: "1px solid var(--primary)", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                Back to signup
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div style={authContainerStyle}>
+          <div style={authCardStyle}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+              <LogoCustomer size={32} />
+            </div>
+            <h1 style={authHeadingStyle}>Create your account</h1>
+            <p style={authSubtitleStyle}>Join GoGO Pantry for fast, fresh grocery delivery</p>
+
+            {error && (
+              <div style={{ background: "var(--red-100)", color: "var(--red-700)", padding: "12px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16, border: "1px solid var(--red-300)" }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <AuthField label="Full name">
+                <input type="text" value={formData.name} onChange={(e) => handleChange("name", e.target.value)} placeholder="John Doe" style={authInputStyle} />
+              </AuthField>
+
+              <AuthField label="Email address">
+                <input type="email" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="you@example.com" style={authInputStyle} />
+              </AuthField>
+
+              <AuthField label="Phone number">
+                <input type="tel" value={formData.phone} onChange={(e) => handleChange("phone", e.target.value)} placeholder="9876543210" style={authInputStyle} maxLength="10" />
+              </AuthField>
+
+              <AuthField label="Password">
+                <input type="password" value={formData.password} onChange={(e) => handleChange("password", e.target.value)} placeholder="••••••••" style={authInputStyle} />
+              </AuthField>
+
+              <AuthField label="Confirm password">
+                <input type="password" value={formData.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} placeholder="••••••••" style={authInputStyle} />
+              </AuthField>
+
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 20, fontSize: 13, color: "var(--text-2)" }}>
+                <input type="checkbox" style={{ marginTop: 3, cursor: "pointer" }} required />
+                <span>I agree to the Terms of Service and Privacy Policy</span>
+              </label>
+
+              <BtnC full type="submit" style={{ opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Creating account..." : "Create account"}
+              </BtnC>
+            </form>
+
+            <div style={{ textAlign: "center", color: "var(--text-2)", fontSize: 13, marginTop: 16 }}>
+              Already have an account?{" "}
+              <button onClick={onLoginClick} style={{ background: "none", border: "none", color: "var(--primary)", fontWeight: 700, textDecoration: "none", cursor: "pointer", fontSize: 13, fontFamily: "var(--font-sans)" }}>
+                Sign in
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ForgotPassword({ onBack }) {
+      const [email, setEmail] = useState("");
+      const [sent, setSent] = useState(false);
+      const [loading, setLoading] = useState(false);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setTimeout(() => {
+          setSent(true);
+          setLoading(false);
+        }, 600);
+      };
+
+      if (sent) {
+        return (
+          <div style={authContainerStyle}>
+            <div style={authCardStyle}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>✉️</div>
+                <h1 style={authHeadingStyle}>Check your email</h1>
+                <p style={authSubtitleStyle}>We've sent password reset instructions to {email}</p>
+                <div style={{ background: "var(--surface-2)", padding: "20px", borderRadius: 12, marginTop: 20, marginBottom: 20, textAlign: "center", fontSize: 13, color: "var(--text-2)" }}>
+                  Click the link in your email to reset your password. The link expires in 24 hours.
+                </div>
+                <BtnC full onClick={onBack}>Back to login</BtnC>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div style={authContainerStyle}>
+          <div style={authCardStyle}>
+            <button onClick={onBack} style={{ background: "none", border: "none", color: "var(--text-2)", cursor: "pointer", fontSize: 14, fontWeight: 600, marginBottom: 20, fontFamily: "var(--font-sans)" }}>
+              ← Back to login
+            </button>
+            <h1 style={authHeadingStyle}>Reset your password</h1>
+            <p style={authSubtitleStyle}>Enter your email to receive a password reset link</p>
+
+            <form onSubmit={handleSubmit}>
+              <AuthField label="Email address">
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" style={authInputStyle} required />
+              </AuthField>
+
+              <BtnC full type="submit" style={{ opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Sending..." : "Send reset link"}
+              </BtnC>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // FILTER SIDEBAR COMPONENT
+    function PriceRangeInput({ value, onChange }) {
+      const [lo, hi] = value;
+      const numStyle = { width: "100%", padding: "9px 10px", borderRadius: 9, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", textAlign: "center", fontWeight: 600 };
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4, fontWeight: 600 }}>MIN</div>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", fontSize: 13 }}>$</span>
+              <input type="number" min={0} max={100} value={lo}
+                onChange={e => {
+                  const v = Math.max(0, Math.min(parseInt(e.target.value) || 0, hi - 1));
+                  onChange([v, hi]);
+                }}
+                style={{ ...numStyle, paddingLeft: 20 }}
+              />
+            </div>
+          </div>
+          <div style={{ color: "var(--text-3)", marginTop: 18, fontWeight: 700 }}>—</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 4, fontWeight: 600 }}>MAX</div>
+            <div style={{ position: "relative" }}>
+              <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", fontSize: 13 }}>$</span>
+              <input type="number" min={0} max={100} value={hi}
+                onChange={e => {
+                  const v = Math.min(100, Math.max(parseInt(e.target.value) || 0, lo + 1));
+                  onChange([lo, v]);
+                }}
+                style={{ ...numStyle, paddingLeft: 20 }}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function FilterSidebar({ priceRange = [0, 500], onPriceChange, showInStockOnly = false, onStockToggle, showOnSaleOnly = false, onSaleToggle, resetFilters }) {
+      const [showMore, setShowMore] = useState(false);
+      const activeCount = (showInStockOnly ? 1 : 0) + (showOnSaleOnly ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 100 ? 1 : 0);
+      return (
+        <div style={{ width: 280, flexShrink: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: 12, borderBottom: "1px solid var(--line)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: 0 }}>Filters</h3>
+              {activeCount > 0 && <span style={{ background: "var(--primary)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "2px 7px", borderRadius: 999 }}>{activeCount}</span>}
+            </div>
+            <button onClick={resetFilters} style={{ background: "none", border: "none", color: "var(--primary)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}>Reset</button>
+          </div>
+
+          {/* Price Range */}
+          <div style={{ background: "var(--surface-2)", borderRadius: 12, padding: "14px 14px 10px" }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "var(--text-2)", display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em" }}>Price Range</label>
+            <PriceRangeInput value={priceRange} onChange={onPriceChange} />
+          </div>
+
+          {/* In Stock */}
+          <div style={{ background: "var(--surface-2)", borderRadius: 12, padding: "4px 14px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 0" }}>
+              <input type="checkbox" checked={showInStockOnly} onChange={e => onStockToggle(e.target.checked)} style={{ width: 18, height: 18, cursor: "pointer", accentColor: "var(--primary)" }} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", userSelect: "none" }}>In Stock Only</span>
+              {showInStockOnly && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 800, background: "#d1fae5", color: "#065f46", padding: "2px 7px", borderRadius: 999 }}>ON</span>}
+            </label>
+          </div>
+
+          {/* More Filters toggle */}
+          <button onClick={() => setShowMore(v => !v)} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "1px dashed var(--line)", borderRadius: 10, padding: "9px 14px", cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600, color: "var(--text-2)", transition: "all 0.15s" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.color = "var(--primary)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-2)"; }}>
+            <span style={{ fontSize: 14 }}>{showMore ? "▲" : "▼"}</span>
+            {showMore ? "Less filters" : "More filters"}
+            {showOnSaleOnly && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 800, background: "#fee2e2", color: "#991b1b", padding: "2px 7px", borderRadius: 999 }}>+1</span>}
+          </button>
+
+          {/* Collapsible: On Sale */}
+          {showMore && (
+            <div style={{ background: "var(--surface-2)", borderRadius: 12, padding: "4px 14px", animation: "fadeIn 0.15s ease" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 0" }}>
+                <input type="checkbox" checked={showOnSaleOnly} onChange={e => onSaleToggle(e.target.checked)} style={{ width: 18, height: 18, cursor: "pointer", accentColor: "var(--primary)" }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", userSelect: "none" }}>🏷️ On Sale</span>
+                {showOnSaleOnly && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 800, background: "#fee2e2", color: "#991b1b", padding: "2px 7px", borderRadius: 999 }}>ON</span>}
+              </label>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // SHOP INFO CARD COMPONENT
+    // PRODUCT CARD ENHANCED COMPONENT
+    function ProductCardEnhanced({ product, inCart, disabled, stockState, onAdd, onAddQty, onRemoveQty, onClick }) {
+      const categoryColor = G.catOf(product.cat);
+      return (
+        <div onClick={!disabled ? onClick : undefined} style={{ background: "var(--surface)", border: `2px solid ${disabled ? "var(--line)" : `oklch(0.6 0.08 ${categoryColor.hue})`}`, borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column", transition: "all 0.2s var(--ease)", opacity: disabled ? 0.65 : 1, cursor: disabled ? "not-allowed" : "pointer" }}
+          onMouseEnter={e => { if (!disabled) { e.currentTarget.style.boxShadow = "var(--shadow-md)"; e.currentTarget.style.transform = "translateY(-4px)"; } }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
+          <div style={{ position: "relative", paddingBottom: "100%", background: `oklch(0.92 0.07 ${categoryColor.hue})`, overflow: "hidden" }}>
+            {product.image
+              ? <img src={product.image} alt={product.name} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+              : <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontSize: "3rem" }}>🛒</div>
+            }
+            {stockState !== "ok" && (
+              <div style={{ position: "absolute", top: 8, right: 8, background: stockState === "low" ? "var(--amber-500)" : "var(--red-500)", color: "#fff", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
+                {stockState === "low" ? "⚠️ Low" : "🚫 Out"}
+              </div>
+            )}
+          </div>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 14 }}>
+            {/* Badges row */}
+            {(product.tag || product.isNew) && (
+              <div style={{ display: "flex", gap: 5, marginBottom: 7, flexWrap: "wrap" }}>
+                {product.tag === "popular" && <span style={{ fontSize: 10, fontWeight: 800, background: "#fef3c7", color: "#92400e", padding: "2px 7px", borderRadius: 999 }}>⭐ Popular</span>}
+                {product.tag === "organic" && <span style={{ fontSize: 10, fontWeight: 800, background: "#d1fae5", color: "#065f46", padding: "2px 7px", borderRadius: 999 }}>🌿 Organic</span>}
+                {product.tag === "sale" && <span style={{ fontSize: 10, fontWeight: 800, background: "#fee2e2", color: "#991b1b", padding: "2px 7px", borderRadius: 999 }}>🏷️ On Sale</span>}
+                {product.tag === "new" && <span style={{ fontSize: 10, fontWeight: 800, background: "#ede9fe", color: "#5b21b6", padding: "2px 7px", borderRadius: 999 }}>✨ New</span>}
+                {product.tag && !["popular","organic","sale","new"].includes(product.tag) && <span style={{ fontSize: 10, fontWeight: 700, background: "var(--surface-2)", color: "var(--text-2)", padding: "2px 7px", borderRadius: 999 }}>{product.tag}</span>}
+              </div>
+            )}
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", lineHeight: 1.3, marginBottom: 4, minHeight: "2.4em" }}>
+              {product.name}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 8 }}>{product.unit}</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 12 }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: "var(--text)" }}>${(parseFloat(product.price) || 0).toFixed(2)}</span>
+            </div>
+            <div style={{ marginTop: "auto" }}>
+              {inCart > 0 ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface-2)", borderRadius: 10, padding: "4px" }}>
+                  <button onClick={e => { e.stopPropagation(); onRemoveQty && onRemoveQty(); }} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "var(--surface)", color: "var(--text)", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: "var(--font-sans)", display: "grid", placeItems: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>−</button>
+                  <span style={{ flex: 1, textAlign: "center", fontWeight: 800, fontSize: 15, color: "var(--primary)" }}>{inCart}</span>
+                  <button onClick={e => { e.stopPropagation(); onAddQty && onAddQty(); }} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "var(--primary)", color: "var(--primary-ink)", fontWeight: 700, fontSize: 16, cursor: "pointer", fontFamily: "var(--font-sans)", display: "grid", placeItems: "center" }}>+</button>
+                </div>
+              ) : (
+                <button onClick={e => { e.stopPropagation(); onAdd(); }} disabled={disabled} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: disabled ? "var(--line)" : "var(--primary)", color: disabled ? "var(--text-3)" : "#fff", fontWeight: 700, fontSize: 13, cursor: disabled ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", transition: "filter 0.15s, transform 0.1s", outline: "none" }}
+                  onMouseEnter={e => { if (!disabled) { e.currentTarget.style.filter = "brightness(0.92)"; e.currentTarget.style.transform = "translateY(-1px)"; }}}
+                  onMouseLeave={e => { e.currentTarget.style.filter = "none"; e.currentTarget.style.transform = "none"; }}
+                  onFocus={e => { if (!disabled) e.currentTarget.style.boxShadow = "0 0 0 3px var(--primary-ink)"; }}
+                  onBlur={e => e.currentTarget.style.boxShadow = "none"}
+                >🛒 Add to Cart</button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // PRODUCT DETAIL MODAL
+    function ProductDetailModal({ product, inCart, onClose, onAdd, onUpdateCart }) {
+      const [qty, setQty] = useState(inCart > 0 ? inCart : 1);
+      const cat = G.catOf(product.cat);
+      const hue = cat.hue || 152;
+      const stock = product.stock || 0;
+      const stockState = G.stockState(stock, product.par || 10);
+      const stockLabel = stockState === "out" ? "Out of stock" : stockState === "low" ? "Low stock" : "In stock";
+      const stockColor = stockState === "out" ? "var(--red-500)" : stockState === "low" ? "var(--amber-500)" : "var(--green-600)";
+      const price = parseFloat(product.price) || 0;
+
+      // Sync qty with external inCart changes
+      useEffect(() => { if (inCart > 0) setQty(inCart); }, [inCart]);
+
+      const handleAdd = () => {
+        if (inCart > 0) {
+          onUpdateCart(product.id, qty);
+        } else {
+          for (let i = 0; i < qty; i++) onAdd();
+        }
+        onClose();
+      };
+
+      return (
+        <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "92vh", overflowY: "auto", boxShadow: "0 24px 64px rgba(0,0,0,0.28)" }}>
+
+            {/* Image */}
+            <div style={{ position: "relative", background: `linear-gradient(135deg, oklch(0.9 0.09 ${hue}) 0%, oklch(0.85 0.12 ${hue}) 100%)`, height: 260, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "20px 20px 0 0", flexShrink: 0, overflow: "hidden" }}>
+              {product.image
+                ? <img src={product.image} alt={product.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                : <span style={{ fontSize: "5rem" }}>🛒</span>
+              }
+              <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 999, background: "rgba(0,0,0,0.25)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)" }}>×</button>
+              {stockState !== "ok" && (
+                <div style={{ position: "absolute", top: 14, left: 14, background: stockColor, color: "#fff", padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
+                  {stockState === "low" ? "⚠️ Low stock" : "🚫 Out of stock"}
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: "24px 24px 28px" }}>
+              {/* Category badge */}
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `hsl(${hue},60%,94%)`, color: `hsl(${hue},55%,35%)`, padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 10 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 999, background: `hsl(${hue},60%,42%)` }} />
+                {cat.name}
+              </div>
+
+              {/* Name + brand */}
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: "var(--text)", margin: "0 0 4px", lineHeight: 1.2 }}>{product.name}</h2>
+              {product.brand && <p style={{ fontSize: 13, color: "var(--text-3)", margin: "0 0 12px" }}>{product.brand}</p>}
+
+              {/* Price row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                <span style={{ fontSize: 28, fontWeight: 900, color: "var(--text)" }}>${price.toFixed(2)}</span>
+                <span style={{ fontSize: 13, color: "var(--text-3)" }}>per {product.unit}</span>
+                {product.size && <span style={{ fontSize: 12, background: "var(--surface-2)", padding: "3px 8px", borderRadius: 6, color: "var(--text-2)" }}>{product.size}</span>}
+              </div>
+
+              {/* Stock + meta */}
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: stockColor }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 999, background: stockColor }} />
+                  {stockLabel}
+                </div>
+                {product.weight && <span style={{ fontSize: 12, color: "var(--text-3)" }}>· {product.weight}</span>}
+              </div>
+
+              {/* Description */}
+              {product.description && (
+                <p style={{ fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.6, marginBottom: 20, padding: "12px 14px", background: "var(--surface-2)", borderRadius: 10 }}>
+                  {product.description}
+                </p>
+              )}
+
+              {/* Divider */}
+              <div style={{ height: 1, background: "var(--line)", marginBottom: 20 }} />
+
+              {/* Qty + Add to Cart */}
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--surface-2)", borderRadius: 12, padding: "6px 8px" }}>
+                  <button onClick={() => setQty(q => Math.max(1, q - 1))} disabled={stockState === "out"} style={{ width: 36, height: 36, borderRadius: 9, border: "none", background: "var(--surface)", color: "var(--text)", fontWeight: 700, fontSize: 18, cursor: "pointer", display: "grid", placeItems: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>−</button>
+                  <span style={{ minWidth: 28, textAlign: "center", fontWeight: 800, fontSize: 18, color: "var(--text)" }}>{qty}</span>
+                  <button onClick={() => setQty(q => q + 1)} disabled={stockState === "out"} style={{ width: 36, height: 36, borderRadius: 9, border: "none", background: `hsl(${hue},60%,42%)`, color: "#fff", fontWeight: 700, fontSize: 18, cursor: "pointer", display: "grid", placeItems: "center" }}>+</button>
+                </div>
+                <button onClick={handleAdd} disabled={stockState === "out"} style={{ flex: 1, height: 50, borderRadius: 12, border: "none", background: stockState === "out" ? "var(--surface-2)" : `hsl(${hue},60%,42%)`, color: stockState === "out" ? "var(--text-3)" : "#fff", fontWeight: 800, fontSize: 15, cursor: stockState === "out" ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", transition: "all 0.15s" }}>
+                  {stockState === "out" ? "Out of Stock" : inCart > 0 ? `Update Cart (${qty})` : `Add ${qty} to Cart · $${(price * qty).toFixed(2)}`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // PROGRESS INDICATOR COMPONENT
+    function ProgressIndicator({ currentStep, steps = ["Cart", "Checkout", "Confirm"] }) {
+      return (
+        <div style={{ padding: "20px 16px", background: "var(--surface)", borderBottom: "1px solid var(--line)" }}>
+          <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 16, justifyContent: "center" }}>
+            {steps.map((step, index) => (
+              <div key={index} style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 999, background: index <= currentStep ? "var(--primary)" : "var(--surface-2)", color: index <= currentStep ? "var(--primary-ink)" : "var(--text-3)", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 14, transition: "all 0.3s var(--ease)", border: `2px solid ${index <= currentStep ? "var(--primary)" : "var(--line)"}` }}>
+                  {index < currentStep ? <IconC name="check" size={20} /> : <span>{index + 1}</span>}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: index <= currentStep ? "var(--text)" : "var(--text-2)" }}>{step}</div>
+                </div>
+                {index < steps.length - 1 && (
+                  <div style={{ flex: 1, height: 2, background: index < currentStep ? "var(--primary)" : "var(--line)", margin: "0 8px", minWidth: 40, transition: "all 0.3s var(--ease)" }} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ─────────────────────────────────────────────────────
+    // STORE POPUP  — compact toast (mobile) + modal (desktop)
+    // Spec: 8px radius, 16px spacing, WCAG AA, focus-trap, aria-live
+    // ─────────────────────────────────────────────────────
+    const POPUP_ANALYTICS = {
+      track(event, data = {}) {
+        // swap for your analytics SDK (GA4, Segment, etc.)
+        console.log("[StorePopup]", event, data);
+      }
+    };
+
+    function StorePopup({ shop, isOpen, onClose, onSelectShop, product = null, promoText = "Free delivery on orders over $25" }) {
+      const primaryCTARef = React.useRef(null);
+      const popupRef = React.useRef(null);
+      const dismissTimer = React.useRef(null);
+      const isMobile = window.matchMedia("(max-width: 640px)").matches;
+      const isOpen_ = isOpen && !!shop;
+
+      // Analytics: impression
+      useEffect(() => {
+        if (isOpen_) {
+          POPUP_ANALYTICS.track("store_popup_impression", { shopId: shop?.id, isMobile });
+        }
+      }, [isOpen_]);
+
+      // Focus primary CTA when opened
+      useEffect(() => {
+        if (isOpen_ && primaryCTARef.current) {
+          setTimeout(() => primaryCTARef.current?.focus(), 50);
+        }
+      }, [isOpen_]);
+
+      // Mobile: auto-dismiss after 6s unless focused inside popup
+      useEffect(() => {
+        if (isOpen_ && isMobile) {
+          dismissTimer.current = setTimeout(() => {
+            if (!popupRef.current?.contains(document.activeElement)) {
+              POPUP_ANALYTICS.track("store_popup_auto_dismiss", { shopId: shop?.id });
+              onClose();
+            }
+          }, 6000);
+        }
+        return () => clearTimeout(dismissTimer.current);
+      }, [isOpen_]);
+
+      // Focus trap (Tab / Shift+Tab cycle within popup)
+      useEffect(() => {
+        if (!isOpen_) return;
+        const el = popupRef.current;
+        const focusable = () => el?.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])') || [];
+        const onKey = (e) => {
+          if (e.key === "Escape") { POPUP_ANALYTICS.track("store_popup_dismiss_esc", { shopId: shop?.id }); onClose(); return; }
+          if (e.key !== "Tab") return;
+          const items = [...focusable()];
+          if (!items.length) return;
+          const first = items[0], last = items[items.length - 1];
+          if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+          else { if (document.activeElement === last) { e.preventDefault(); first.focus(); } }
+        };
+        document.addEventListener("keydown", onKey);
+        return () => document.removeEventListener("keydown", onKey);
+      }, [isOpen_]);
+
+      if (!isOpen_) return null;
+
+      const hue = typeof shop.tint === "number" ? shop.tint : 152;
+      const storeStatus = "Open";       // replace with real open/close logic
+      const etaRange   = "25–40 min";
+      const deliveryFee = "$3.99 delivery";
+      const isOpen_status = storeStatus === "Open";
+
+      const handlePrimary = () => {
+        POPUP_ANALYTICS.track("store_popup_cta_primary", { shopId: shop.id, label: "Shop Now" });
+        onSelectShop(shop.id);
+        onClose();
+      };
+      const handleSecondary = () => {
+        POPUP_ANALYTICS.track("store_popup_cta_secondary", { shopId: shop.id, label: "View Store" });
+        onSelectShop(shop.id);
+        onClose();
+      };
+      const handleClose = () => {
+        POPUP_ANALYTICS.track("store_popup_dismiss_x", { shopId: shop.id });
+        onClose();
+      };
+
+      // ── Shared inner content (used by both variants) ──
+      const popupId = "store-popup-heading";
+
+      const inner = (
+        <React.Fragment>
+          {/* Header row */}
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 16 }}>
+            {/* Store logo 48×48 */}
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: `linear-gradient(135deg, oklch(0.55 0.15 ${hue}), oklch(0.68 0.12 ${hue+20}))`, color: "#fff", display: "grid", placeItems: "center", flexShrink: 0, boxShadow: `0 4px 12px oklch(0.55 0.13 ${hue} / 0.4)` }}>
+              <IconC name="pin" size={24} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Headline: store_name — store_status */}
+              <h2 id={popupId} style={{ fontSize: 17, fontWeight: 800, color: "var(--text)", margin: "0 0 4px", letterSpacing: "-0.01em", lineHeight: 1.2 }}>
+                {shop.name}
+                <span style={{ margin: "0 6px", color: "var(--text-3)" }}>—</span>
+                <span style={{ color: isOpen_status ? "#059669" : "#dc2626" }}>{storeStatus}</span>
+              </h2>
+              {/* Subline with aria-live for live ETA updates */}
+              <p aria-live="polite" style={{ fontSize: 13, color: "var(--text-2)", margin: 0 }}>
+                {window.APP_CONFIG.deliveryEnabled ? (
+                  <>Est. delivery <strong style={{ color: "var(--text)" }}>{etaRange}</strong> · {deliveryFee}</>
+                ) : (
+                  <>Ready for pickup in <strong style={{ color: "var(--text)" }}>30–45 minutes</strong> · {shop.city || "Local store"}</>
+                )}
+              </p>
+            </div>
+            {/* Close × */}
+            <button onClick={handleClose} aria-label="Close store popup" style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "var(--surface-2)", color: "var(--text-2)", cursor: "pointer", fontSize: 18, display: "grid", placeItems: "center", flexShrink: 0, outline: "none" }}
+              onFocus={e => e.currentTarget.style.boxShadow = "0 0 0 3px var(--primary)"}
+              onBlur={e => e.currentTarget.style.boxShadow = "none"}>×</button>
+          </div>
+
+          {/* Optional product thumbnail 64×64 */}
+          {product && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--surface-2)", borderRadius: 10, marginBottom: 16 }}>
+              <div style={{ width: 64, height: 64, borderRadius: 10, background: `hsl(${hue},55%,92%)`, overflow: "hidden", flexShrink: 0, display: "grid", placeItems: "center" }}>
+                {product.image
+                  ? <img src={product.image} alt={product.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : <span style={{ fontSize: "2rem" }}>🛒</span>
+                }
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>{product.name}</div>
+                <div style={{ fontSize: 12, color: "var(--text-3)" }}>{product.unit} · ${(parseFloat(product.price)||0).toFixed(2)}</div>
+                <div style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginTop: 3 }}>Available at {shop.name}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Status + ETA badges */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: isOpen_status ? "#d1fae5" : "#fee2e2", color: isOpen_status ? "#065f46" : "#991b1b", padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />
+              {storeStatus}
+            </span>
+            {window.APP_CONFIG.deliveryEnabled ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+                ⚡ {etaRange}
+              </span>
+            ) : (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+                🛒 30–45 min pickup
+              </span>
+            )}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+              📍 {shop.city || shop.code}
+            </span>
+          </div>
+
+          {/* Micro-message / promo */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "oklch(0.96 0.04 152)", borderRadius: 10, marginBottom: 16, border: "1px solid oklch(0.88 0.08 152)" }}>
+            <span style={{ fontSize: 15 }}>🎉</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "oklch(0.35 0.1 152)" }}>
+              {window.APP_CONFIG.deliveryEnabled
+                ? promoText
+                : "Quick pickup · No waiting in line"}
+            </span>
+          </div>
+
+          {/* CTAs */}
+          <div style={{ display: "flex", gap: 10 }}>
+            {/* Primary CTA — 16-18px, primary brand colour */}
+            <button ref={primaryCTARef} onClick={handlePrimary}
+              style={{ flex: 1, padding: "14px 0", borderRadius: 10, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "filter 0.15s, transform 0.1s", outline: "none" }}
+              onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.92)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.filter = "none"; e.currentTarget.style.transform = "none"; }}
+              onFocus={e => e.currentTarget.style.boxShadow = "0 0 0 3px oklch(0.65 0.15 152)"}
+              onBlur={e => e.currentTarget.style.boxShadow = "none"}
+              aria-describedby={popupId}>
+              🛍️ Shop Now
+            </button>
+            {/* Secondary CTA — outline */}
+            <button onClick={handleSecondary}
+              style={{ padding: "14px 18px", borderRadius: 10, border: "2px solid var(--line)", background: "transparent", color: "var(--text)", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "border-color 0.15s", outline: "none", whiteSpace: "nowrap" }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = "var(--primary)"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = "var(--line)"}
+              onFocus={e => e.currentTarget.style.boxShadow = "0 0 0 3px oklch(0.65 0.15 152)"}
+              onBlur={e => e.currentTarget.style.boxShadow = "none"}>
+              View Store
+            </button>
+          </div>
+        </React.Fragment>
+      );
+
+      // ── Mobile: compact toast (bottom-anchored, auto-dismiss) ──
+      if (isMobile) {
+        return (
+          <div role="dialog" aria-modal="true" aria-labelledby={popupId}
+            style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 300, animation: "slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1)" }}>
+            <div ref={popupRef} style={{ background: "var(--surface)", borderRadius: 16, padding: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.08)", border: "1px solid var(--line)" }}>
+              {inner}
+              {/* Auto-dismiss progress bar */}
+              <div style={{ marginTop: 12, height: 3, background: "var(--line)", borderRadius: 999, overflow: "hidden" }}>
+                <div style={{ height: "100%", background: "var(--primary)", borderRadius: 999, animation: "shrink 6s linear forwards" }} />
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ── Desktop: expanded modal ──
+      return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 300, display: "grid", placeItems: "center", padding: 16 }}
+          onClick={e => { if (e.target === e.currentTarget) handleClose(); }}>
+          <div ref={popupRef} role="dialog" aria-modal="true" aria-labelledby={popupId}
+            style={{ background: "var(--surface)", borderRadius: 20, padding: 24, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.28)", border: "1px solid var(--line)", animation: "fadeScaleIn 0.2s ease" }}>
+            {inner}
+          </div>
+        </div>
+      );
+    }
+
+    // CSS keyframes for StorePopup animations (injected once)
+    (function injectPopupStyles() {
+      if (document.getElementById("store-popup-styles")) return;
+      const s = document.createElement("style");
+      s.id = "store-popup-styles";
+      s.textContent = `
+        @keyframes slideUp   { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+        @keyframes fadeScaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+        @keyframes shrink    { from { width: 100%; } to { width: 0%; } }
+      `;
+      document.head.appendChild(s);
+    })();
+
+    // ShopInfoCard — compact sidebar version (browse page)
+    function ShopInfoCard({ shop, onChangeShop }) {
+      const hue = typeof shop.tint === "number" ? shop.tint : 152;
+      return (
+        <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 16, position: "sticky", top: 100, zIndex: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 11, background: `linear-gradient(135deg, oklch(0.55 0.15 ${hue}), oklch(0.68 0.12 ${hue+20}))`, color: "#fff", display: "grid", placeItems: "center", flexShrink: 0 }}>
+              <IconC name="pin" size={22} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", margin: "0 0 2px" }}>{shop.name}</h4>
+              <div style={{ display: "flex", gap: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, background: "#d1fae5", color: "#065f46", padding: "2px 7px", borderRadius: 999 }}>● Open</span>
+                <span style={{ fontSize: 10, color: "var(--text-3)", padding: "2px 0" }}>
+                  {window.APP_CONFIG.deliveryEnabled ? "⚡ 25–40 min" : "🛒 30–45 min pickup"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 14, borderBottom: "1px solid var(--line)", fontSize: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
+              <span>Hours</span><span style={{ fontWeight: 600, color: "var(--text)" }}>{shop.hours}</span>
+            </div>
+            {window.APP_CONFIG.deliveryEnabled ? (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
+                  <span>Delivery</span><span style={{ fontWeight: 600, color: "var(--text)" }}>$3.99</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
+                  <span>Est. delivery</span><span style={{ fontWeight: 600, color: "var(--text)" }}>25–40 min</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
+                <span>Pickup time</span><span style={{ fontWeight: 600, color: "var(--text)" }}>30–45 min</span>
+              </div>
+            )}
+          </div>
+          <button onClick={onChangeShop} style={{ marginTop: 14, width: "100%", padding: "10px", borderRadius: 9, border: "1px solid var(--line)", background: "transparent", color: "var(--text)", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "border-color 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = "var(--primary)"}
+            onMouseLeave={e => e.currentTarget.style.borderColor = "var(--line)"}
+            onFocus={e => e.currentTarget.style.boxShadow = "0 0 0 3px oklch(0.65 0.15 152)"}
+            onBlur={e => e.currentTarget.style.boxShadow = "none"}>
+            Change Store
+          </button>
+        </div>
+      );
+    }
+
+    // SHOP SELECTOR MODAL COMPONENT
+    function ShopSelector({ isOpen, onClose, onSelectShop, currentShopId }) {
+      const [search, setSearch] = useState("");
+      const [sortBy, setSortBy] = useState("distance");
+
+      const filteredShops = search
+        ? G.SHOPS.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.city.toLowerCase().includes(search.toLowerCase()))
+        : G.SHOPS;
+
+      if (!isOpen) return null;
+
+      return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "16px" }}
+          onClick={onClose}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: 20, width: "100%", maxWidth: 600, maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "var(--shadow-lg)" }}>
+            <div style={{ padding: "20px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: "var(--text)", margin: 0 }}>Select a Store</h2>
+              <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 28, color: "var(--text-2)", cursor: "pointer", width: 40, height: 40, display: "grid", placeItems: "center" }}>×</button>
+            </div>
+            <div style={{ padding: "16px 20px", background: "var(--surface-2)", display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }}><IconC name="search" size={16} /></span>
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores..." style={{ width: "100%", padding: "10px 12px 10px 36px", borderRadius: 9, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 13, outline: "none", fontFamily: "var(--font-sans)" }} />
+              </div>
+              <div style={{ position: "relative" }}>
+                <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={{ padding: "10px 32px 10px 12px", borderRadius: 9, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 12, fontFamily: "var(--font-sans)", appearance: "none", cursor: "pointer", outline: "none" }}>
+                  <option value="distance">Nearest</option>
+                  <option value="name">Name (A-Z)</option>
+                </select>
+                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-3)" }}><IconC name="chevD" size={14} /></span>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px 0" }}>
+              {filteredShops.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-3)" }}>
+                  <IconC name="search" size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
+                  <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>No stores found</p>
+                </div>
+              ) : (
+                filteredShops.map(shop => (
+                  <button key={shop.id} onClick={() => { onSelectShop(shop.id); onClose(); }} style={{ width: "100%", padding: "14px 20px", border: "none", background: shop.id === currentShopId ? "var(--surface-2)" : "transparent", borderLeft: shop.id === currentShopId ? "4px solid var(--primary)" : "4px solid transparent", cursor: "pointer", textAlign: "left", transition: "all 0.2s var(--ease)", display: "flex", alignItems: "center", gap: 14 }} onMouseEnter={e => { if (shop.id !== currentShopId) e.currentTarget.style.background = "var(--surface-2)"; }} onMouseLeave={e => { if (shop.id !== currentShopId) e.currentTarget.style.background = "transparent"; }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 10, background: `oklch(0.6 0.13 ${shop.tint || '152'})`, color: "#fff", display: "grid", placeItems: "center", flexShrink: 0 }}><IconC name="pin" size={22} /></div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>{shop.name}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-2)", marginBottom: 4 }}>{shop.city} · Open {shop.hours}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-3)", display: "flex", gap: 8 }}><span>📍 2.5 miles</span><span>⏱️ 25 min</span></div>
+                    </div>
+                    {shop.id === currentShopId && (
+                      <div style={{ width: 24, height: 24, borderRadius: 999, background: "var(--primary)", color: "var(--primary-ink)", display: "grid", placeItems: "center", flexShrink: 0, fontWeight: 800, fontSize: 14 }}>✓</div>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // SHOP CARD COMPONENT
+    function ShopCard({ shop, onSelect }) {
+      const hue = typeof shop.tint === "number" ? shop.tint : 152;
+      return (
+        <div onClick={onSelect} style={{ borderRadius: 18, border: "1px solid var(--line)", background: "var(--surface)", cursor: "pointer", transition: "all 0.2s var(--ease)", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}
+          onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.12)"; e.currentTarget.style.transform = "translateY(-4px)"; }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.05)"; e.currentTarget.style.transform = "none"; }}>
+          {/* Coloured header strip */}
+          <div style={{ height: 80, background: `linear-gradient(135deg, oklch(0.55 0.13 ${hue}) 0%, oklch(0.65 0.1 ${hue + 20}) 100%)`, display: "flex", alignItems: "flex-end", padding: "0 20px 0", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", right: -16, top: -16, fontSize: "5rem", opacity: 0.18 }}>🏪</div>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: "#fff", display: "grid", placeItems: "center", transform: "translateY(26px)", boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+              <IconC name="pin" size={26} style={{ color: `oklch(0.45 0.15 ${hue})` }} />
+            </div>
+          </div>
+          <div style={{ padding: "32px 20px 20px", display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
+            <div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: "var(--text)", marginBottom: 3, letterSpacing: "-0.01em" }}>{shop.name}</div>
+              <div style={{ fontSize: 13, color: "var(--text-2)" }}>{shop.city}</div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#d1fae5", color: "#065f46", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                ● Open
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
+                🕐 {shop.hours || "9am–9pm"}
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
+                ⚡ Under 1hr
+              </span>
+            </div>
+            <button onClick={onSelect} style={{ marginTop: "auto", width: "100%", padding: "12px", borderRadius: 11, border: "none", background: `oklch(0.45 0.15 ${hue})`, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "all 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
+              onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+              Shop Now →
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // COLLECTION BANNER COMPONENT
+    function CollectionBanner({ icon, title, subtitle, accentColor, emoji }) {
+      return (
+        <div style={{ borderRadius: 18, background: `linear-gradient(135deg, oklch(0.38 0.14 ${accentColor}) 0%, oklch(0.52 0.12 ${accentColor + 15}) 100%)`, color: "#fff", cursor: "pointer", transition: "all 0.2s var(--ease)", display: "flex", flexDirection: "column", justifyContent: "space-between", minHeight: 180, position: "relative", overflow: "hidden", boxShadow: `0 4px 20px oklch(0.45 0.12 ${accentColor} / 0.3)` }}
+          onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-6px)"; e.currentTarget.style.boxShadow = `0 16px 40px oklch(0.45 0.12 ${accentColor} / 0.45)`; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = `0 4px 20px oklch(0.45 0.12 ${accentColor} / 0.3)`; }}>
+          {/* Big decorative emoji */}
+          <div style={{ position: "absolute", right: -10, top: -10, fontSize: "7rem", opacity: 0.22, userSelect: "none", lineHeight: 1 }}>{emoji || "🌿"}</div>
+          <div style={{ position: "relative", zIndex: 1, padding: 24 }}>
+            <div style={{ width: 46, height: 46, borderRadius: 12, background: "rgba(255,255,255,0.2)", backdropFilter: "blur(4px)", display: "grid", placeItems: "center", marginBottom: 14 }}>
+              <IconC name={icon} size={24} />
+            </div>
+            <h3 style={{ fontSize: 20, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.02em" }}>{title}</h3>
+            <p style={{ fontSize: 13, margin: 0, opacity: 0.88, lineHeight: 1.5 }}>{subtitle}</p>
+          </div>
+          <div style={{ position: "relative", zIndex: 1, padding: "0 24px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12, fontWeight: 800, background: "rgba(255,255,255,0.2)", padding: "6px 14px", borderRadius: 999, backdropFilter: "blur(4px)" }}>View Collection →</span>
+          </div>
+        </div>
+      );
+    }
+
+    // CUSTOMER HOMEPAGE COMPONENT
+    function CustomerHomepage({ onSelectShop }) {
+      const [search, setSearch] = useState("");
+      // Lazy init: if data already loaded before mount, start at 1 so first render shows data
+      const [dataVersion, setDataVersion] = useState(() => window.GOGO.SHOPS?.length > 0 ? 1 : 0);
+      useEffect(() => {
+        // If data arrived while component was mounting, catch it immediately
+        if (window.GOGO.SHOPS?.length > 0) setDataVersion(n => n > 0 ? n : 1);
+        const handler = () => setDataVersion(n => n + 1);
+        window.addEventListener("dataLoaded", handler);
+        return () => window.removeEventListener("dataLoaded", handler);
+      }, []);
+      const filteredShops = search
+        ? G.SHOPS.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.city.toLowerCase().includes(search.toLowerCase()))
+        : G.SHOPS;
+      const recommendedShops = G.SHOPS.slice(0, 4);
+
+      return (
+        <div style={{ padding: "0", background: "var(--bg)" }}>
+
+          {/* ══ HERO ══ */}
+          <div style={{ background: "linear-gradient(135deg, oklch(0.38 0.1 152) 0%, oklch(0.5 0.13 152) 60%, oklch(0.55 0.08 180) 100%)", color: "#fff", padding: "72px 20px 60px", minHeight: "55vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
+            {/* Decorative produce emojis */}
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", overflow: "hidden" }}>
+              {[["🥦","-10%","10%","7rem"],["🍅","78%","8%","5.5rem"],["🥕","88%","55%","4.5rem"],["🍋","5%","70%","4rem"],["🫐","55%","80%","3.5rem"],["🥑","35%","-5%","4rem"]].map(([e,l,t,fs]) => (
+                <span key={l} style={{ position:"absolute", left:l, top:t, fontSize:fs, opacity:0.18, userSelect:"none" }}>{e}</span>
+              ))}
+            </div>
+            <div style={{ maxWidth: 1400, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "center", position: "relative", zIndex: 1 }}>
+              <div>
+                {window.APP_CONFIG.deliveryEnabled ? (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 18, backdropFilter: "blur(4px)" }}>
+                    🚀 Same-day delivery available
+                  </div>
+                ) : (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 18, backdropFilter: "blur(4px)" }}>
+                    🛒 Easy pickup at your local store
+                  </div>
+                )}
+                <h1 style={{ fontSize: "clamp(32px, 6vw, 56px)", fontWeight: 900, margin: "0 0 16px", letterSpacing: "-0.03em", lineHeight: 1.1 }}>Fresh Groceries,<br/>Delivered Fast 🛒</h1>
+                <p style={{ fontSize: "clamp(14px, 2vw, 18px)", margin: "0 0 32px", opacity: 0.9, lineHeight: 1.7, maxWidth: 480 }}>Shop local stores. Get fresh produce, dairy, bakery & more at your door in under an hour.</p>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <button onClick={() => { const s = G.SHOPS[0]; if (s) onSelectShop(s.id); }} style={{ padding: "14px 28px", borderRadius: 12, border: "none", background: "#fff", color: "oklch(0.38 0.1 152)", fontWeight: 900, fontSize: 16, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 4px 20px rgba(0,0,0,0.2)", transition: "all 0.2s" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.25)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)"; }}>
+                    🛍️ Shop Now
+                  </button>
+                  <button style={{ padding: "14px 24px", borderRadius: 12, border: "2px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", backdropFilter: "blur(4px)" }}>Browse Stores</button>
+                </div>
+                <div style={{ display: "flex", gap: 24, marginTop: 28, flexWrap: "wrap" }}>
+                  {[["⭐","4.9 rating"],["🏪",`${G.SHOPS.length} stores`],["⚡","Under 1hr"]].map(([ic,lb]) => (
+                    <div key={lb} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, opacity: 0.9 }}>
+                      <span>{ic}</span><span style={{ fontWeight: 600 }}>{lb}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Right visual block */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, flexShrink: 0, width: 220 }} className="hideOnMobile">
+                {[["🥦","#d1fae5"],["🍅","#fee2e2"],["🧀","#fef3c7"],["🥖","#ffedd5"]].map(([e,bg]) => (
+                  <div key={e} style={{ height: 90, borderRadius: 16, background: bg, display: "grid", placeItems: "center", fontSize: "2.8rem", boxShadow: "0 4px 12px rgba(0,0,0,0.12)" }}>{e}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Featured Stores ── */}
+          <div style={{ padding: "48px 20px", maxWidth: 1400, margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: "oklch(0.94 0.06 152)", display: "grid", placeItems: "center" }}>
+                <IconC name="pin" size={22} style={{ color: "oklch(0.45 0.13 152)" }} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: 26, fontWeight: 900, margin: 0, color: "var(--text)", letterSpacing: "-0.02em" }}>{search ? "Search Results" : "Featured Stores"}</h2>
+                <p style={{ fontSize: 13, color: "var(--text-3)", margin: "2px 0 0" }}>{filteredShops.length} store{filteredShops.length !== 1 ? "s" : ""} available near you</p>
+              </div>
+            </div>
+            {filteredShops.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-3)", background: "var(--surface-2)", borderRadius: 16 }}>
+                <IconC name="search" size={40} style={{ opacity: 0.3, marginBottom: 16 }} />
+                <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>No stores found</p>
+                <p style={{ fontSize: 13, margin: "6px 0 0" }}>Try adjusting your search</p>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+                {filteredShops.map(shop => <ShopCard key={shop.id} shop={shop} onSelect={() => onSelectShop(shop.id)} />)}
+              </div>
+            )}
+          </div>
+
+          {/* ── Shop by Category ── */}
+          <div style={{ padding: "48px 20px", background: "oklch(0.97 0.02 152)" }}>
+            <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: "oklch(0.88 0.1 152)", display: "grid", placeItems: "center" }}>
+                  <IconC name="box" size={22} style={{ color: "oklch(0.4 0.15 152)" }} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: 26, fontWeight: 900, margin: 0, color: "var(--text)", letterSpacing: "-0.02em" }}>Shop by Category</h2>
+                  <p style={{ fontSize: 13, color: "var(--text-3)", margin: "2px 0 0" }}>Browse {G.CATEGORIES.length} departments</p>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 14 }}>
+                {G.CATEGORIES.map(c => (
+                  <div key={c.id} onClick={() => onSelectShop(G.SHOPS[0]?.id)} style={{ textAlign: "center", padding: "22px 14px 18px", borderRadius: 16, background: "var(--surface)", cursor: "pointer", transition: "all 0.2s var(--ease)", border: `2px solid hsl(${c.hue},40%,88%)`, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = `0 8px 24px hsl(${c.hue},40%,80%)`; e.currentTarget.style.borderColor = `hsl(${c.hue},55%,70%)`; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = `hsl(${c.hue},40%,88%)`; }}>
+                    <div style={{ width: 56, height: 56, borderRadius: 14, background: `hsl(${c.hue},55%,92%)`, display: "grid", placeItems: "center" }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 8, background: `hsl(${c.hue},60%,55%)` }} />
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text)", lineHeight: 1.3 }}>{c.name}</div>
+                    <div style={{ fontSize: 11, color: `hsl(${c.hue},50%,45%)`, fontWeight: 600 }}>{G.productsByCat(c.id).length} items</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── This Week's Highlights ── */}
+          <div style={{ padding: "48px 20px", maxWidth: 1400, margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: "oklch(0.94 0.08 65)", display: "grid", placeItems: "center" }}>
+                <IconC name="bell" size={22} style={{ color: "oklch(0.5 0.15 65)" }} />
+              </div>
+              <div>
+                <h2 style={{ fontSize: 26, fontWeight: 900, margin: 0, color: "var(--text)", letterSpacing: "-0.02em" }}>This Week's Highlights</h2>
+                <p style={{ fontSize: 13, color: "var(--text-3)", margin: "2px 0 0" }}>Curated picks just for you</p>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+              <CollectionBanner icon="spark" title="Weekly Deals" subtitle="Biggest savings of the week" accentColor={152} emoji="🏷️" />
+              <CollectionBanner icon="leaf" title="Organic & Natural" subtitle="Hand-picked, certified organic" accentColor={120} emoji="🥦" />
+              <CollectionBanner icon="truck" title="Express Delivery" subtitle="Order now, at your door in 45 min" accentColor={245} emoji="🚚" />
+              <CollectionBanner icon="plus" title="New Arrivals" subtitle="Fresh products added this week" accentColor={35} emoji="✨" />
+            </div>
+          </div>
+
+          <div style={{ padding: "40px 20px", background: "linear-gradient(135deg, oklch(0.6 0.12 245) 0%, oklch(0.55 0.1 245) 100%)", color: "#fff" }}>
+            <div style={{ maxWidth: 1400, margin: "0 auto", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+              <div>
+                <h3 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.01em" }}>New Customer? Save 20%</h3>
+                <p style={{ fontSize: 14, margin: 0, opacity: 0.9 }}>Use code WELCOME20 on your first order</p>
+              </div>
+              <BtnC style={{ background: "#fff", color: "oklch(0.6 0.12 245)" }}>Explore Stores</BtnC>
+            </div>
+          </div>
+
+          <div style={{ padding: "40px 20px", background: "var(--surface-2)" }}>
+            <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+              <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 32px", color: "var(--text)", textAlign: "center" }}>How It Works</h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 24 }}>
+                {[
+                  { icon: "pin", title: "Select Store", desc: "Choose your nearest GoGO Pantry" },
+                  { icon: "cart", title: "Browse & Shop", desc: "Add fresh items to your cart" },
+                  { icon: "truck", title: "Fast Delivery", desc: "Same-day delivery to your door" }
+                ].map((step, i) => (
+                  <div key={i} style={{ textAlign: "center", padding: 24, background: "var(--surface)", borderRadius: 14, border: "1px solid var(--line)" }}>
+                    <div style={{ width: 56, height: 56, borderRadius: 12, background: "var(--primary)", color: "var(--primary-ink)", display: "grid", placeItems: "center", margin: "0 auto 16px", fontSize: 24 }}><IconC name={step.icon} size={28} /></div>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: "0 0 6px" }}>{step.title}</h4>
+                    <p style={{ fontSize: 12, color: "var(--text-2)", margin: 0 }}>{step.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ padding: "32px 20px", maxWidth: 1400, margin: "0 auto", textAlign: "center" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 32, fontSize: 13, color: "var(--text-2)" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}><IconC name="checkCircle" size={20} />100% Fresh Guarantee</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}><IconC name="truck" size={20} />Same-Day Delivery</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}><IconC name="check" size={20} />Secure Checkout</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // MAIN APP
+    // CUSTOMER BROWSE COMPONENT
+    function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, onChangeShop }) {
+      const [cat, setCat] = useState("all");
+      const [sort, setSort] = useState("popularity");
+      const [search, setSearch] = useState("");
+      const [priceRange, setPriceRange] = useState([0, 100]);
+      const [showInStockOnly, setShowInStockOnly] = useState(false);
+      const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
+      const [showFiltersModal, setShowFiltersModal] = useState(false);
+      const [selectedProduct, setSelectedProduct] = useState(null);
+      const [dataVersion, setDataVersion] = useState(() => window.GOGO.PRODUCTS?.length > 0 ? 1 : 0);
+
+      // Re-render + bust memo cache when API data loads
+      useEffect(() => {
+        if (window.GOGO.PRODUCTS?.length > 0) setDataVersion(n => n > 0 ? n : 1);
+        const handler = () => setDataVersion(n => n + 1);
+        window.addEventListener("dataLoaded", handler);
+        return () => window.removeEventListener("dataLoaded", handler);
+      }, []);
+
+      const products = useMemo(() => {
+        let p = G.productsByCat(cat).map(x => ({ ...x, stock: G.shopStock(x.id, shopId) }));
+        if (search) p = p.filter(x => x.name.toLowerCase().includes(search.toLowerCase()));
+        if (showInStockOnly) p = p.filter(x => G.stockState(x.stock) !== "out");
+        p = p.filter(x => x.price >= priceRange[0] && x.price <= priceRange[1]);
+        if (sort === "price-low") p.sort((a, b) => a.price - b.price);
+        if (sort === "price-high") p.sort((a, b) => b.price - a.price);
+        if (sort === "name") p.sort((a, b) => a.name.localeCompare(b.name));
+        return p;
+      }, [cat, sort, search, shopId, priceRange, showInStockOnly, dataVersion]);
+
+      const currentCat = cat === "all"
+        ? { name: "All Products", hue: 152 }
+        : G.catOf(cat);
+      const currentShop = G.SHOPS.find(s => s.id === shopId);
+
+      const resetFilters = () => {
+        setPriceRange([0, 100]);
+        setShowInStockOnly(false);
+        setShowOnSaleOnly(false);
+        setSearch("");
+      };
+
+      return (
+        <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--bg)" }}>
+          {/* SEARCH BAR — scrolls away */}
+          <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", padding: "12px 16px" }}>
+            <div style={{ maxWidth: 1600, margin: "0 auto", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--surface-2)", borderRadius: 8, fontSize: 12, color: "var(--text-2)", fontWeight: 600 }}>
+                <IconC name="pin" size={16} />
+                <span>{currentShop?.name || "Select Store"}</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)" }}><IconC name="search" size={16} /></span>
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products…" style={{ width: "100%", padding: "8px 12px 8px 36px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 13, outline: "none", fontFamily: "var(--font-sans)", transition: "all 0.15s" }} />
+              </div>
+              <div style={{ position: "relative" }}>
+                <select value={sort} onChange={e => setSort(e.target.value)} style={{ padding: "8px 32px 8px 12px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 13, fontFamily: "var(--font-sans)", appearance: "none", cursor: "pointer", outline: "none" }}>
+                  <option value="popularity">Popular</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                  <option value="name">A–Z</option>
+                </select>
+                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-3)" }}><IconC name="chevD" size={14} /></span>
+              </div>
+              <button onClick={() => setShowFiltersModal(!showFiltersModal)} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text-2)", fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", gap: 6 }}>⚙️ Filter</button>
+            </div>
+          </div>
+          {/* CATEGORY TABS — sticky below the header */}
+          <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", position: "sticky", top: 64, zIndex: 30, display: "flex", gap: 8, overflowX: "auto", padding: "10px 16px", scrollBehavior: "smooth" }}>
+            <button onClick={() => { setCat("all"); setSearch(""); }} style={{ padding: "8px 14px", borderRadius: 999, border: "1px solid", borderColor: cat === "all" ? "transparent" : "var(--line)", background: cat === "all" ? "var(--primary)" : "transparent", color: cat === "all" ? "var(--primary-ink)" : "var(--text-2)", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "var(--font-sans)", transition: "all 0.15s" }}>
+              All
+            </button>
+            {G.CATEGORIES.map(c => {
+              const active = cat === c.id;
+              const bg = active ? `hsl(${c.hue}, 60%, 42%)` : "transparent";
+              const border = active ? "transparent" : "var(--line)";
+              const color = active ? "#fff" : "var(--text-2)";
+              return (
+                <button key={c.id} onClick={() => { setCat(c.id); setSearch(""); }} style={{ padding: "8px 14px", borderRadius: 999, border: "1px solid", borderColor: border, background: bg, color, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "var(--font-sans)", transition: "all 0.15s" }}>
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* CATEGORY HERO */}
+          <div style={{ background: `linear-gradient(135deg, oklch(0.6 0.08 ${currentCat.hue}) 0%, oklch(0.52 0.1 ${currentCat.hue}) 100%)`, color: "#fff", padding: "24px 16px 22px", textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.02em" }}>{currentCat.name}</p>
+          </div>
+
+          {/* MAIN CONTENT */}
+          <div style={{ flex: 1, display: "flex", gap: 20, padding: "20px 16px", maxWidth: 1600, margin: "0 auto", width: "100%" }}>
+            {/* SIDEBAR */}
+            <div className="sidebar-desktop" style={{ minWidth: 280 }}>
+              <FilterSidebar priceRange={priceRange} onPriceChange={setPriceRange} showInStockOnly={showInStockOnly} onStockToggle={setShowInStockOnly} showOnSaleOnly={showOnSaleOnly} onSaleToggle={setShowOnSaleOnly} resetFilters={resetFilters} />
+              {currentShop && (
+                <div style={{ marginTop: 20 }}>
+                  <ShopInfoCard shop={currentShop} onChangeShop={() => {}} />
+                </div>
+              )}
+            </div>
+
+            {/* PRODUCTS */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 13, color: "var(--text-2)", fontWeight: 600 }}>
+                  {products.length === G.productsByCat(cat).length
+                    ? <>{products.length} product{products.length !== 1 ? "s" : ""}</>
+                    : <><span style={{ color: "var(--text)", fontWeight: 800 }}>{products.length}</span> of {G.productsByCat(cat).length} products</>
+                  }
+                </span>
+                {products.length < G.productsByCat(cat).length && (
+                  <span style={{ fontSize: 11, color: "var(--primary)", fontWeight: 700, background: "oklch(0.96 0.04 152)", padding: "3px 10px", borderRadius: 999 }}>Filtered</span>
+                )}
+              </div>
+              {products.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-3)" }}>
+                  <IconC name="search" size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
+                  <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>No products found</p>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 14 }}>
+                  {products.map(p => {
+                    const inCart = cartItems[p.id] || 0;
+                    const stockState = G.stockState(p.stock);
+                    const disabled = stockState === "out";
+                    return (
+                      <ProductCardEnhanced key={p.id} product={p} inCart={inCart} disabled={disabled} stockState={stockState} onAdd={() => onAddToCart(p.id)} onAddQty={() => onAddToCart(p.id)} onRemoveQty={() => onUpdateCart && onUpdateCart(p.id, Math.max(0, inCart - 1))} onClick={() => setSelectedProduct(p)} />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* MOBILE FILTER MODAL */}
+          {/* PRODUCT DETAIL MODAL */}
+          {selectedProduct && (
+            <ProductDetailModal
+              product={selectedProduct}
+              inCart={cartItems[selectedProduct.id] || 0}
+              onClose={() => setSelectedProduct(null)}
+              onAdd={() => onAddToCart(selectedProduct.id)}
+              onUpdateCart={onUpdateCart}
+            />
+          )}
+
+          {showFiltersModal && (
+            <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, top: 0, background: "rgba(0,0,0,0.4)", zIndex: 40, display: "flex", alignItems: "flex-end" }} className="mobile-filter-modal" onClick={() => setShowFiltersModal(false)}>
+              <div onClick={e => e.stopPropagation()} style={{ width: "100%", background: "var(--surface)", borderRadius: "16px 16px 0 0", padding: "20px 16px", maxHeight: "80vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 18, fontWeight: 800, color: "var(--text)", margin: 0 }}>Filters</h3>
+                  <button onClick={() => setShowFiltersModal(false)} style={{ background: "none", border: "none", fontSize: 24, color: "var(--text-2)", cursor: "pointer" }}>×</button>
+                </div>
+                <FilterSidebar priceRange={priceRange} onPriceChange={setPriceRange} showInStockOnly={showInStockOnly} onStockToggle={setShowInStockOnly} showOnSaleOnly={showOnSaleOnly} onSaleToggle={setShowOnSaleOnly} resetFilters={resetFilters} />
+                <BtnC full onClick={() => setShowFiltersModal(false)} style={{ marginTop: "auto" }}>Apply Filters</BtnC>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // CUSTOMER CART COMPONENT
+    function CustomerCart({ shopId, cartItems, onUpdateCart, onCheckout, onContinueShopping }) {
+      const cartProducts = useMemo(() => {
+        return Object.entries(cartItems).filter(([, qty]) => qty > 0).map(([id, qty]) => {
+          const p = G.PRODUCTS.find(x => String(x.id) === String(id));
+          if (!p) return null;
+          return { ...p, qty, stock: G.shopStock(p.id, shopId), subtotal: (parseFloat(p.price) || 0) * qty };
+        }).filter(Boolean);
+      }, [cartItems, shopId]);
+
+      const subtotal = cartProducts.reduce((s, p) => s + p.subtotal, 0);
+      const deliveryFee = subtotal > 0 ? 3.99 : 0;
+      const tax = subtotal * 0.08;
+      const total = subtotal + deliveryFee + tax;
+      const isEmpty = cartProducts.length === 0;
+
+      return (
+        <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--bg)" }}>
+          <ProgressIndicator currentStep={0} />
+          <div style={{ padding: "20px 16px", maxWidth: 900, margin: "0 auto", width: "100%", flex: 1 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 20px", color: "var(--text)" }}>Your cart</h1>
+            {isEmpty ? (
+              <div style={{ textAlign: "center", padding: "80px 20px", color: "var(--text-3)" }}>
+                <IconC name="cart" size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
+                <p style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>Your cart is empty</p>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24 }}>
+                {/* ITEMS */}
+                <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 0, overflow: "hidden" }}>
+                  <div style={{ padding: 16, borderBottom: "1px solid var(--line)", fontSize: 15, fontWeight: 700, color: "var(--text)" }}>
+                    {cartProducts.length} item{cartProducts.length !== 1 ? 's' : ''}
+                  </div>
+                  <div>
+                    {cartProducts.map((p, i) => (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderTop: i ? "1px solid var(--line)" : "none" }}>
+                        <div style={{ width: 70, height: 70, borderRadius: 11, background: `oklch(0.92 0.07 ${G.catOf(p.cat).hue})`, display: "grid", placeItems: "center", flexShrink: 0, fontSize: "1.8rem" }}>🛒</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text)", marginBottom: 2 }}>{p.name}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-2)" }}>{p.unit} · ${p.price.toFixed(2)}</div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <button onClick={() => onUpdateCart(p.id, Math.max(0, p.qty - 1))} style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid var(--line)", background: "transparent", color: "var(--text-2)", cursor: "pointer", fontFamily: "var(--font-sans)" }}>−</button>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", minWidth: 24, textAlign: "center" }}>{p.qty}</span>
+                          <button onClick={() => onUpdateCart(p.id, p.qty + 1)} style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid var(--line)", background: "transparent", color: "var(--text-2)", cursor: "pointer", fontFamily: "var(--font-sans)" }}>+</button>
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", minWidth: 60, textAlign: "right" }}>${p.subtotal.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SUMMARY */}
+                <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 20, height: "fit-content", position: "sticky", top: 80 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "var(--text)" }}>Order summary</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13, marginBottom: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
+                      <span>Subtotal</span>
+                      <span>${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
+                      <span>Delivery</span>
+                      <span>${deliveryFee.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
+                      <span>Tax</span>
+                      <span>${tax.toFixed(2)}</span>
+                    </div>
+                  </div>
+                  <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14, marginBottom: 18, display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ fontWeight: 700, color: "var(--text)" }}>Total</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>${total.toFixed(2)}</span>
+                  </div>
+                  <BtnC full onClick={onCheckout} style={{ marginBottom: 10 }}>Proceed to checkout</BtnC>
+                  <BtnC full variant="ghost" onClick={onContinueShopping}>Continue shopping</BtnC>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // CUSTOMER CHECKOUT COMPONENT
+    function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
+      const [step, setStep] = useState(1);
+      const [deliveryType, setDeliveryType] = useState("delivery");
+      const [slot, setSlot] = useState(null);
+      const [email, setEmail] = useState("maya@example.com");
+      const [name, setName] = useState("Maya Thompson");
+      const [address, setAddress] = useState("21st & Valencia St");
+      const [processing, setProcessing] = useState(false);
+
+      const cartProducts = Object.entries(cartItems).filter(([, qty]) => qty > 0).map(([id, qty]) => {
+        const p = G.PRODUCTS.find(x => String(x.id) === String(id));
+        if (!p) return null;
+        return { ...p, qty };
+      }).filter(Boolean);
+
+      const subtotal = cartProducts.reduce((s, p) => s + (parseFloat(p.price) || 0) * p.qty, 0);
+      const deliveryFee = deliveryType === "pickup" ? 0 : 3.99;
+      const tax = subtotal * 0.08;
+      const total = subtotal + deliveryFee + tax;
+
+      const slots = useMemo(() => {
+        const arr = [];
+        const now = new Date();
+        for (let day = 0; day < 7; day++) {
+          const d = new Date(now.getTime() + day * 24 * 60 * 60 * 1000);
+          const dStr = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+          for (const time of ["9am–11am", "11am–1pm", "1pm–3pm", "3pm–5pm", "5pm–7pm"]) {
+            arr.push({ id: `${day}-${time}`, display: `${dStr} · ${time}`, day, time });
+          }
+        }
+        return arr;
+      }, []);
+
+      const handleConfirm = () => {
+        if (step === 1 && !deliveryType) return;
+        if (step === 2 && !slot) return;
+        if (step === 3) {
+          setProcessing(true);
+          setTimeout(() => {
+            onConfirm({ deliveryType, slot, email, name, address, total });
+          }, 800);
+          return;
+        }
+        setStep(step + 1);
+      };
+
+      return (
+        <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--bg)" }}>
+          <ProgressIndicator currentStep={1} />
+          <div style={{ padding: "20px 16px", maxWidth: 900, margin: "0 auto", width: "100%", flex: 1 }}>
+            {/* PROGRESS */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 32 }}>
+              {[1, 2, 3].map(s => (
+                <div key={s} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 999, display: "grid", placeItems: "center", fontWeight: 700, background: s <= step ? "var(--primary)" : "var(--surface-2)", color: s <= step ? "var(--primary-ink)" : "var(--text-3)" }}>
+                    {s < step ? <IconC name="check" size={20} /> : s}
+                  </div>
+                  {s < 3 && <div style={{ flex: 1, height: 2, background: s < step ? "var(--primary)" : "var(--surface-2)" }} />}
+                </div>
+              ))}
+            </div>
+
+            {/* STEP 1 */}
+            {step === 1 && (
+              <div style={{ maxWidth: 600 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 20px", color: "var(--text)" }}>How would you like to receive your order?</h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {[["delivery", "🚚 Delivery", "Delivered to your door within 2 hours"], ["pickup", "🏪 In-store pickup", "Pick up at " + G.SHOPS.find(s => s.id === shopId)?.name]].map(([id, label, desc]) => (
+                    <button key={id} onClick={() => setDeliveryType(id)} style={{ textAlign: "left", padding: 20, borderRadius: 14, border: "2px solid", borderColor: deliveryType === id ? "var(--primary)" : "var(--line)", background: deliveryType === id ? "color-mix(in oklch, var(--primary) 10%, transparent)" : "transparent", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: 999, border: "2px solid", borderColor: deliveryType === id ? "var(--primary)" : "var(--line-strong)", background: deliveryType === id ? "var(--primary)" : "transparent" }} />
+                        <div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{label}</div>
+                          <div style={{ fontSize: 13, color: "var(--text-2)", marginTop: 2 }}>{desc}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2 */}
+            {step === 2 && (
+              <div style={{ maxWidth: 700 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 20px", color: "var(--text)" }}>Choose your {deliveryType} time</h2>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10 }}>
+                  {slots.map(s => (
+                    <button key={s.id} onClick={() => setSlot(s.id)} style={{ padding: 14, borderRadius: 11, border: "2px solid", borderColor: slot === s.id ? "var(--primary)" : "var(--line)", background: slot === s.id ? "color-mix(in oklch, var(--primary) 10%, transparent)" : "transparent", cursor: "pointer", textAlign: "center", fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                      {s.display}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 3 */}
+            {step === 3 && (
+              <div style={{ maxWidth: 600 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 24px", color: "var(--text)" }}>Review your order</h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: 18, marginBottom: 28 }}>
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 18 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>Delivery details</div>
+                    <div style={{ display: "flex", gap: 12, fontSize: 13, color: "var(--text-2)" }}>
+                      <IconC name={deliveryType === "delivery" ? "truck" : "store"} size={18} style={{ color: "var(--primary)", marginTop: 1 }} />
+                      <div>
+                        <div style={{ fontWeight: 600, color: "var(--text)", marginBottom: 2 }}>{deliveryType === "delivery" ? "Delivery" : "Pickup"} · {slots.find(s => s.id === slot)?.display || "Select time"}</div>
+                        {deliveryType === "delivery" && <div>{address}</div>}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 18 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 12 }}>{cartProducts.length} items</div>
+                    {cartProducts.map(p => (
+                      <div key={p.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--text-2)", marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid var(--line-strong)" }}>
+                        <span>{p.name} × {p.qty}</span>
+                        <span>${(p.price * p.qty).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 18 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 10 }}>
+                      <span style={{ color: "var(--text-2)" }}>Subtotal</span>
+                      <span style={{ color: "var(--text)" }}>${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 10 }}>
+                      <span style={{ color: "var(--text-2)" }}>{deliveryType === "delivery" ? "Delivery fee" : "Pickup"}</span>
+                      <span style={{ color: "var(--text)" }}>${deliveryFee.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, paddingBottom: 10, borderBottom: "1px solid var(--line-strong)" }}>
+                      <span style={{ color: "var(--text-2)" }}>Tax</span>
+                      <span style={{ color: "var(--text)" }}>${tax.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 800, marginTop: 10 }}>
+                      <span>Total</span>
+                      <span style={{ color: "var(--primary)" }}>${total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <BtnC variant="ghost" full onClick={onBack}>Cancel</BtnC>
+                  <BtnC full onClick={handleConfirm} style={{ opacity: processing ? 0.7 : 1 }}>
+                    {processing ? "Processing…" : "Place order"}
+                  </BtnC>
+                </div>
+              </div>
+            )}
+
+            {/* FOOTER NAV */}
+            {step > 1 && step !== 3 && (
+              <div style={{ display: "flex", gap: 12, marginTop: 32 }}>
+                <BtnC variant="ghost" full onClick={() => setStep(step - 1)}>Back</BtnC>
+                <BtnC full onClick={handleConfirm} style={{ opacity: (step === 1 && !deliveryType) || (step === 2 && !slot) ? 0.5 : 1, pointerEvents: (step === 1 && !deliveryType) || (step === 2 && !slot) ? "none" : "auto" }}>
+                  {step === 2 ? "Review order" : "Next"}
+                </BtnC>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // CUSTOMER CONFIRMATION COMPONENT
+    function CustomerConfirmation({ orderData, onNewOrder }) {
+      const [order] = useState(() => ({
+        id: "GG-" + Math.random().toString().slice(2, 6).padStart(4, "0"),
+        timestamp: new Date(),
+        ...orderData,
+        items: 8,
+      }));
+
+      const [timeline, setTimeline] = useState([
+        { id: "confirmed", label: "Order confirmed", time: "Just now", done: true },
+        { id: "picking", label: "Starting to pick items", time: "2 min", done: false },
+        { id: "quality", label: "Quality check", time: "8 min", done: false },
+        { id: "ready", label: "Ready for pickup / dispatch", time: "12 min", done: false },
+      ]);
+
+      useEffect(() => {
+        const intervals = [
+          setTimeout(() => setTimeline(t => t.map(x => x.id === "picking" ? { ...x, done: true } : x)), 3000),
+          setTimeout(() => setTimeline(t => t.map(x => x.id === "quality" ? { ...x, done: true } : x)), 8000),
+          setTimeout(() => setTimeline(t => t.map(x => x.id === "ready" ? { ...x, done: true } : x)), 14000),
+        ];
+        return () => intervals.forEach(clearTimeout);
+      }, []);
+
+      const slotDisplay = order.slot || "9am–11am";
+
+      return (
+        <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--bg)" }}>
+          <ProgressIndicator currentStep={2} />
+          <div style={{ padding: "20px 16px", maxWidth: 800, margin: "0 auto", flex: 1, display: "flex", flexDirection: "column", width: "100%" }}>
+            {/* SUCCESS */}
+            <div style={{ textAlign: "center", marginBottom: 32 }}>
+              <div style={{ width: 80, height: 80, borderRadius: 999, background: "var(--green-100)", color: "var(--green-700)", display: "grid", placeItems: "center", margin: "0 auto 18px" }}>
+                <IconC name="checkCircle" size={44} stroke={2} />
+              </div>
+              <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", color: "var(--text)" }}>Order confirmed!</h1>
+              <p style={{ fontSize: 15, color: "var(--text-2)", margin: 0 }}>Thank you. Here's what happens next.</p>
+            </div>
+
+            {/* ORDER SUMMARY */}
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid var(--line)" }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 4 }}>Order number</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{order.id}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 4 }}>Total</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>${order.total.toFixed(2)}</div>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 4 }}>Delivery method</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <IconC name={order.deliveryType === "delivery" ? "truck" : "store"} size={18} style={{ color: "var(--primary)" }} />
+                    {order.deliveryType === "delivery" ? "Delivery" : "In-store pickup"}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 4 }}>Time slot</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <IconC name="clock" size={18} style={{ color: "var(--primary)" }} />
+                    {slotDisplay}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TIMELINE */}
+            <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, padding: 24, marginBottom: 24 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 20px", color: "var(--text)" }}>Order status</h2>
+              <div style={{ position: "relative", paddingLeft: 32 }}>
+                {timeline.map((step, i) => (
+                  <div key={step.id} style={{ marginBottom: i < timeline.length - 1 ? 20 : 0, opacity: step.done ? 1 : 0.6 }}>
+                    <div style={{ position: "absolute", left: 0, top: 6, width: 24, height: 24, borderRadius: 999, background: step.done ? "var(--primary)" : "var(--surface-2)", border: step.done ? "2px solid var(--primary)" : "2px solid var(--line-strong)", display: "grid", placeItems: "center", color: "var(--primary-ink)", fontWeight: 700, fontSize: 12 }}>
+                      {step.done && <IconC name="check" size={13} stroke={3} />}
+                    </div>
+                    {i < timeline.length - 1 && (
+                      <div style={{ position: "absolute", left: 11, top: 24, width: 2, height: 20, background: step.done ? "var(--primary)" : "var(--line-strong)" }} />
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)", marginBottom: 2 }}>{step.label}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-2)" }}>{step.time}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div style={{ display: "flex", gap: 12, marginTop: "auto" }}>
+              <BtnC variant="ghost" full>Track order</BtnC>
+              <BtnC full icon="home" onClick={onNewOrder}>Back to shopping</BtnC>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // CUSTOMER SHELL - Main app layout wrapper
+    function CustomerShell({ page, setPage, cartCount, user, onLogout, onNavigate, shopId, onSelectShop }) {
+      const [userMenuOpen, setUserMenuOpen] = useState(false);
+      const [shopSelectorOpen, setShopSelectorOpen] = useState(false);
+      const [storePopupShop, setStorePopupShop] = useState(null);
+      const currentShopName = shopId ? (G.SHOPS.find(s => s.id === shopId)?.name || shopId) : null;
+
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
+          {/* Top bar */}
+          <header style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 40, boxShadow: "0 1px 3px oklch(0 0 0 / 0.05)" }}>
+            <LogoCustomer size={26} onClick={() => setPage("home")} />
+            <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                onClick={() => setShopSelectorOpen(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--line)",
+                  background: "var(--surface-2)",
+                  color: "var(--text-2)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-sans)",
+                  transition: "all 0.15s"
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = "var(--primary)";
+                  e.currentTarget.style.color = "var(--primary-ink)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "var(--surface-2)";
+                  e.currentTarget.style.color = "var(--text-2)";
+                }}
+                className="hideOnMobile"
+                id="shopName"
+              >
+                <IconC name="pin" size={16} />
+                <span>{currentShopName || "Select Store"}</span>
+              </button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button style={{ width: 40, height: 40, borderRadius: 10, border: "none", background: "transparent", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center", transition: "all .15s" }}><IconC name="search" size={20} /></button>
+              <button style={{ width: 40, height: 40, borderRadius: 10, border: "none", background: "transparent", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center", transition: "all .15s" }}><IconC name="heart" size={20} /></button>
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  style={{ width: 40, height: 40, borderRadius: 10, border: "none", background: "transparent", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center", transition: "all .15s" }}
+                  title={user?.email}
+                >
+                  <IconC name="user" size={20} />
+                </button>
+                {userMenuOpen && (
+                  <div style={{
+                    position: "absolute",
+                    top: "calc(100% + 8px)",
+                    right: 0,
+                    background: "var(--surface)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 12,
+                    boxShadow: "var(--shadow-lg)",
+                    zIndex: 50,
+                    minWidth: 200,
+                    animation: "gg-scale-in .14s var(--ease)"
+                  }}>
+                    <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--line)" }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{user?.name || "Account"}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>{user?.email}</div>
+                    </div>
+                    <button style={{
+                      width: "100%",
+                      padding: "10px 16px",
+                      background: "transparent",
+                      border: "none",
+                      textAlign: "left",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "var(--text-2)",
+                      cursor: "pointer",
+                      fontFamily: "var(--font-sans)"
+                    }}>
+                      My orders
+                    </button>
+                    <button style={{
+                      width: "100%",
+                      padding: "10px 16px",
+                      background: "transparent",
+                      border: "none",
+                      textAlign: "left",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "var(--text-2)",
+                      cursor: "pointer",
+                      fontFamily: "var(--font-sans)"
+                    }}>
+                      Account settings
+                    </button>
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        onLogout();
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "10px 16px",
+                        background: "transparent",
+                        border: "none",
+                        textAlign: "left",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: "var(--red-500)",
+                        cursor: "pointer",
+                        fontFamily: "var(--font-sans)",
+                        borderTop: "1px solid var(--line)"
+                      }}
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setPage("cart")} style={{ position: "relative", width: 40, height: 40, borderRadius: 10, border: "none", background: "transparent", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center", transition: "all .15s" }}>
+                <IconC name="cart" size={20} />
+                {cartCount > 0 && <span style={{ position: "absolute", top: -6, right: -4, background: "var(--primary)", color: "var(--primary-ink)", fontSize: 10, fontWeight: 800, width: 18, height: 18, borderRadius: 999, display: "grid", placeItems: "center" }}>{cartCount}</span>}
+              </button>
+            </div>
+          </header>
+
+          {/* Main content */}
+          <main style={{ flex: 1, minWidth: 0 }}>{onNavigate}</main>
+
+          {/* Footer */}
+          <footer style={{ background: "oklch(0.18 0.02 152)", color: "#fff", marginTop: "auto" }}>
+            {/* Newsletter */}
+            <div style={{ borderBottom: "1px solid rgba(255,255,255,0.1)", padding: "40px 20px" }}>
+              <div style={{ maxWidth: 1400, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr auto", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
+                <div>
+                  <h3 style={{ fontSize: 22, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.01em" }}>🌿 Stay Fresh</h3>
+                  <p style={{ fontSize: 14, margin: 0, opacity: 0.7 }}>Get weekly deals and new arrivals straight to your inbox.</p>
+                </div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <input type="email" placeholder="your@email.com" style={{ padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.08)", color: "#fff", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", minWidth: 220 }} />
+                  <button style={{ padding: "11px 22px", borderRadius: 10, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)", whiteSpace: "nowrap" }}>Subscribe</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Links + Social */}
+            <div style={{ padding: "32px 20px", maxWidth: 1400, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 32 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--primary)", display: "grid", placeItems: "center" }}><IconC name="leaf" size={18} /></div>
+                  <span style={{ fontSize: 16, fontWeight: 900, letterSpacing: "-0.01em" }}>GoGO<span style={{ color: "var(--primary)" }}>Pantry</span></span>
+                </div>
+                <p style={{ fontSize: 13, opacity: 0.6, lineHeight: 1.6, margin: 0 }}>Fresh groceries, delivered fast. Supporting local stores every day.</p>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.5, marginBottom: 14 }}>Company</div>
+                {["About Us","Careers","Press","Blog"].map(l => <div key={l} style={{ fontSize: 13, opacity: 0.7, marginBottom: 8, cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.7"}>{l}</div>)}
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.5, marginBottom: 14 }}>Support</div>
+                {["Help Center","Track Order","Returns","Contact Us"].map(l => <div key={l} style={{ fontSize: 13, opacity: 0.7, marginBottom: 8, cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.opacity="1"} onMouseLeave={e => e.currentTarget.style.opacity="0.7"}>{l}</div>)}
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.5, marginBottom: 14 }}>Follow Us</div>
+                <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                  {[["📘","Facebook"],["📸","Instagram"],["🐦","Twitter"],["▶️","YouTube"]].map(([ic,lb]) => (
+                    <button key={lb} title={lb} style={{ width: 38, height: 38, borderRadius: 10, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.07)", cursor: "pointer", fontSize: "1.1rem", display: "grid", placeItems: "center", transition: "all 0.15s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.18)"; e.currentTarget.style.transform="translateY(-2px)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.07)"; e.currentTarget.style.transform="none"; }}
+                    >{ic}</button>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, opacity: 0.5 }}>App coming soon 📱</div>
+              </div>
+            </div>
+
+            {/* Bottom bar */}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", padding: "16px 20px" }}>
+              <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, fontSize: 12, opacity: 0.5 }}>
+                <span>© 2026 GoGO Pantry. All rights reserved.</span>
+                <div style={{ display: "flex", gap: 20 }}>
+                  {["Privacy Policy","Terms of Service","Cookie Settings"].map(l => <span key={l} style={{ cursor: "pointer" }}>{l}</span>)}
+                </div>
+              </div>
+            </div>
+          </footer>
+
+          {/* Shop Selector list */}
+          <ShopSelector
+            isOpen={shopSelectorOpen && !storePopupShop}
+            onClose={() => setShopSelectorOpen(false)}
+            onSelectShop={(id) => { const s = G.SHOPS.find(x => x.id === id); setStorePopupShop(s || null); setShopSelectorOpen(false); }}
+            currentShopId={shopId}
+          />
+
+          {/* StorePopup — compact toast (mobile) / modal (desktop) */}
+          <StorePopup
+            shop={storePopupShop}
+            isOpen={!!storePopupShop}
+            onClose={() => setStorePopupShop(null)}
+            onSelectShop={(id) => { onSelectShop(id); setStorePopupShop(null); }}
+          />
+        </div>
+      );
+    }
+
+    // ---- URL helpers ----
+    function pageToPath(page, shopId) {
+      if (page === "browse" && shopId) return `/shop/${shopId}`;
+      if (page === "cart")         return "/cart";
+      if (page === "checkout")     return "/checkout";
+      if (page === "confirmation") return "/confirmation";
+      return "/";
+    }
+
+    function pathToState(pathname) {
+      if (pathname.startsWith("/shop/")) return { page: "browse", shopId: pathname.slice(6) };
+      if (pathname === "/cart")         return { page: "cart",         shopId: null };
+      if (pathname === "/checkout")     return { page: "checkout",     shopId: null };
+      if (pathname === "/confirmation") return { page: "confirmation", shopId: null };
+      return { page: "home", shopId: null };
+    }
+
+    function CustomerApp() {
+      const [user, setUser] = useState(() => {
+        const stored = localStorage.getItem("customerAuth");
+        return stored ? JSON.parse(stored) : null;
+      });
+      const [authPage, setAuthPage] = useState("login");
+
+      // Initialise from current URL
+      const initState = pathToState(window.location.pathname);
+      const [page, setPageState] = useState(initState.page);
+      const [shopId, setShopId] = useState(initState.shopId);
+      const [cartItems, setCartItems] = useState({});
+      const [orderData, setOrderData] = useState(null);
+
+      // navigate() updates both React state and the browser URL
+      const navigate = (newPage, newShopId) => {
+        const sid = newShopId !== undefined ? newShopId : shopId;
+        const path = pageToPath(newPage, sid);
+        window.history.pushState({ page: newPage, shopId: sid }, "", path);
+        setPageState(newPage);
+        if (newShopId !== undefined) setShopId(newShopId);
+      };
+
+      // Handle browser back / forward buttons
+      useEffect(() => {
+        const onPop = (e) => {
+          const s = e.state || pathToState(window.location.pathname);
+          setPageState(s.page || "home");
+          if (s.shopId !== undefined) setShopId(s.shopId);
+        };
+        window.addEventListener("popstate", onPop);
+        // Push initial state so first back-press goes to "/" not out of app
+        window.history.replaceState(
+          { page: initState.page, shopId: initState.shopId },
+          "",
+          window.location.pathname
+        );
+        return () => window.removeEventListener("popstate", onPop);
+      }, []);
+
+      const handleSelectShop = (id) => {
+        setShopId(id);
+        navigate("browse", id);
+      };
+
+
+      const handleAddToCart = (id) => {
+        setCartItems(c => ({ ...c, [id]: (c[id] || 0) + 1 }));
+      };
+
+      const handleUpdateCart = (id, qty) => {
+        setCartItems(c => {
+          if (qty <= 0) { const n = { ...c }; delete n[id]; return n; }
+          return { ...c, [id]: qty };
+        });
+      };
+
+      const handleCheckout = () => navigate("checkout");
+
+      const handleConfirm = (data) => {
+        setOrderData(data);
+        setCartItems({});
+        navigate("confirmation");
+      };
+
+      const handleNewOrder = () => {
+        setShopId(null);
+        navigate("home", null);
+      };
+
+      const handleContinueShopping = () => navigate("browse");
+
+      const handleLoginSuccess = (userData) => setUser(userData);
+      const handleSignupSuccess = (userData) => setUser(userData);
+      const handleLogout = () => {
+        localStorage.removeItem("customerAuth");
+        setUser(null);
+        setShopId(null);
+        navigate("home", null);
+      };
+
+      // setPage shim so Shell can still call setPage("cart") etc.
+      const setPage = (p) => navigate(p);
+
+      if (!user) {
+        if (authPage === "login") {
+          return <CustomerLogin onLoginSuccess={handleLoginSuccess} onSignupClick={() => setAuthPage("signup")} onForgotClick={() => setAuthPage("forgot")} />;
+        } else if (authPage === "signup") {
+          return <CustomerSignup onSignupSuccess={handleSignupSuccess} onLoginClick={() => setAuthPage("login")} />;
+        } else if (authPage === "forgot") {
+          return <ForgotPassword onBack={() => setAuthPage("login")} />;
+        }
+      }
+
+      const cartCount = Object.values(cartItems).reduce((s, q) => s + q, 0);
+
+      const screens = {
+        home: <CustomerHomepage onSelectShop={handleSelectShop} />,
+        browse: shopId && <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={handleSelectShop} />,
+        cart: <CustomerCart shopId={shopId} cartItems={cartItems} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} onContinueShopping={handleContinueShopping} />,
+        checkout: <CustomerCheckout shopId={shopId} cartItems={cartItems} onConfirm={handleConfirm} onBack={() => setPage("cart")} />,
+        confirmation: orderData && <CustomerConfirmation orderData={orderData} onNewOrder={handleNewOrder} />,
+      };
+
+      return (
+        <CustomerShell
+          page={page}
+          setPage={setPage}
+          cartCount={cartCount}
+          user={user}
+          onLogout={handleLogout}
+          onNavigate={screens[page]}
+          shopId={shopId}
+          onSelectShop={handleSelectShop}
+        />
+      );
+    }
+
+    try {
+      console.log("🎯 Creating React root...");
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      console.log("🎯 Rendering CustomerApp...");
+      root.render(<CustomerApp />);
+      console.log("✅ App rendered successfully!");
+    } catch (error) {
+      console.error("❌ ERROR:", error);
+      console.error("Stack:", error.stack);
+      document.getElementById("root").innerHTML = `<div style="padding:20px; color:red; font-family:monospace;"><h2>Error loading app:</h2><pre>${error.message}\n\n${error.stack}</pre></div>`;
+    }
+  </script>
+</body>
+</html>

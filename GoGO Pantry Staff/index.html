@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoGO Pantry — Staff Management</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html {
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+      --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px oklch(0 0 0 / 0.07);
+      --shadow-lg: 0 10px 24px oklch(0 0 0 / 0.12);
+      --bg: oklch(0.98 0 0);
+      --surface: oklch(1 0 0);
+      --surface-2: oklch(0.96 0.001 215);
+      --line: oklch(0.88 0.003 215);
+      --text: oklch(0.2 0.004 215);
+      --text-2: oklch(0.5 0.005 215);
+      --text-3: oklch(0.65 0.004 215);
+      --primary: oklch(0.55 0.17 152);
+      --primary-ink: oklch(1 0 0);
+      --green-100: oklch(0.97 0.04 152);
+      --green-300: oklch(0.9 0.08 152);
+      --green-500: oklch(0.68 0.13 152);
+      --green-600: oklch(0.55 0.17 152);
+      --green-700: oklch(0.42 0.14 152);
+      --red-100: oklch(0.97 0.04 25);
+      --red-300: oklch(0.9 0.08 25);
+      --red-500: oklch(0.65 0.15 25);
+      --red-700: oklch(0.42 0.14 25);
+      --amber-100: oklch(0.98 0.03 78);
+      --amber-500: oklch(0.75 0.13 78);
+      --amber-600: oklch(0.65 0.15 78);
+      --blue-100: oklch(0.97 0.04 245);
+      --blue-500: oklch(0.6 0.15 245);
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    #root {
+      width: 100%;
+      height: 100%;
+      display: flex;
+    }
+  </style>
+  <link rel="stylesheet" href="./staff/staff-styles.css">
+</head>
+<body>
+  <div id="root"></div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    console.log("🚀 Staff App starting...");
+    const { useState, useEffect, useMemo } = React;
+    console.log("✅ React hooks loaded");
+
+    // API BASE URL
+    const API_BASE = "http://localhost:3000/api";
+
+    // Initialize global state with mock data for staff operations
+    window.G = {
+      api: API_BASE,
+      SHOPS: [
+        { id: "msn", name: "Main Store North", code: "MSN", tint: 152, location: "123 Main St", hours: "6am - 11pm", distance: 0 },
+        { id: "dst", name: "Downtown Store", code: "DST", tint: 245, location: "456 Oak Ave", hours: "7am - 10pm", distance: 2.1 },
+        { id: "wst", name: "West Side Shop", code: "WST", tint: 45, location: "789 Park Blvd", hours: "6am - 11pm", distance: 4.5 },
+        { id: "est", name: "East Village Market", code: "EST", tint: 25, location: "321 River Rd", hours: "8am - 9pm", distance: 3.2 },
+      ],
+      CATEGORIES: [
+        { id: "produce", name: "Produce", hue: 152 },
+        { id: "dairy", name: "Dairy & Eggs", hue: 45 },
+        { id: "meat", name: "Meat & Seafood", hue: 25 },
+        { id: "pantry", name: "Pantry", hue: 220 },
+        { id: "frozen", name: "Frozen Foods", hue: 245 },
+        { id: "beverages", name: "Beverages", hue: 300 },
+      ],
+      PRODUCTS: [
+        { id: "p1", name: "Fresh Tomatoes", cat: "produce", price: 3.99, unit: "lb", par: 40, supplier: "fresh-farms", supplier_code: "FF" },
+        { id: "p2", name: "Organic Lettuce", cat: "produce", price: 2.49, unit: "head", par: 30, supplier: "fresh-farms", supplier_code: "FF" },
+        { id: "p3", name: "Free Range Eggs", cat: "dairy", price: 5.99, unit: "dozen", par: 25, supplier: "happy-hens", supplier_code: "HH" },
+        { id: "p4", name: "Greek Yogurt", cat: "dairy", price: 4.99, unit: "32oz", par: 20, supplier: "dairy-supreme", supplier_code: "DS" },
+        { id: "p5", name: "Salmon Fillets", cat: "meat", price: 12.99, unit: "lb", par: 15, supplier: "sea-harvest", supplier_code: "SH" },
+        { id: "p6", name: "Grass Fed Beef", cat: "meat", price: 8.99, unit: "lb", par: 20, supplier: "ranch-natural", supplier_code: "RN" },
+        { id: "p7", name: "Whole Grain Bread", cat: "pantry", price: 3.49, unit: "loaf", par: 35, supplier: "baker-artisan", supplier_code: "BA" },
+        { id: "p8", name: "Almond Butter", cat: "pantry", price: 7.99, unit: "16oz", par: 18, supplier: "nuts-world", supplier_code: "NW" },
+      ],
+      ORDERS: [
+        { id: "ORD-001", customer: "Sarah Chen", initials: "SC", items: 5, total: 42.50, status: "new", type: "Pickup", slot: "Today · 2:00 PM", address: "123 Main St", placed: "2:14 PM", picker: null },
+        { id: "ORD-002", customer: "John Miller", initials: "JM", items: 8, total: 67.25, status: "picking", type: "Delivery", slot: "Today · 3:30 PM", address: "456 Oak Ave", placed: "1:45 PM", picker: "Alex" },
+        { id: "ORD-003", customer: "Emma Rodriguez", initials: "ER", items: 3, total: 24.99, status: "ready", type: "Pickup", slot: "Today · 4:00 PM", address: "789 Park Blvd", placed: "1:20 PM", picker: null },
+        { id: "ORD-004", customer: "James Wilson", initials: "JW", items: 6, total: 51.75, status: "new", type: "Delivery", slot: "Today · 5:00 PM", address: "321 River Rd", placed: "2:00 PM", picker: null },
+        { id: "ORD-005", customer: "Lisa Thompson", initials: "LT", items: 4, total: 38.50, status: "completed", type: "Pickup", slot: "Earlier today", address: "123 Main St", placed: "12:30 PM", picker: null },
+      ],
+      DELIVERIES: [
+        { id: "PO-2206", supplier: "FF", status: "arrived", items: 12, eta: "Today 1:00 PM" },
+        { id: "PO-2207", supplier: "HH", status: "in-transit", items: 8, eta: "Today 3:30 PM" },
+        { id: "PO-2208", supplier: "DS", status: "scheduled", items: 10, eta: "Tomorrow 9:00 AM" },
+      ],
+      money: (n) => "$" + (parseFloat(n) || 0).toFixed(2),
+      shopStock: (pid, sid) => 15 + ((pid.charCodeAt(1) + sid.charCodeAt(1)) % 35),
+      stockState: (stock, par) => stock === 0 ? "out" : stock < par * 0.3 ? "critical" : stock < par * 0.6 ? "low" : "ok",
+      catOf: (catId) => window.G.CATEGORIES.find(c => c.id === catId) || { id: catId, name: "Unknown", hue: 0 },
+      supplierOf: (suppId) => {
+        const map = {
+          "FF": { id: "FF", name: "Fresh Farms Co.", type: "Produce", lead: "2 days" },
+          "HH": { id: "HH", name: "Happy Hens Farm", type: "Poultry", lead: "1 day" },
+          "DS": { id: "DS", name: "Dairy Supreme", type: "Dairy", lead: "1 day" },
+          "SH": { id: "SH", name: "Sea Harvest Fish", type: "Seafood", lead: "2 days" },
+          "RN": { id: "RN", name: "Ranch Natural", type: "Meat", lead: "2 days" },
+          "BA": { id: "BA", name: "Baker Artisan", type: "Bakery", lead: "Daily" },
+          "NW": { id: "NW", name: "Nuts World", type: "Specialty", lead: "3 days" },
+        };
+        return map[suppId] || { id: suppId, name: "Unknown Supplier", type: "General", lead: "Unknown" };
+      },
+    };
+
+    // Auth token storage
+    window.G.token = sessionStorage.getItem("staff_token") || null;
+    window.G.currentUser = JSON.parse(sessionStorage.getItem("staff_user") || "null");
+
+    function authHeaders() {
+      return window.G.token ? { Authorization: `Bearer ${window.G.token}` } : {};
+    }
+
+    // Fetch data from backend
+    async function initializeAppData() {
+      try {
+        const headers = authHeaders();
+        const shopsRes = await fetch(`${API_BASE}/shops`, { headers });
+        if (shopsRes.ok) {
+          const data = await shopsRes.json();
+          if (Array.isArray(data) && data.length > 0) {
+            window.G.SHOPS = data.map(s => ({
+              id: s.id, name: s.name, code: s.code || s.id.toUpperCase(),
+              tint: parseInt(s.tint) || 152, location: s.city || s.location || "",
+              hours: s.hours || "", distance: 0,
+            }));
+          }
+        }
+        const catsRes = await fetch(`${API_BASE}/categories`, { headers });
+        if (catsRes.ok) {
+          const data = await catsRes.json();
+          if (Array.isArray(data) && data.length > 0) {
+            window.G.CATEGORIES = data.map(c => ({ id: c.id, name: c.name, hue: c.hue || 152 }));
+          }
+        }
+        const productsRes = await fetch(`${API_BASE}/products`, { headers });
+        if (productsRes.ok) {
+          const data = await productsRes.json();
+          if (Array.isArray(data) && data.length > 0) {
+            window.G.PRODUCTS = data.map(p => ({
+              ...p,
+              cat: p.cat || p.category_id || p.categoryId || "pantry",
+              supplier_code: p.supplier_code || (p.supplier_id || p.supplierId || "").toUpperCase().slice(0, 2),
+            }));
+          }
+        }
+      } catch (error) {
+        console.log("ℹ️ Using mock data for staff app");
+      }
+    }
+
+    initializeAppData();
+
+    /* ========== STAFF UI COMPONENTS ========== */
+    const ICONS = {
+      dashboard: "M3 13h8V3H3v10Zm0 8h8v-6H3v6Zm10 0h8V11h-8v10Zm0-18v6h8V3h-8Z",
+      orders: "M3 7l1.5 12.5a1 1 0 0 0 1 .9h13a1 1 0 0 0 1-.9L21 7M3 7l2-3h14l2 3M3 7h18M9 11v4M15 11v4",
+      truck: "M3 4h11v10H3zM14 8h4l3 3v3h-7M5.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM17.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
+      transfer: "M17 3l4 4-4 4M21 7H7M7 21l-4-4 4-4M3 17h14",
+      clipboard: "M9 4h6v3H9zM7 5H5v16h14V5h-2M9 12h6M9 16h4",
+      box: "M21 8l-9-5-9 5 9 5 9-5ZM3 8v8l9 5 9-5V8M12 13v8",
+      search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM21 21l-4.3-4.3",
+      bell: "M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+      settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z",
+      logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
+      chevR: "M9 6l6 6-6 6",
+      chevD: "M6 9l6 6 6-6",
+      plus: "M12 5v14M5 12h14",
+      minus: "M5 12h14",
+      check: "M20 6L9 17l-5-5",
+      alert: "M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z",
+      leaf: "M11 20A7 7 0 0 1 4 13c0-6 5-9 16-9 0 9-4 12-9 12ZM4 20c2-3 5-6 9-8",
+      x: "M18 6 6 18M6 6l12 12",
+      pin: "M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11ZM12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
+      filter: "M3 5h18M6 12h12M10 19h4",
+      users: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75",
+      building: "M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16",
+      folder: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z",
+      edit: "M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z",
+      trash: "M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6",
+    };
+
+    function Icon({ name, size = 20, stroke = 2, fill = "none", style }) {
+      const d = ICONS[name] || "";
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill={fill === "current" ? "currentColor" : "none"}
+          stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" style={style}>
+          {d.split("M").filter(Boolean).map((seg, i) => <path key={i} d={"M" + seg} />)}
+        </svg>
+      );
+    }
+
+    function Logo({ size = 30 }) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: size, height: size, borderRadius: 9, background: "var(--primary)",
+            display: "grid", placeItems: "center", color: "white", flexShrink: 0
+          }}>
+            <Icon name="leaf" size={size * 0.62} stroke={2.4} />
+          </div>
+          <span style={{ fontWeight: 800, fontSize: size * 0.6, letterSpacing: "-0.02em", color: "var(--text)" }}>
+            GoGO<span style={{ color: "var(--primary)" }}>Pantry</span>
+          </span>
+        </div>
+      );
+    }
+
+    function Pill({ tone = "neutral", children, dot = false, size = "md" }) {
+      const map = {
+        ok: ["var(--green-100)", "var(--green-700)"],
+        low: ["var(--amber-100)", "oklch(0.5 0.12 78)"],
+        critical: ["var(--red-100)", "var(--red-500)"],
+        out: ["var(--red-100)", "var(--red-500)"],
+        info: ["var(--blue-100)", "var(--blue-500)"],
+        warn: ["var(--amber-100)", "var(--amber-600)"],
+        neutral: ["var(--surface-2)", "var(--text-2)"],
+      };
+      const [bg, fg] = map[tone] || map.neutral;
+      return (
+        <span style={{
+          display: "inline-flex", alignItems: "center", gap: 6, background: bg, color: fg,
+          fontSize: size === "sm" ? 11 : 12, fontWeight: 700, padding: size === "sm" ? "2px 8px" : "4px 10px",
+          borderRadius: 999, lineHeight: 1.4, whiteSpace: "nowrap"
+        }}>
+          {dot && <span style={{ width: 6, height: 6, borderRadius: 999, background: fg }} />}
+          {children}
+        </span>
+      );
+    }
+
+    function StockBar({ stock, par }) {
+      const state = window.G.stockState(stock, par);
+      const pct = Math.min(100, Math.round((stock / Math.max(par, 1)) * 100));
+      const color = { ok: "var(--green-500)", low: "var(--amber-500)", critical: "var(--red-500)", out: "var(--red-500)" }[state];
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 120 }}>
+          <div style={{ flex: 1, height: 6, background: "var(--surface-2)", borderRadius: 999, overflow: "hidden" }}>
+            <div style={{ width: Math.max(pct, stock > 0 ? 6 : 0) + "%", height: "100%", background: color, borderRadius: 999, transition: "width .5s var(--ease)" }} />
+          </div>
+          <span className="mono tnum" style={{ fontSize: 12, color: "var(--text-2)", minWidth: 28, textAlign: "right" }}>{stock}</span>
+        </div>
+      );
+    }
+
+    function Btn({ children, variant = "primary", size = "md", icon, onClick, full, style, type }) {
+      const base = {
+        display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+        fontFamily: "var(--font-sans)", fontWeight: 700, cursor: "pointer", border: "1px solid transparent",
+        borderRadius: 10, transition: "all .16s var(--ease)", width: full ? "100%" : "auto",
+        fontSize: size === "sm" ? 13 : 14, padding: size === "sm" ? "7px 12px" : "11px 18px", whiteSpace: "nowrap",
+      };
+      const variants = {
+        primary: { background: "var(--primary)", color: "white" },
+        ghost: { background: "transparent", color: "var(--text)", borderColor: "var(--line)" },
+        soft: { background: "var(--surface-2)", color: "var(--text)" },
+        danger: { background: "var(--red-500)", color: "white" },
+      };
+      return (
+        <button type={type || "button"} onClick={onClick}
+          style={{ ...base, ...variants[variant], ...style }}>
+          {icon && <Icon name={icon} size={size === "sm" ? 16 : 18} />}
+          {children}
+        </button>
+      );
+    }
+
+    /* ========== SHELL & LOGIN ========== */
+    function StaffLogin({ onLogin }) {
+      const [email, setEmail] = useState("");
+      const [pw, setPw] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [error, setError] = useState("");
+
+      const submit = async (e) => {
+        e.preventDefault();
+        if (!email || !pw) { setError("Please enter your username and password."); return; }
+        setLoading(true);
+        setError("");
+        try {
+          const res = await fetch(`${API_BASE}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password: pw }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setError(data.message || data.error || "Invalid username or password.");
+            setLoading(false);
+            return;
+          }
+          const { token, user } = data;
+          sessionStorage.setItem("staff_token", token);
+          sessionStorage.setItem("staff_user", JSON.stringify(user));
+          window.G.token = token;
+          window.G.currentUser = user;
+          await initializeAppData();
+          const shopId = user.shopId || (window.G.SHOPS[0] && window.G.SHOPS[0].id) || "msn";
+          onLogin(shopId, user);
+        } catch (err) {
+          setError("Cannot connect to server. Check the backend is running.");
+          setLoading(false);
+        }
+      };
+
+      const fieldStyle = { width: "100%", padding: "12px 14px", borderRadius: 11, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--text)", fontSize: 15, fontFamily: "var(--font-sans)", outline: "none", boxSizing: "border-box" };
+
+      return (
+        <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "var(--bg)", padding: 40 }}>
+          <div style={{ width: "100%", maxWidth: 392, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 20, padding: "38px 36px", boxShadow: "var(--shadow-lg)" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 26 }}><Logo size={30} /></div>
+            <h2 style={{ fontSize: 23, fontWeight: 800, letterSpacing: "-0.02em", margin: "0 0 5px", color: "var(--text)", textAlign: "center" }}>Staff Sign In</h2>
+            <p style={{ color: "var(--text-2)", margin: "0 0 26px", fontSize: 14.5, textAlign: "center" }}>Store Operations Console</p>
+
+            {error && (
+              <div style={{ marginBottom: 16, padding: "11px 14px", borderRadius: 11, background: "var(--red-100)", color: "var(--red-700)", fontSize: 13.5, fontWeight: 600, border: "1px solid var(--red-300)" }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={submit}>
+              <label style={{ display: "block", marginBottom: 16 }}>
+                <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text-2)", marginBottom: 7 }}>Username (email)</span>
+                <input value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" autoComplete="username" style={fieldStyle} />
+              </label>
+              <label style={{ display: "block", marginBottom: 20 }}>
+                <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "var(--text-2)", marginBottom: 7 }}>Password</span>
+                <input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" autoComplete="current-password" style={fieldStyle} />
+              </label>
+
+              <Btn full type="submit" style={{ opacity: loading ? 0.7 : 1 }}>
+                {loading ? "Signing in…" : "Sign in"}
+              </Btn>
+            </form>
+
+            <p style={{ marginTop: 18, fontSize: 12.5, color: "var(--text-3)", textAlign: "center", lineHeight: 1.6 }}>
+              Demo: <code>admin@gogopantry.com</code> / <code>123456</code><br/>
+              or <code>staff@gogopantry.com</code> / <code>password123</code>
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    function Shell({ shopId, route, setRoute, onLogout, user, children }) {
+      const userName = user ? user.name : "Staff";
+      const userRole = user ? (user.userType === "admin" ? "Admin" : "Staff") : "Staff";
+      const initials = userName.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+      const shop = window.G.SHOPS.find(s => s.id === shopId);
+      const isAdmin = user && user.userType === "admin";
+      const newOrderCount = window.G.ORDERS.filter(o => o.status === "new").length;
+      const staffNav = [
+        { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+        { id: "fulfill", label: "Fulfillment", icon: "clipboard", badge: newOrderCount },
+        { id: "receive", label: "Receive Stock", icon: "truck" },
+        { id: "transfer", label: "Transfers", icon: "transfer" },
+      ];
+      const adminNav = [
+        { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+        { id: "fulfill", label: "Fulfillment", icon: "clipboard", badge: newOrderCount },
+        { id: "receive", label: "Receive Stock", icon: "truck" },
+        { id: "transfer", label: "Transfers", icon: "transfer" },
+        { id: "manage-shops", label: "Manage Shops", icon: "building" },
+        { id: "manage-staff", label: "Manage Staff", icon: "users" },
+        { id: "manage-categories", label: "Manage Categories", icon: "folder" },
+      ];
+      const nav = isAdmin ? adminNav : staffNav;
+      const navLabel = isAdmin ? "Admin Operations" : "Operations";
+      return (
+        <div style={{ display: "grid", gridTemplateColumns: "248px 1fr", height: "100vh", width: "100vw", background: "var(--bg)" }}>
+          <aside style={{ borderRight: "1px solid var(--line)", background: "var(--bg)", padding: "22px 16px", display: "flex", flexDirection: "column", overflow: "auto", height: "100vh" }}>
+            <div style={{ padding: "0 8px 18px" }}><Logo size={28} /></div>
+            <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 12px", borderRadius: 12, border: "1px solid var(--line)", background: "var(--surface)", marginBottom: 4 }}>
+              <span style={{ width: 30, height: 30, borderRadius: 8, background: `oklch(0.6 0.13 ${shop.tint})`, color: "#fff", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name="pin" size={16} /></span>
+              <span style={{ flex: 1, lineHeight: 1.2, overflow: "hidden" }}>
+                <span style={{ display: "block", fontSize: 13.5, fontWeight: 700, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shop.name}</span>
+                <span style={{ display: "block", fontSize: 11.5, color: "var(--text-3)" }}>{shop.code} · Open</span>
+              </span>
+            </div>
+            <nav style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-3)", padding: "4px 12px 8px" }}>{navLabel}</div>
+              {nav.map(n => (
+                <button key={n.id} onClick={() => setRoute(n.id)} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 11, border: "none", cursor: "pointer",
+                  background: route === n.id ? "var(--surface)" : "transparent", color: route === n.id ? "var(--text)" : "var(--text-2)",
+                  fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: route === n.id ? 700 : 500, textAlign: "left",
+                  boxShadow: route === n.id ? "var(--shadow-sm)" : "none", transition: "all .15s var(--ease)",
+                }}
+                onMouseEnter={e => { if (route !== n.id) e.currentTarget.style.background = "var(--surface-2)"; }}
+                onMouseLeave={e => { if (route !== n.id) e.currentTarget.style.background = "transparent"; }}>
+                  <span style={{ color: route === n.id ? "var(--primary)" : "var(--text-3)" }}><Icon name={n.icon} size={19} /></span>
+                  <span style={{ flex: 1 }}>{n.label}</span>
+                  {n.badge ? <span className="tnum" style={{ background: "var(--primary)", color: "white", fontSize: 11.5, fontWeight: 800, minWidth: 20, height: 20, borderRadius: 999, display: "grid", placeItems: "center", padding: "0 6px" }}>{n.badge}</span> : null}
+                </button>
+              ))}
+            </nav>
+            <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+              <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 12px", borderRadius: 11, border: "none", cursor: "pointer", background: "transparent", color: "var(--text-2)", fontFamily: "var(--font-sans)", fontSize: 14.5, fontWeight: 500, whiteSpace: "nowrap" }}>
+                <span style={{ color: "var(--text-3)" }}><Icon name="logout" size={19} /></span> Sign out
+              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", marginTop: 6, borderRadius: 12, background: "var(--surface)" }}>
+                <div style={{ width: 34, height: 34, borderRadius: 999, background: "var(--green-600)", color: "#fff", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 13 }}>{initials}</div>
+                <div style={{ lineHeight: 1.2, overflow: "hidden" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{userName}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-3)" }}>{userRole}</div>
+                </div>
+              </div>
+            </div>
+          </aside>
+          <main style={{ minWidth: 0, display: "flex", flexDirection: "column", overflow: "auto", height: "100vh", flex: 1 }}>{children}</main>
+        </div>
+      );
+    }
+
+    function PageHead({ title, subtitle, children }) {
+      return (
+        <header style={{ position: "sticky", top: 0, zIndex: 20, background: "color-mix(in oklch, var(--bg) 86%, transparent)", backdropFilter: "blur(10px)", borderBottom: "1px solid var(--line)", padding: "18px 34px", display: "flex", alignItems: "center", gap: 20 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", margin: 0, color: "var(--text)" }}>{title}</h1>
+            {subtitle && <p style={{ margin: "3px 0 0", fontSize: 13.5, color: "var(--text-2)" }}>{subtitle}</p>}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {children}
+            <button style={{ position: "relative", width: 40, height: 40, borderRadius: 11, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center" }}>
+              <Icon name="bell" size={19} />
+              <span style={{ position: "absolute", top: 9, right: 10, width: 7, height: 7, borderRadius: 999, background: "var(--primary)" }} />
+            </button>
+          </div>
+        </header>
+      );
+    }
+
+    /* ========== DASHBOARD SCREEN ========== */
+    function ProductSwatch({ p, size = 40, radius }) {
+      const c = window.G.catOf(p.cat);
+      const bg = `oklch(0.9 0.07 ${c.hue})`;
+      const fg = `oklch(0.4 0.1 ${c.hue})`;
+      const initials = p.name.split(" ").slice(0, 2).map(w => w[0]).join("");
+      return (
+        <div style={{ width: size, height: size, borderRadius: radius != null ? radius : size * 0.26, background: bg, color: fg, display: "grid", placeItems: "center", flexShrink: 0, fontWeight: 800, fontSize: size * 0.34, letterSpacing: "-0.02em" }}>
+          {initials}
+        </div>
+      );
+    }
+
+    const card = (extra) => ({ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, padding: 18, boxShadow: "var(--shadow-sm)", ...extra });
+    const sectionTitle = { fontSize: 15.5, fontWeight: 700, margin: 0, color: "var(--text)", letterSpacing: "-0.01em" };
+    const sectionSub = { fontSize: 12.5, margin: "2px 0 0", color: "var(--text-3)" };
+    const th = { fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-3)", padding: "11px 16px", textAlign: "left" };
+    const td = { padding: "11px 16px", verticalAlign: "middle" };
+    const linkBtn = { display: "inline-flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "var(--primary)", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)" };
+
+    function DashboardScreen({ shopId, setRoute }) {
+      console.log("🎨 DashboardScreen rendering for shop:", shopId);
+      const [q, setQ] = useState("");
+      const [cat, setCat] = useState("all");
+
+      const products = useMemo(() => {
+        return window.G.PRODUCTS.map(p => ({ ...p, stock: window.G.shopStock(p.id, shopId) }))
+          .filter(p => cat === "all" || p.cat === cat)
+          .filter(p => p.name.toLowerCase().includes(q.toLowerCase()));
+      }, [shopId, q, cat]);
+
+      const all = window.G.PRODUCTS.map(p => ({ ...p, stock: window.G.shopStock(p.id, shopId) }));
+      const low = all.filter(p => ["low", "critical"].includes(window.G.stockState(p.stock, p.par)));
+      const out = all.filter(p => window.G.stockState(p.stock, p.par) === "out");
+      const newOrders = window.G.ORDERS.filter(o => o.status === "new");
+      const inProgress = window.G.ORDERS.filter(o => ["picking", "ready"].includes(o.status));
+      const revenue = window.G.ORDERS.reduce((s, o) => s + o.total, 0);
+
+      const kpis = [
+        { label: "Open orders", value: newOrders.length + inProgress.length, delta: "+4", tone: "up", icon: "orders", sub: "vs. yesterday" },
+        { label: "Low / out of stock", value: low.length + out.length, delta: out.length + " out", tone: "warn", icon: "alert", sub: "needs reorder" },
+        { label: "Today's sales", value: window.G.money(revenue), delta: "+12.4%", tone: "up", icon: "orders", sub: "8 orders" },
+        { label: "Fill rate", value: "99.2%", delta: "+0.3%", tone: "up", icon: "check", sub: "last 7 days" },
+      ];
+
+      return (
+        <React.Fragment>
+          <PageHead title="Dashboard" subtitle="Tuesday, June 4 · Live store overview">
+            <Btn variant="ghost" size="sm" icon="search">Scan item</Btn>
+            <Btn size="sm" icon="plus" onClick={() => setRoute("receive")}>Receive stock</Btn>
+          </PageHead>
+
+          <div style={{ flex: 1, padding: "22px 34px 48px", display: "flex", flexDirection: "column", gap: 18, maxWidth: "100%", width: "100%", overflowY: "auto" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+              {kpis.map(k => (
+                <div key={k.label} style={card({ padding: 16 })}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ width: 32, height: 32, borderRadius: 9, background: "var(--surface-2)", color: "var(--text-2)", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name={k.icon} size={17} /></span>
+                    <span style={{ fontSize: 12.5, color: "var(--text-2)", fontWeight: 600, flex: 1 }}>{k.label}</span>
+                    <Pill tone={k.tone === "up" ? "ok" : "warn"} size="sm">{k.delta}</Pill>
+                  </div>
+                  <div style={{ marginTop: 12 }}>
+                    <div className="tnum" style={{ fontSize: 25, fontWeight: 800, letterSpacing: "-0.02em", color: "var(--text)", lineHeight: 1.1 }}>{k.value}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>{k.sub}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1.7fr 1fr", gap: 18, alignItems: "start" }}>
+              <section style={{ ...card(), padding: 0, overflow: "hidden" }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 140 }}>
+                    <h2 style={sectionTitle}>Stock overview</h2>
+                    <p style={sectionSub}>{products.length} of {window.G.PRODUCTS.length} SKUs</p>
+                  </div>
+                  <div style={{ position: "relative" }}>
+                    <select value={cat} onChange={e => setCat(e.target.value)} style={{ padding: "8px 30px 8px 32px", borderRadius: 9, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 13, fontWeight: 600, outline: "none", fontFamily: "var(--font-sans)", appearance: "none", cursor: "pointer" }}>
+                      <option value="all">All categories</option>
+                      {window.G.CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }}><Icon name="chevD" size={14} /></span>
+                  </div>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)" }}><Icon name="search" size={16} /></span>
+                    <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search products…" style={{ padding: "8px 12px 8px 34px", borderRadius: 9, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 13, width: 168, outline: "none", fontFamily: "var(--font-sans)" }} />
+                  </div>
+                </div>
+                <div style={{ maxHeight: 460, overflowY: "auto", overflowX: "hidden" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                    <thead style={{ position: "sticky", top: 0, background: "var(--surface)", zIndex: 1 }}>
+                      <tr>
+                        <th style={th}>Product</th>
+                        <th style={{ ...th, width: 150 }}>Stock level</th>
+                        <th style={{ ...th, width: 110 }}>Status</th>
+                        <th style={{ ...th, width: 96, textAlign: "right" }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map(p => {
+                        const state = window.G.stockState(p.stock, p.par);
+                        return (
+                          <tr key={p.id} style={{ borderTop: "1px solid var(--line)" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                            <td style={td}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+                                <ProductSwatch p={p} size={34} />
+                                <div style={{ lineHeight: 1.3, minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                                  <div style={{ fontSize: 11.5, color: "var(--text-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{window.G.catOf(p.cat).name} · {window.G.money(p.price)}/{p.unit}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={td}><StockBar stock={p.stock} par={p.par} /></td>
+                            <td style={td}>
+                              <Pill tone={state} dot size="sm">{state === "ok" ? "In stock" : state === "low" ? "Low" : state === "critical" ? "Critical" : "Out"}</Pill>
+                            </td>
+                            <td style={{ ...td, textAlign: "right" }}>
+                              {state !== "ok" && <Btn size="sm" variant="soft" onClick={() => setRoute("receive")}>Reorder</Btn>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                <section style={{ ...card(), padding: 0, overflow: "hidden" }}>
+                  <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center" }}>
+                    <div style={{ flex: 1 }}>
+                      <h2 style={sectionTitle}>Incoming orders</h2>
+                      <p style={sectionSub}>{newOrders.length} new · {inProgress.length} in progress</p>
+                    </div>
+                    <button onClick={() => setRoute("fulfill")} style={linkBtn}>View queue <Icon name="chevR" size={14} /></button>
+                  </div>
+                  <div>
+                    {window.G.ORDERS.filter(o => o.status !== "completed").slice(0, 5).map(o => (
+                      <div key={o.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 20px", borderTop: "1px solid var(--line)", cursor: "pointer" }} onClick={() => setRoute("fulfill")}
+                        onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        <div style={{ width: 36, height: 36, borderRadius: 999, background: "var(--surface-2)", color: "var(--text-2)", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 12.5, flexShrink: 0 }}>{o.initials}</div>
+                        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.35 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.customer}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-2)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}><span className="mono" style={{ color: "var(--text-3)" }}>{o.id}</span> · {o.items} items · {o.type}</div>
+                        </div>
+                        <Pill tone={o.status === "new" ? "info" : o.status === "ready" ? "ok" : "low"} size="sm">{o.status === "new" ? "New" : o.status === "picking" ? "Picking" : "Ready"}</Pill>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section style={{ ...card(), padding: 0, overflow: "hidden" }}>
+                  <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center" }}>
+                    <div style={{ flex: 1 }}>
+                      <h2 style={sectionTitle}>Incoming deliveries</h2>
+                      <p style={sectionSub}>From suppliers</p>
+                    </div>
+                    <button onClick={() => setRoute("receive")} style={linkBtn}>Receive <Icon name="chevR" size={14} /></button>
+                  </div>
+                  {window.G.DELIVERIES.map(d => {
+                    const sup = window.G.supplierOf(d.supplier);
+                    const tone = d.status === "arrived" ? "ok" : d.status === "in-transit" ? "info" : "neutral";
+                    return (
+                      <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 20px", borderTop: "1px solid var(--line)" }}>
+                        <span style={{ width: 36, height: 36, borderRadius: 10, background: "var(--surface-2)", color: "var(--text-2)", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name="truck" size={18} /></span>
+                        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--text)" }}>{sup.name}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-2)" }}><span className="mono">{d.id}</span> · {d.items} lines · {d.eta}</div>
+                        </div>
+                        <Pill tone={tone} dot size="sm">{d.status === "in-transit" ? "In transit" : d.status === "arrived" ? "Arrived" : "Scheduled"}</Pill>
+                      </div>
+                    );
+                  })}
+                </section>
+              </div>
+            </div>
+          </div>
+        </React.Fragment>
+      );
+    }
+
+    /* ========== FULFILLMENT SCREEN ========== */
+    function FulfillScreen({ shopId, setRoute }) {
+      const [orders, setOrders] = useState(() => window.G.ORDERS.map(o => ({ ...o })));
+      const [selId, setSelId] = useState(window.G.ORDERS.find(o => o.status === "new")?.id || window.G.ORDERS[0].id);
+      const [tab, setTab] = useState("active");
+      const [picked, setPicked] = useState({});
+
+      const sel = orders.find(o => o.id === selId);
+      const lineItems = useMemo(() => {
+        if (!sel) return [];
+        const start = (sel.id.charCodeAt(4) * 3) % window.G.PRODUCTS.length;
+        const n = Math.min(sel.items, 8);
+        const arr = [];
+        for (let i = 0; i < n; i++) {
+          const p = window.G.PRODUCTS[(start + i * 4) % window.G.PRODUCTS.length];
+          arr.push({ ...p, qty: 1 + ((p.id.charCodeAt(2) + i) % 3), aisle: ["A2", "A5", "B1", "B4", "C3", "D2", "Freezer"][i % 7] });
+        }
+        return arr;
+      }, [selId]);
+
+      const counts = {
+        new: orders.filter(o => o.status === "new").length,
+        picking: orders.filter(o => o.status === "picking").length,
+        ready: orders.filter(o => o.status === "ready").length,
+        completed: orders.filter(o => o.status === "completed").length,
+      };
+
+      const visible = orders.filter(o => tab === "active" ? o.status !== "completed" : o.status === "completed");
+      const setStatus = (id, status, picker) => setOrders(os => os.map(o => o.id === id ? { ...o, status, picker: picker ?? o.picker } : o));
+      const togglePick = (idx) => setPicked(p => ({ ...p, [selId]: { ...(p[selId] || {}), [idx]: !(p[selId]?.[idx]) } }));
+
+      const pickedCount = lineItems.filter((_, i) => picked[selId]?.[i]).length;
+      const allPicked = pickedCount === lineItems.length && lineItems.length > 0;
+
+      return (
+        <React.Fragment>
+          <PageHead title="Fulfillment queue" subtitle={`${counts.new} new · ${counts.picking} picking · ${counts.ready} ready`} />
+
+          <div style={{ flex: 1, display: "grid", gridTemplateColumns: "minmax(380px, 1fr) 1.1fr", gap: 22, padding: "22px 34px 48px", alignItems: "start", maxWidth: "100%", width: "100%", overflowY: "auto" }}>
+            <section style={{ ...card(), padding: 0, overflow: "hidden" }}>
+              <div style={{ display: "flex", padding: 6, gap: 4, borderBottom: "1px solid var(--line)" }}>
+                {[["active", "Active"], ["completed", "Completed"]].map(([k, l]) => (
+                  <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", cursor: "pointer", background: tab === k ? "var(--surface-2)" : "transparent", color: "var(--text)", fontWeight: 700, fontSize: 13.5, fontFamily: "var(--font-sans)" }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <div style={{ maxHeight: 620, overflowY: "auto" }}>
+                {visible.map(o => {
+                  const active = o.id === selId;
+                  const statusTone = o.status === "new" ? "info" : o.status === "ready" ? "ok" : "low";
+                  return (
+                    <button key={o.id} onClick={() => setSelId(o.id)} style={{ width: "100%", textAlign: "left", display: "flex", gap: 13, padding: "15px 18px", borderTop: "1px solid var(--line)", border: "none", borderLeft: active ? "3px solid var(--primary)" : "3px solid transparent", background: active ? "var(--surface-2)" : "transparent", cursor: "pointer", alignItems: "center" }}>
+                      <div style={{ width: 42, height: 42, borderRadius: 999, background: active ? "var(--green-600)" : "var(--surface-2)", color: active ? "#fff" : "var(--text-2)", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 13.5, flexShrink: 0 }}>{o.initials}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{o.customer}</div>
+                        <div style={{ fontSize: 12.5, color: "var(--text-2)", marginTop: 2 }}><span className="mono" style={{ color: "var(--text-3)" }}>{o.id}</span> · {o.items} items</div>
+                      </div>
+                      <Pill tone={statusTone} size="sm">{o.status.charAt(0).toUpperCase() + o.status.slice(1)}</Pill>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {sel && (
+              <section style={{ ...card(), padding: 0, overflow: "hidden", position: "sticky", top: 92 }}>
+                <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 999, background: "var(--green-600)", color: "#fff", display: "grid", placeItems: "center", fontWeight: 700, fontSize: 16, flexShrink: 0 }}>{sel.initials}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--text)" }}>{sel.customer}</h2>
+                    <p style={{ fontSize: 13, color: "var(--text-2)", margin: "3px 0 0" }}><span className="mono">{sel.id}</span> · {window.G.money(sel.total)}</p>
+                  </div>
+                </div>
+
+                {sel.status === "picking" && (
+                  <div style={{ padding: "12px 24px", display: "flex", alignItems: "center", gap: 12, background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>Progress</span>
+                    <div style={{ flex: 1, height: 7, background: "var(--surface-2)", borderRadius: 999, overflow: "hidden" }}>
+                      <div style={{ width: (pickedCount / lineItems.length * 100) + "%", height: "100%", background: "var(--primary)", transition: "width .35s var(--ease)" }} />
+                    </div>
+                    <span className="tnum" style={{ fontSize: 13, fontWeight: 700, color: "var(--text-2)" }}>{pickedCount}/{lineItems.length}</span>
+                  </div>
+                )}
+
+                <div style={{ maxHeight: 360, overflowY: "auto" }}>
+                  {lineItems.map((it, idx) => {
+                    const isPicked = picked[selId]?.[idx];
+                    const canPick = sel.status === "picking";
+                    return (
+                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: 13, padding: "12px 24px", borderTop: idx ? "1px solid var(--line)" : "none", opacity: isPicked ? 0.6 : 1 }}>
+                        <button onClick={() => canPick && togglePick(idx)} disabled={!canPick} style={{ width: 24, height: 24, borderRadius: 7, border: "2px solid", borderColor: isPicked ? "var(--primary)" : "var(--line)", background: isPicked ? "var(--primary)" : "transparent", color: "#fff", cursor: canPick ? "pointer" : "not-allowed", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                          {isPicked && <Icon name="check" size={14} stroke={3} />}
+                        </button>
+                        <ProductSwatch p={it} size={38} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--text)", textDecoration: isPicked ? "line-through" : "none" }}>{it.name}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-3)" }}>{window.G.catOf(it.cat).name} · {window.G.money(it.price)}/{it.unit}</div>
+                        </div>
+                        <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--text-2)", background: "var(--surface-2)", padding: "3px 9px", borderRadius: 7 }}>Aisle {it.aisle}</span>
+                        <span className="tnum" style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", minWidth: 28, textAlign: "right" }}>×{it.qty}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", background: "var(--bg)", display: "flex", gap: 12, alignItems: "center" }}>
+                  {sel.status === "new" && <><span style={{ flex: 1, fontSize: 13, color: "var(--text-2)" }}>Ready to pick</span><Btn icon="clipboard" onClick={() => setStatus(sel.id, "picking", "Alex")}>Start picking</Btn></>}
+                  {sel.status === "picking" && <><span style={{ flex: 1, fontSize: 13, color: allPicked ? "var(--primary)" : "var(--text-2)" }}>{allPicked ? "All picked!" : `${lineItems.length - pickedCount} left`}</span><Btn icon="check" onClick={() => setStatus(sel.id, "ready")} style={{ opacity: allPicked ? 1 : 0.5 }}>Mark ready</Btn></>}
+                  {sel.status === "ready" && <><span style={{ flex: 1, fontSize: 13, color: "var(--text-2)" }}>Hand off to driver</span><Btn icon="check" onClick={() => setStatus(sel.id, "completed")}>Dispatch</Btn></>}
+                </div>
+              </section>
+            )}
+          </div>
+        </React.Fragment>
+      );
+    }
+
+    /* ========== RECEIVE SCREEN ========== */
+    function ReceiveScreen({ shopId, setRoute }) {
+      const [poId, setPoId] = useState("PO-2206");
+      const po = window.G.DELIVERIES.find(d => d.id === poId);
+      const sup = window.G.supplierOf(po.supplier);
+
+      const lines = useMemo(() => {
+        const items = window.G.PRODUCTS.filter(p => p.supplier === po.supplier).slice(0, po.items);
+        return items.map(p => ({ ...p, stock: window.G.shopStock(p.id, shopId), expected: 6 + ((p.id.charCodeAt(2) * 3) % 18) }));
+      }, [poId, shopId]);
+
+      const [recv, setRecv] = useState({});
+      const [done, setDone] = useState({});
+      const [success, setSuccess] = useState(false);
+
+      const checkedCount = lines.filter(l => done[l.id]).length;
+      const progress = Math.round((checkedCount / lines.length) * 100);
+
+      if (success) return (
+        <div style={{ display: "grid", placeItems: "center", padding: 40, minHeight: "calc(100vh - 60px)" }}>
+          <div style={{ ...card(), maxWidth: 460, width: "100%", textAlign: "center", padding: 40 }}>
+            <div style={{ width: 76, height: 76, borderRadius: 999, background: "var(--green-100)", color: "var(--green-700)", display: "grid", placeItems: "center", margin: "0 auto 22px" }}>
+              <Icon name="check" size={40} stroke={3} />
+            </div>
+            <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 8px", color: "var(--text)" }}>Stock received</h2>
+            <p style={{ color: "var(--text-2)", margin: "0 0 24px", fontSize: 15 }}>
+              <span className="mono">{po.id}</span> from {sup.name} is checked in.
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <Btn variant="ghost" full onClick={() => { setSuccess(false); setRecv({}); setDone({}); }}>Receive another</Btn>
+              <Btn full icon="dashboard" onClick={() => setRoute("dashboard")}>Dashboard</Btn>
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <React.Fragment>
+          <PageHead title="Receive stock" subtitle="Check in supplier delivery" />
+          <div style={{ flex: 1, display: "grid", gridTemplateColumns: "300px 1fr", gap: 22, padding: "22px 34px 48px", maxWidth: "100%", width: "100%", overflowY: "auto" }}>
+            <aside style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-3)" }}>Incoming POs</div>
+              {window.G.DELIVERIES.map(d => {
+                const active = d.id === poId;
+                return (
+                  <button key={d.id} onClick={() => setPoId(d.id)} style={{ textAlign: "left", padding: 15, borderRadius: 14, border: "1px solid", borderColor: active ? "var(--primary)" : "var(--line)", background: active ? "var(--surface)" : "var(--bg)", cursor: "pointer", boxShadow: active ? "var(--shadow-md)" : "none" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                      <span className="mono" style={{ fontSize: 12, fontWeight: 700, color: "var(--text)" }}>{d.id}</span>
+                      <Pill tone={d.status === "arrived" ? "ok" : "info"} size="sm">{d.status === "arrived" ? "Arrived" : "In transit"}</Pill>
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)" }}>{window.G.supplierOf(d.supplier).name}</div>
+                    <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 2 }}>{d.items} lines</div>
+                  </button>
+                );
+              })}
+            </aside>
+
+            <section style={{ ...card(), padding: 0, overflow: "hidden" }}>
+              <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 16 }}>
+                <span style={{ width: 48, height: 48, borderRadius: 13, background: "var(--green-100)", color: "var(--green-700)", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name="truck" size={24} /></span>
+                <div style={{ flex: 1 }}>
+                  <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--text)" }}>{sup.name}</h2>
+                  <p style={{ fontSize: 13, color: "var(--text-2)", margin: "2px 0 0" }}><span className="mono">{po.id}</span> · {po.eta}</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div className="tnum" style={{ fontSize: 22, fontWeight: 800, color: "var(--text)" }}>{checkedCount}<span style={{ color: "var(--text-3)", fontWeight: 600 }}>/{lines.length}</span></div>
+                  <div style={{ fontSize: 12, color: "var(--text-3)" }}>lines received</div>
+                </div>
+              </div>
+              <div style={{ height: 4, background: "var(--surface-2)" }}><div style={{ width: progress + "%", height: "100%", background: "var(--primary)", transition: "width .4s var(--ease)" }} /></div>
+
+              <div style={{ maxHeight: 430, overflowY: "auto" }}>
+                {lines.map(l => {
+                  const checked = !!done[l.id];
+                  return (
+                    <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 24px", borderTop: "1px solid var(--line)", background: checked ? "color-mix(in oklch, var(--green-500) 7%, transparent)" : "transparent" }}>
+                      <button onClick={() => setDone(d => ({ ...d, [l.id]: !d[l.id] }))} style={{ width: 26, height: 26, borderRadius: 8, border: "2px solid", borderColor: checked ? "var(--primary)" : "var(--line)", background: checked ? "var(--primary)" : "transparent", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                        {checked && <Icon name="check" size={16} stroke={3} />}
+                      </button>
+                      <ProductSwatch p={l} size={40} />
+                      <div style={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>{l.name}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-3)" }}><span className="mono">{l.id.toUpperCase()}</span> · on hand {l.stock}</div>
+                      </div>
+                      {checked ? <Icon name="check" size={16} style={{ color: "var(--primary)" }} /> : <span style={{ fontSize: 12, color: "var(--text-3)" }}>—</span>}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 16, background: "var(--bg)" }}>
+                <span style={{ flex: 1, fontSize: 13, color: "var(--text-2)" }}>{checkedCount} of {lines.length} items checked</span>
+                <Btn variant="ghost" onClick={() => { setRecv({}); setDone({}); }}>Reset</Btn>
+                <Btn icon="check" onClick={() => setSuccess(true)} style={{ opacity: checkedCount ? 1 : 0.5 }}>Confirm & add</Btn>
+              </div>
+            </section>
+          </div>
+        </React.Fragment>
+      );
+    }
+
+    /* ========== TRANSFER SCREEN ========== */
+    function TransferScreen({ shopId, setRoute }) {
+      const [from, setFrom] = useState(shopId);
+      const [to, setTo] = useState(() => {
+        const other = window.G.SHOPS.find(s => s.id !== shopId);
+        return other ? other.id : (window.G.SHOPS[0] ? window.G.SHOPS[0].id : shopId);
+      });
+      const [cart, setCart] = useState({});
+      const [q, setQ] = useState("");
+      const [success, setSuccess] = useState(false);
+
+      const fromShop = window.G.SHOPS.find(s => s.id === from);
+      const toShop = window.G.SHOPS.find(s => s.id === to);
+
+      const products = useMemo(() => window.G.PRODUCTS
+        .map(p => ({ ...p, fromStock: window.G.shopStock(p.id, from), toStock: window.G.shopStock(p.id, to) }))
+        .filter(p => p.name.toLowerCase().includes(q.toLowerCase())), [from, to, q]);
+
+      const lines = Object.entries(cart).filter(([, v]) => v > 0);
+      const totalUnits = lines.reduce((s, [, v]) => s + v, 0);
+
+      if (success) return (
+        <div style={{ display: "grid", placeItems: "center", padding: 40, minHeight: "calc(100vh - 60px)" }}>
+          <div style={{ ...card(), maxWidth: 460, width: "100%", textAlign: "center", padding: 40 }}>
+            <div style={{ width: 76, height: 76, borderRadius: 999, background: "var(--green-100)", color: "var(--green-700)", display: "grid", placeItems: "center", margin: "0 auto 22px" }}>
+              <Icon name="transfer" size={36} stroke={2.4} />
+            </div>
+            <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 8px", color: "var(--text)" }}>Transfer submitted</h2>
+            <p style={{ color: "var(--text-2)", margin: "0 0 24px", fontSize: 15 }}>
+              {totalUnits} units from {fromShop.name} to {toShop.name} are en route.
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <Btn variant="ghost" full onClick={() => { setSuccess(false); setCart({}); }}>New transfer</Btn>
+              <Btn full icon="dashboard" onClick={() => setRoute("dashboard")}>Dashboard</Btn>
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <React.Fragment>
+          <PageHead title="Stock transfer" subtitle="Move inventory between locations" />
+          <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 360px", gap: 22, padding: "22px 34px 48px", alignItems: "start", maxWidth: "100%", width: "100%", overflowY: "auto" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ ...card(), display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-3)", marginBottom: 6, textTransform: "uppercase" }}>From</div>
+                  <select value={from} onChange={e => { setFrom(e.target.value); setCart({}); }} style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--text)", fontSize: 14.5, fontWeight: 700, appearance: "none", cursor: "pointer", fontFamily: "var(--font-sans)", outline: "none" }}>
+                    {window.G.SHOPS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                <button onClick={() => { setFrom(to); setTo(from); setCart({}); }} title="Swap" style={{ width: 42, height: 42, borderRadius: 999, border: "1px solid var(--line)", background: "var(--surface-2)", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0, marginTop: 18 }}>
+                  <Icon name="transfer" size={18} />
+                </button>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-3)", marginBottom: 6, textTransform: "uppercase" }}>To</div>
+                  <select value={to} onChange={e => setTo(e.target.value)} style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--text)", fontSize: 14.5, fontWeight: 700, appearance: "none", cursor: "pointer", fontFamily: "var(--font-sans)", outline: "none" }}>
+                    {window.G.SHOPS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <section style={{ ...card(), padding: 0, overflow: "hidden" }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ flex: 1 }}><h2 style={sectionTitle}>Select products</h2></div>
+                  <div style={{ position: "relative" }}>
+                    <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)" }}><Icon name="search" size={16} /></span>
+                    <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search…" style={{ padding: "8px 12px 8px 34px", borderRadius: 9, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 13, width: 170, outline: "none", fontFamily: "var(--font-sans)" }} />
+                  </div>
+                </div>
+                <div style={{ maxHeight: 440, overflowY: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead style={{ position: "sticky", top: 0, background: "var(--surface)", zIndex: 1 }}>
+                      <tr>
+                        <th style={th}>Product</th>
+                        <th style={{ ...th, textAlign: "center" }}>{fromShop.code}</th>
+                        <th style={{ ...th, textAlign: "center" }}>{toShop.code}</th>
+                        <th style={{ ...th, textAlign: "right" }}>Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map(p => {
+                        const inCart = cart[p.id] || 0;
+                        return (
+                          <tr key={p.id} style={{ borderTop: "1px solid var(--line)", background: inCart ? "color-mix(in oklch, var(--green-500) 6%, transparent)" : "transparent" }}>
+                            <td style={td}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                                <ProductSwatch p={p} size={34} />
+                                <div>
+                                  <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--text)" }}>{p.name}</div>
+                                  <div style={{ fontSize: 11.5, color: "var(--text-3)" }}>{window.G.catOf(p.cat).name}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ ...td, textAlign: "center" }}><span className="tnum" style={{ fontWeight: 700, fontSize: 13.5, color: "var(--text)" }}>{p.fromStock}</span></td>
+                            <td style={{ ...td, textAlign: "center" }}>
+                              <Pill tone={window.G.stockState(p.toStock, p.par)} size="sm">{p.toStock}</Pill>
+                            </td>
+                            <td style={{ ...td, textAlign: "right" }}>
+                              {inCart > 0
+                                ? <input type="number" value={inCart} onChange={e => { const v = parseInt(e.target.value) || 0; setCart(c => ({ ...c, [p.id]: Math.max(0, Math.min(v, p.fromStock)) })); }} style={{ width: 50, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--text)", textAlign: "center", fontFamily: "var(--font-sans)" }} />
+                                : <Btn size="sm" variant="soft" icon="plus" onClick={() => setCart(c => ({ ...c, [p.id]: 1 }))}>Add</Btn>}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+
+            <aside style={{ ...card(), padding: 0, position: "sticky", top: 92, overflow: "hidden" }}>
+              <div style={{ padding: "18px 20px", borderBottom: "1px solid var(--line)" }}>
+                <h2 style={sectionTitle}>Manifest</h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13 }}>
+                  <span style={{ fontWeight: 700, color: "var(--text)", whiteSpace: "nowrap" }}>{fromShop.name}</span>
+                  <Icon name="chevR" size={14} style={{ color: "var(--text-3)" }} />
+                  <span style={{ fontWeight: 700, color: "var(--primary)", whiteSpace: "nowrap" }}>{toShop.name}</span>
+                </div>
+              </div>
+              <div style={{ maxHeight: 340, overflowY: "auto" }}>
+                {lines.length === 0
+                  ? <div style={{ padding: "44px 20px", textAlign: "center", color: "var(--text-3)" }}>
+                      <Icon name="box" size={30} style={{ opacity: 0.5 }} />
+                      <p style={{ fontSize: 13.5, margin: "10px 0 0" }}>No items added</p>
+                    </div>
+                  : lines.map(([id, qty]) => {
+                    const p = window.G.PRODUCTS.find(x => x.id === id);
+                    return (
+                      <div key={id} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 20px", borderTop: "1px solid var(--line)" }}>
+                        <ProductSwatch p={p} size={32} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{p.name}</div>
+                          <div className="tnum" style={{ fontSize: 12, color: "var(--text-3)" }}>{qty} {p.unit}</div>
+                        </div>
+                        <button onClick={() => setCart(c => { const n = { ...c }; delete n[id]; return n; })} style={{ background: "none", border: "none", color: "var(--text-3)", cursor: "pointer", padding: 4 }}><Icon name="x" size={16} /></button>
+                      </div>
+                    );
+                  })}
+              </div>
+              <div style={{ padding: 20, borderTop: "1px solid var(--line)", background: "var(--bg)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+                  <span style={{ fontSize: 14, color: "var(--text-2)" }}>{lines.length} products · {totalUnits} units</span>
+                </div>
+                <Btn full icon="transfer" onClick={() => setSuccess(true)} style={{ opacity: lines.length ? 1 : 0.5, pointerEvents: lines.length ? "auto" : "none" }}>Submit transfer</Btn>
+              </div>
+            </aside>
+          </div>
+        </React.Fragment>
+      );
+    }
+
+    /* ========== ADMIN MANAGEMENT SCREENS ========== */
+    function AdminPageWrap({ title, subtitle, action, children }) {
+      return (
+        <React.Fragment>
+          <PageHead title={title} subtitle={subtitle}>
+            {action}
+          </PageHead>
+          <div style={{ flex: 1, padding: "22px 34px 48px", overflowY: "auto" }}>{children}</div>
+        </React.Fragment>
+      );
+    }
+
+    function MgmtModal({ open, title, onClose, children }) {
+      if (!open) return null;
+      return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "grid", placeItems: "center", padding: 20 }} onClick={onClose}>
+          <div style={{ background: "var(--surface)", borderRadius: 16, padding: 28, width: "100%", maxWidth: 460, border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--text)" }}>{title}</h2>
+              <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "var(--text-3)", lineHeight: 1 }}>×</button>
+            </div>
+            {children}
+          </div>
+        </div>
+      );
+    }
+
+    function FieldRow({ label, children }) {
+      return (
+        <label style={{ display: "block", marginBottom: 14 }}>
+          <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 6 }}>{label}</span>
+          {children}
+        </label>
+      );
+    }
+
+    const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 9, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", boxSizing: "border-box" };
+
+    function MgmtTable({ cols, rows, onEdit, onDelete, extraAction }) {
+      return (
+        <div style={{ ...card(), padding: 0, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "var(--surface-2)" }}>
+                {cols.map(c => <th key={c} style={{ ...th, fontWeight: 700 }}>{c}</th>)}
+                <th style={{ ...th, textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr><td colSpan={cols.length + 1} style={{ ...td, textAlign: "center", color: "var(--text-3)", padding: 32 }}>No records yet</td></tr>
+              ) : rows.map(r => (
+                <tr key={r.id} style={{ borderTop: "1px solid var(--line)" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  {r.cells.map((c, i) => <td key={i} style={td}>{c}</td>)}
+                  <td style={{ ...td, textAlign: "right" }}>
+                    <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      {extraAction && extraAction(r.raw)}
+                      <Btn size="sm" variant="soft" icon="edit" onClick={() => onEdit(r.raw)}>Edit</Btn>
+                      <Btn size="sm" variant="danger" icon="trash" onClick={() => onDelete(r.raw)}>Delete</Btn>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    /* ---- Manage Shops ---- */
+    function ManageShopsScreen() {
+      const [shops, setShops] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [modal, setModal] = useState(false);
+      const [editing, setEditing] = useState(null);
+      const [form, setForm] = useState({ id: "", name: "", city: "", code: "", hours: "" });
+      const [err, setErr] = useState("");
+
+      const load = async () => {
+        setLoading(true);
+        try {
+          const r = await fetch(`${API_BASE}/shops`, { headers: authHeaders() });
+          if (r.ok) setShops(await r.json());
+        } finally { setLoading(false); }
+      };
+
+      useEffect(() => { load(); }, []);
+
+      const openCreate = () => { setEditing(null); setForm({ id: "", name: "", city: "", code: "", hours: "" }); setErr(""); setModal(true); };
+      const openEdit = s => { setEditing(s.id); setForm({ id: s.id, name: s.name, city: s.city, code: s.code, hours: s.hours || "" }); setErr(""); setModal(true); };
+
+      const save = async e => {
+        e.preventDefault(); setErr("");
+        const url = editing ? `${API_BASE}/shops/${editing}` : `${API_BASE}/shops`;
+        const body = editing ? { name: form.name, city: form.city, code: form.code, hours: form.hours } : form;
+        const r = await fetch(url, { method: editing ? "PUT" : "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (r.ok) { setModal(false); load(); window.G.SHOPS = []; initializeAppData(); }
+        else { const d = await r.json(); setErr(d.message || d.error || "Save failed"); }
+      };
+
+      const del = async s => {
+        if (!confirm(`Delete shop "${s.name}"?`)) return;
+        const r = await fetch(`${API_BASE}/shops/${s.id}`, { method: "DELETE", headers: authHeaders() });
+        if (r.ok) load(); else alert("Delete failed");
+      };
+
+      return (
+        <AdminPageWrap title="Manage Shops" subtitle={`${shops.length} locations`} action={<Btn size="sm" icon="plus" onClick={openCreate}>Add Shop</Btn>}>
+          {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading…</div> : (
+            <MgmtTable
+              cols={["Name", "Code", "City", "Hours"]}
+              rows={shops.map(s => ({ id: s.id, raw: s, cells: [s.name, <span className="mono" style={{ fontSize: 12 }}>{s.code}</span>, s.city, s.hours || "—"] }))}
+              onEdit={openEdit} onDelete={del}
+            />
+          )}
+          <MgmtModal open={modal} title={editing ? "Edit Shop" : "Add Shop"} onClose={() => setModal(false)}>
+            <form onSubmit={save}>
+              {!editing && <FieldRow label="Shop ID (short code, e.g. msn)"><input style={inputStyle} value={form.id} onChange={e => setForm({ ...form, id: e.target.value.toLowerCase() })} required placeholder="msn" /></FieldRow>}
+              <FieldRow label="Name *"><input style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Mission District" /></FieldRow>
+              <FieldRow label="City *"><input style={inputStyle} value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} required placeholder="San Francisco" /></FieldRow>
+              <FieldRow label="Code *"><input style={inputStyle} value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} required placeholder="MSN" /></FieldRow>
+              <FieldRow label="Hours"><input style={inputStyle} value={form.hours} onChange={e => setForm({ ...form, hours: e.target.value })} placeholder="9am–9pm" /></FieldRow>
+              {err && <div style={{ color: "var(--red-500)", fontSize: 13, marginBottom: 12 }}>{err}</div>}
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn full type="submit">{editing ? "Update" : "Create"}</Btn>
+                <Btn full variant="ghost" type="button" onClick={() => setModal(false)}>Cancel</Btn>
+              </div>
+            </form>
+          </MgmtModal>
+        </AdminPageWrap>
+      );
+    }
+
+    /* ---- Manage Staff ---- */
+    function ManageStaffScreen() {
+      const [staff, setStaff] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [modal, setModal] = useState(false);
+      const [editing, setEditing] = useState(null);
+      const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", shopId: "" });
+      const [err, setErr] = useState("");
+      const [resetInfo, setResetInfo] = useState(null);
+
+      const load = async () => {
+        setLoading(true);
+        try {
+          const r = await fetch(`${API_BASE}/staff`, { headers: authHeaders() });
+          if (r.ok) setStaff(await r.json());
+        } finally { setLoading(false); }
+      };
+
+      useEffect(() => { load(); }, []);
+
+      const openCreate = () => { setEditing(null); setForm({ name: "", email: "", password: "", phone: "", shopId: window.G.SHOPS[0]?.id || "" }); setErr(""); setModal(true); };
+      const openEdit = s => { setEditing(s.id); setForm({ name: s.name, email: s.email, password: "", phone: s.phone || "", shopId: s.shopId || "" }); setErr(""); setModal(true); };
+
+      const save = async e => {
+        e.preventDefault(); setErr("");
+        const url = editing ? `${API_BASE}/staff/${editing}` : `${API_BASE}/staff`;
+        const body = editing ? { name: form.name, phone: form.phone, shopId: form.shopId } : form;
+        const r = await fetch(url, { method: editing ? "PUT" : "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (r.ok) { setModal(false); load(); }
+        else { const d = await r.json(); setErr(d.message || d.error || "Save failed"); }
+      };
+
+      const del = async s => {
+        if (!confirm(`Delete staff member "${s.name}"?`)) return;
+        const r = await fetch(`${API_BASE}/staff/${s.id}`, { method: "DELETE", headers: authHeaders() });
+        if (r.ok) load(); else alert("Delete failed");
+      };
+
+      const resetPw = async s => {
+        if (!confirm(`Reset password for "${s.name}"? A temporary password will be generated.`)) return;
+        const r = await fetch(`${API_BASE}/staff/${s.id}/reset-password`, { method: "POST", headers: authHeaders() });
+        if (r.ok) { const d = await r.json(); setResetInfo(d); } else alert("Reset failed");
+      };
+
+      const shopName = id => (window.G.SHOPS.find(s => s.id === id)?.name) || id || "—";
+
+      return (
+        <AdminPageWrap title="Manage Staff" subtitle={`${staff.length} members`} action={<Btn size="sm" icon="plus" onClick={openCreate}>Add Staff</Btn>}>
+          {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading…</div> : (
+            <MgmtTable
+              cols={["Name", "Email", "Shop", "Status"]}
+              rows={staff.map(s => ({ id: s.id, raw: s, cells: [
+                <span style={{ fontWeight: 600 }}>{s.name}</span>,
+                <span style={{ fontSize: 13, color: "var(--text-2)" }}>{s.email}</span>,
+                shopName(s.shopId),
+                <Pill tone={s.status === "active" ? "ok" : "neutral"} size="sm">{s.status}</Pill>
+              ]}))}
+              onEdit={openEdit} onDelete={del}
+              extraAction={s => <Btn size="sm" variant="soft" onClick={() => resetPw(s)}>Reset PW</Btn>}
+            />
+          )}
+          <MgmtModal open={modal} title={editing ? "Edit Staff" : "Add Staff"} onClose={() => setModal(false)}>
+            <form onSubmit={save}>
+              <FieldRow label="Name *"><input style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></FieldRow>
+              {!editing && <FieldRow label="Email *"><input style={inputStyle} type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></FieldRow>}
+              {!editing && <FieldRow label="Password *"><input style={inputStyle} type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required /></FieldRow>}
+              <FieldRow label="Phone"><input style={inputStyle} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></FieldRow>
+              <FieldRow label="Assigned Shop *">
+                <select style={{ ...inputStyle, appearance: "none" }} value={form.shopId} onChange={e => setForm({ ...form, shopId: e.target.value })} required>
+                  <option value="">Select shop…</option>
+                  {window.G.SHOPS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </FieldRow>
+              {err && <div style={{ color: "var(--red-500)", fontSize: 13, marginBottom: 12 }}>{err}</div>}
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn full type="submit">{editing ? "Update" : "Create"}</Btn>
+                <Btn full variant="ghost" type="button" onClick={() => setModal(false)}>Cancel</Btn>
+              </div>
+            </form>
+          </MgmtModal>
+          <MgmtModal open={!!resetInfo} title="Password Reset" onClose={() => setResetInfo(null)}>
+            {resetInfo && (
+              <div>
+                <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: 16, marginBottom: 20 }}>
+                  <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 4 }}>New temporary password</div>
+                  <div className="mono" style={{ fontSize: 20, fontWeight: 800, color: "var(--text)" }}>{resetInfo.temporaryPassword}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 6 }}>Share this securely with {resetInfo.email}</div>
+                </div>
+                <Btn full onClick={() => setResetInfo(null)}>Done</Btn>
+              </div>
+            )}
+          </MgmtModal>
+        </AdminPageWrap>
+      );
+    }
+
+    /* ---- Manage Categories (tabs: Departments | Categories | Products) ---- */
+    function ManageCategoriesScreen() {
+      const [tab, setTab] = useState("departments");
+
+      const tabs = [
+        { id: "departments", label: "Departments" },
+        { id: "categories", label: "Categories" },
+        { id: "products", label: "Products" },
+      ];
+
+      const tabBar = (
+        <div style={{ display: "flex", gap: 4, padding: "4px 6px", background: "var(--surface-2)", borderRadius: 12, marginBottom: 20 }}>
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              flex: 1, padding: "9px 12px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "var(--font-sans)",
+              fontWeight: 700, fontSize: 13.5, transition: "all .15s var(--ease)",
+              background: tab === t.id ? "var(--surface)" : "transparent",
+              color: tab === t.id ? "var(--text)" : "var(--text-2)",
+              boxShadow: tab === t.id ? "var(--shadow-sm)" : "none",
+            }}>{t.label}</button>
+          ))}
+        </div>
+      );
+
+      return (
+        <React.Fragment>
+          <PageHead title="Manage Categories" subtitle="Departments · Categories · Products" />
+          <div style={{ flex: 1, padding: "22px 34px 48px", overflowY: "auto" }}>
+            {tabBar}
+            {tab === "departments" && <DepartmentsTab />}
+            {tab === "categories" && <CategoriesTab />}
+            {tab === "products" && <ProductsTab />}
+          </div>
+        </React.Fragment>
+      );
+    }
+
+    function DepartmentsTab() {
+      const [items, setItems] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [modal, setModal] = useState(false);
+      const [editing, setEditing] = useState(null);
+      const [form, setForm] = useState({ name: "", location: "", temperatureZone: "ambient", description: "" });
+      const [err, setErr] = useState("");
+
+      const load = async () => {
+        setLoading(true);
+        try { const r = await fetch(`${API_BASE}/departments`, { headers: authHeaders() }); if (r.ok) setItems(await r.json()); }
+        finally { setLoading(false); }
+      };
+      useEffect(() => { load(); }, []);
+
+      const openCreate = () => { setEditing(null); setForm({ name: "", location: "", temperatureZone: "ambient", description: "" }); setErr(""); setModal(true); };
+      const openEdit = d => { setEditing(d.id); setForm({ name: d.name, location: d.location || "", temperatureZone: d.temperatureZone || "ambient", description: d.description || "" }); setErr(""); setModal(true); };
+
+      const save = async e => {
+        e.preventDefault(); setErr("");
+        const url = editing ? `${API_BASE}/departments/${editing}` : `${API_BASE}/departments`;
+        const r = await fetch(url, { method: editing ? "PUT" : "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(form) });
+        if (r.ok) { setModal(false); load(); } else { const d = await r.json(); setErr(d.message || d.error || "Save failed"); }
+      };
+
+      const del = async d => {
+        if (!confirm(`Delete department "${d.name}"?`)) return;
+        const r = await fetch(`${API_BASE}/departments/${d.id}`, { method: "DELETE", headers: authHeaders() });
+        if (r.ok) load(); else { const d2 = await r.json(); alert(d2.error || "Delete failed"); }
+      };
+
+      const zoneLabel = z => ({ frozen: "Frozen (−18°C)", chilled: "Chilled (4°C)", ambient: "Ambient (20°C)" }[z] || z);
+
+      return (
+        <React.Fragment>
+          <div style={{ marginBottom: 14 }}><Btn size="sm" icon="plus" onClick={openCreate}>Add Department</Btn></div>
+          {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading…</div> : (
+            <MgmtTable
+              cols={["Name", "Location", "Temperature zone"]}
+              rows={items.map(d => ({ id: d.id, raw: d, cells: [
+                <span style={{ fontWeight: 600 }}>{d.name}</span>,
+                d.location || "—",
+                <Pill tone="neutral" size="sm">{zoneLabel(d.temperatureZone)}</Pill>
+              ]}))}
+              onEdit={openEdit} onDelete={del}
+            />
+          )}
+          <MgmtModal open={modal} title={editing ? "Edit Department" : "Add Department"} onClose={() => setModal(false)}>
+            <form onSubmit={save}>
+              <FieldRow label="Name *"><input style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="e.g. Frozen Foods" /></FieldRow>
+              <FieldRow label="Location"><input style={inputStyle} value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="e.g. Aisle A" /></FieldRow>
+              <FieldRow label="Temperature zone">
+                <select style={{ ...inputStyle, appearance: "none" }} value={form.temperatureZone} onChange={e => setForm({ ...form, temperatureZone: e.target.value })}>
+                  <option value="frozen">Frozen (−18°C)</option>
+                  <option value="chilled">Chilled (4°C)</option>
+                  <option value="ambient">Ambient (20°C)</option>
+                </select>
+              </FieldRow>
+              <FieldRow label="Description"><textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></FieldRow>
+              {err && <div style={{ color: "var(--red-500)", fontSize: 13, marginBottom: 12 }}>{err}</div>}
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn full type="submit">{editing ? "Update" : "Create"}</Btn>
+                <Btn full variant="ghost" type="button" onClick={() => setModal(false)}>Cancel</Btn>
+              </div>
+            </form>
+          </MgmtModal>
+        </React.Fragment>
+      );
+    }
+
+    function CategoriesTab() {
+      const [items, setItems] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [modal, setModal] = useState(false);
+      const [editing, setEditing] = useState(null);
+      const [form, setForm] = useState({ id: "", name: "", hue: 152, blurb: "" });
+      const [err, setErr] = useState("");
+
+      const load = async () => {
+        setLoading(true);
+        try { const r = await fetch(`${API_BASE}/categories`, { headers: authHeaders() }); if (r.ok) { const d = await r.json(); setItems(d); window.G.CATEGORIES = d.map(c => ({ id: c.id, name: c.name, hue: c.hue || 152 })); } }
+        finally { setLoading(false); }
+      };
+      useEffect(() => { load(); }, []);
+
+      const openCreate = () => { setEditing(null); setForm({ id: "", name: "", hue: 152, blurb: "" }); setErr(""); setModal(true); };
+      const openEdit = c => { setEditing(c.id); setForm({ id: c.id, name: c.name, hue: c.hue || 152, blurb: c.blurb || "" }); setErr(""); setModal(true); };
+
+      const save = async e => {
+        e.preventDefault(); setErr("");
+        const url = editing ? `${API_BASE}/categories/${editing}` : `${API_BASE}/categories`;
+        const body = editing ? { name: form.name, hue: form.hue, blurb: form.blurb } : { id: form.id, name: form.name, hue: form.hue, blurb: form.blurb };
+        const r = await fetch(url, { method: editing ? "PUT" : "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (r.ok) { setModal(false); load(); } else { const d = await r.json(); setErr(d.message || d.error || "Save failed"); }
+      };
+
+      const del = async c => {
+        if (!confirm(`Delete category "${c.name}"?`)) return;
+        const r = await fetch(`${API_BASE}/categories/${c.id}`, { method: "DELETE", headers: authHeaders() });
+        if (r.ok) load(); else { const d = await r.json(); alert(d.error || "Delete failed"); }
+      };
+
+      return (
+        <React.Fragment>
+          <div style={{ marginBottom: 14 }}><Btn size="sm" icon="plus" onClick={openCreate}>Add Category</Btn></div>
+          {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading…</div> : (
+            <MgmtTable
+              cols={["Name", "Color", "Description"]}
+              rows={items.map(c => ({ id: c.id, raw: c, cells: [
+                <span style={{ fontWeight: 600 }}>{c.name}</span>,
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 20, height: 20, borderRadius: 5, background: `hsl(${c.hue},65%,50%)`, border: "1px solid var(--line)" }} />
+                  <span className="mono" style={{ fontSize: 12 }}>{c.hue}°</span>
+                </div>,
+                <span style={{ color: "var(--text-3)", fontSize: 13 }}>{c.blurb || "—"}</span>
+              ]}))}
+              onEdit={openEdit} onDelete={del}
+            />
+          )}
+          <MgmtModal open={modal} title={editing ? "Edit Category" : "Add Category"} onClose={() => setModal(false)}>
+            <form onSubmit={save}>
+              {!editing && <FieldRow label="ID (e.g. produce)"><input style={inputStyle} value={form.id} onChange={e => setForm({ ...form, id: e.target.value.toLowerCase().replace(/\s/g, "-") })} required placeholder="produce" /></FieldRow>}
+              <FieldRow label="Name *"><input style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Produce" /></FieldRow>
+              <FieldRow label="Color hue (0–360)">
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <input style={{ ...inputStyle, width: 90 }} type="number" min="0" max="360" value={form.hue} onChange={e => setForm({ ...form, hue: parseInt(e.target.value) || 0 })} />
+                  <div style={{ flex: 1, height: 36, borderRadius: 9, background: `hsl(${form.hue},65%,50%)`, border: "1px solid var(--line)", transition: "background 0.2s" }} />
+                </div>
+              </FieldRow>
+              <FieldRow label="Description"><textarea style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} value={form.blurb} onChange={e => setForm({ ...form, blurb: e.target.value })} placeholder="Short description shown to customers" /></FieldRow>
+              {err && <div style={{ color: "var(--red-500)", fontSize: 13, marginBottom: 12 }}>{err}</div>}
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn full type="submit">{editing ? "Update" : "Create"}</Btn>
+                <Btn full variant="ghost" type="button" onClick={() => setModal(false)}>Cancel</Btn>
+              </div>
+            </form>
+          </MgmtModal>
+        </React.Fragment>
+      );
+    }
+
+    function ProductsTab() {
+      const [items, setItems] = useState([]);
+      const [suppliers, setSuppliers] = useState([]);
+      const [categories, setCategories] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [modal, setModal] = useState(false);
+      const [editing, setEditing] = useState(null);
+      const [form, setForm] = useState({ name: "", brand: "", categoryId: "", supplierId: "", price: "", unit: "", par: "", size: "", costPrice: "", featuredImage: "" });
+      const [err, setErr] = useState("");
+      const [q, setQ] = useState("");
+
+      const load = async () => {
+        setLoading(true);
+        try {
+          const [rp, rs, rc] = await Promise.all([
+            fetch(`${API_BASE}/products`, { headers: authHeaders() }),
+            fetch(`${API_BASE}/suppliers`, { headers: authHeaders() }),
+            fetch(`${API_BASE}/categories`, { headers: authHeaders() }),
+          ]);
+          if (rp.ok) setItems(await rp.json());
+          if (rs.ok) setSuppliers(await rs.json());
+          if (rc.ok) setCategories(await rc.json());
+        } finally { setLoading(false); }
+      };
+      useEffect(() => { load(); }, []);
+
+      const openCreate = () => { setEditing(null); setForm({ name: "", brand: "", categoryId: categories[0]?.id || "", supplierId: suppliers[0]?.id || "", price: "", unit: "", par: "", size: "", costPrice: "", featuredImage: "" }); setErr(""); setModal(true); };
+      const openEdit = p => { setEditing(p.id); setForm({ name: p.name, brand: p.brand || "", categoryId: p.categoryId || p.category_id || "", supplierId: p.supplierId || p.supplier_id || "", price: p.price, unit: p.unit, par: p.par, size: p.size || "", costPrice: p.costPrice || p.cost_price || "", featuredImage: p.featuredImage || "" }); setErr(""); setModal(true); };
+
+      const save = async e => {
+        e.preventDefault(); setErr("");
+        const payload = { ...form, price: parseFloat(form.price), par: parseInt(form.par), costPrice: form.costPrice ? parseFloat(form.costPrice) : undefined, featuredImage: form.featuredImage || null };
+        const url = editing ? `${API_BASE}/products/${editing}` : `${API_BASE}/products`;
+        const r = await fetch(url, { method: editing ? "PUT" : "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        if (r.ok) { setModal(false); load(); } else { const d = await r.json(); setErr(d.message || d.error || "Save failed"); }
+      };
+
+      const del = async p => {
+        if (!confirm(`Delete product "${p.name}"?`)) return;
+        const r = await fetch(`${API_BASE}/products/${p.id}`, { method: "DELETE", headers: authHeaders() });
+        if (r.ok) load(); else { const d = await r.json(); alert(d.error || "Delete failed"); }
+      };
+
+      const catName = id => categories.find(c => c.id === id)?.name || id || "—";
+      const supName = id => suppliers.find(s => s.id === id)?.name || id || "—";
+      const filtered = q ? items.filter(p => p.name.toLowerCase().includes(q.toLowerCase())) : items;
+
+      return (
+        <React.Fragment>
+          <div style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "center" }}>
+            <Btn size="sm" icon="plus" onClick={openCreate}>Add Product</Btn>
+            <div style={{ position: "relative", flex: 1, maxWidth: 280 }}>
+              <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)" }}><Icon name="search" size={15} /></span>
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search products…" style={{ ...inputStyle, paddingLeft: 32 }} />
+            </div>
+            <span style={{ fontSize: 13, color: "var(--text-3)" }}>{filtered.length} of {items.length}</span>
+          </div>
+          {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading…</div> : (
+            <MgmtTable
+              cols={["Name", "Category", "Price", "Unit", "Par"]}
+              rows={filtered.map(p => ({ id: p.id, raw: p, cells: [
+                <span style={{ fontWeight: 600 }}>{p.name}{p.brand ? <span style={{ fontWeight: 400, color: "var(--text-3)", fontSize: 12 }}> · {p.brand}</span> : null}</span>,
+                <span style={{ fontSize: 13 }}>{catName(p.categoryId || p.category_id)}</span>,
+                <span className="tnum">{window.G.money(p.price)}</span>,
+                p.unit,
+                <span className="tnum">{p.par}</span>,
+              ]}))}
+              onEdit={openEdit} onDelete={del}
+            />
+          )}
+          <MgmtModal open={modal} title={editing ? "Edit Product" : "Add Product"} onClose={() => setModal(false)}>
+            <form onSubmit={save}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <FieldRow label="Name *"><input style={inputStyle} value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></FieldRow>
+                <FieldRow label="Brand"><input style={inputStyle} value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })} /></FieldRow>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <FieldRow label="Category *">
+                  <select style={{ ...inputStyle, appearance: "none" }} value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })} required>
+                    <option value="">Select…</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </FieldRow>
+                <FieldRow label="Supplier *">
+                  <select style={{ ...inputStyle, appearance: "none" }} value={form.supplierId} onChange={e => setForm({ ...form, supplierId: e.target.value })} required>
+                    <option value="">Select…</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </FieldRow>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <FieldRow label="Price *"><input style={inputStyle} type="number" step="0.01" min="0" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} required placeholder="0.00" /></FieldRow>
+                <FieldRow label="Unit *"><input style={inputStyle} value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} required placeholder="lb" /></FieldRow>
+                <FieldRow label="Par level *"><input style={inputStyle} type="number" min="1" value={form.par} onChange={e => setForm({ ...form, par: e.target.value })} required placeholder="20" /></FieldRow>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <FieldRow label="Size"><input style={inputStyle} value={form.size} onChange={e => setForm({ ...form, size: e.target.value })} placeholder="500g" /></FieldRow>
+                <FieldRow label="Cost price"><input style={inputStyle} type="number" step="0.01" min="0" value={form.costPrice} onChange={e => setForm({ ...form, costPrice: e.target.value })} placeholder="0.00" /></FieldRow>
+              </div>
+              <FieldRow label="Product Image">
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <label style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 9, border: "2px dashed var(--line)", cursor: "pointer", background: "var(--surface-2)", color: "var(--text-2)", fontSize: 13, fontWeight: 500 }}>
+                    <Icon name="plus" size={16} />
+                    {form.featuredImage ? "Change image" : "Upload image"}
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = ev => setForm(f => ({ ...f, featuredImage: ev.target.result }));
+                      reader.readAsDataURL(file);
+                    }} />
+                  </label>
+                  {form.featuredImage && (
+                    <div style={{ position: "relative", width: 56, height: 56, borderRadius: 9, overflow: "hidden", border: "1px solid var(--line)", flexShrink: 0 }}>
+                      <img src={form.featuredImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button type="button" onClick={() => setForm(f => ({ ...f, featuredImage: "" }))} style={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, borderRadius: 999, background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", fontSize: 11, cursor: "pointer", display: "grid", placeItems: "center" }}>×</button>
+                    </div>
+                  )}
+                </div>
+              </FieldRow>
+              {err && <div style={{ color: "var(--red-500)", fontSize: 13, margin: "10px 0" }}>{err}</div>}
+              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                <Btn full type="submit">{editing ? "Update" : "Create"}</Btn>
+                <Btn full variant="ghost" type="button" onClick={() => setModal(false)}>Cancel</Btn>
+              </div>
+            </form>
+          </MgmtModal>
+        </React.Fragment>
+      );
+    }
+
+    /* ========== MAIN APP ========== */
+    const STAFF_ROUTES = ["dashboard","fulfill","receive","transfer","manage-shops","manage-staff","manage-categories"];
+
+    function staffPathToRoute(pathname) {
+      const seg = pathname.replace(/^\//, "") || "dashboard";
+      return STAFF_ROUTES.includes(seg) ? seg : "dashboard";
+    }
+
+    function StaffApp() {
+      const savedUser = window.G.currentUser;
+      const [shopId, setShopId] = useState(savedUser ? (savedUser.shopId || "msn") : null);
+      const [route, setRoute] = useState(() => shopId ? staffPathToRoute(window.location.pathname) : "dashboard");
+
+      const navigate = (newRoute) => {
+        window.history.pushState({ route: newRoute }, "", "/" + newRoute);
+        setRoute(newRoute);
+      };
+
+      useEffect(() => {
+        const onPop = (e) => {
+          const r = e.state?.route || staffPathToRoute(window.location.pathname);
+          setRoute(r);
+        };
+        window.addEventListener("popstate", onPop);
+        if (shopId) {
+          window.history.replaceState({ route }, "", "/" + route);
+        }
+        return () => window.removeEventListener("popstate", onPop);
+      }, []);
+
+      const handleLogin = (sId, user) => {
+        setShopId(sId);
+        navigate("dashboard");
+      };
+
+      const handleLogout = () => {
+        sessionStorage.removeItem("staff_token");
+        sessionStorage.removeItem("staff_user");
+        window.G.token = null;
+        window.G.currentUser = null;
+        window.history.pushState({}, "", "/");
+        setShopId(null);
+      };
+
+      if (!shopId) return <StaffLogin onLogin={handleLogin} />;
+
+      const screenMap = {
+        dashboard: () => <DashboardScreen shopId={shopId} setRoute={navigate} />,
+        fulfill: () => <FulfillScreen shopId={shopId} setRoute={navigate} />,
+        receive: () => <ReceiveScreen shopId={shopId} setRoute={navigate} />,
+        transfer: () => <TransferScreen shopId={shopId} setRoute={navigate} />,
+        "manage-shops": () => <ManageShopsScreen />,
+        "manage-staff": () => <ManageStaffScreen />,
+        "manage-categories": () => <ManageCategoriesScreen />,
+      };
+
+      const renderScreen = screenMap[route] || screenMap.dashboard;
+
+      return (
+        <Shell shopId={shopId} route={route} setRoute={navigate} onLogout={handleLogout} user={window.G.currentUser}>
+          {renderScreen()}
+        </Shell>
+      );
+    }
+
+    try {
+      console.log("🎯 Creating React root...");
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      console.log("🎯 Rendering Staff App...");
+      root.render(<StaffApp />);
+      console.log("✅ Staff App rendered successfully!");
+    } catch (error) {
+      console.error("❌ ERROR:", error);
+      console.error("Stack:", error.stack);
+      document.getElementById("root").innerHTML = `<div style="padding:20px; color:red; font-family:monospace;"><h2>Error loading app:</h2><pre>${error.message}</pre></div>`;
+    }
+  </script>
+</body>
+</html>
