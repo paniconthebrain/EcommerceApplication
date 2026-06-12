@@ -40,7 +40,9 @@ function ProductCardEnhanced({ product, inCart, disabled, stockState, onAdd, onA
           placeItems: "center",
           fontSize: "3rem"
         }}>
-          🛒
+          {product.image
+            ? <img src={product.image} alt={product.name} loading="lazy" style={{ width: "70%", height: "70%", objectFit: "contain" }} />
+            : <span>🛒</span>}
         </div>
 
         {/* Stock badge */}
@@ -66,6 +68,7 @@ function ProductCardEnhanced({ product, inCart, disabled, stockState, onAdd, onA
 
         {/* Wishlist button */}
         <button
+          aria-label="Add to wishlist"
           style={{
             position: "absolute",
             top: 8,

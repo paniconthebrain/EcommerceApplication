@@ -1,0 +1,16 @@
+{
+  "name": "gogo-pantry",
+  "version": "1.0.0",
+  "description": "GoGO Pantry - Full stack ecommerce application",
+  "scripts": {
+    "start": "concurrently --kill-others-on-fail false -n backend,customer,staff -c green,cyan,yellow \"npm run backend\" \"npm run customer\" \"npm run staff\"",
+    "dev": "concurrently --kill-others-on-fail false -n backend,customer,staff -c green,cyan,yellow \"npm run backend:dev\" \"npm run customer\" \"npm run staff\"",
+    "backend": "cd backend && node src/index.js",
+    "backend:dev": "cd backend && npx nodemon src/index.js",
+    "customer": "node \"./GoGO Pantry Customer WebApp/server.js\"",
+    "staff": "node \"./GoGO Pantry Staff/server.js\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

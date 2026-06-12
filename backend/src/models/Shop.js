@@ -28,6 +28,10 @@ const Shop = sequelize.define('Shop', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  image: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
 }, {
   tableName: 'shops',
   timestamps: true,

@@ -11,7 +11,7 @@ app.use(helmet({
       scriptSrc:  ["'self'", "https://unpkg.com", "'unsafe-inline'"],
       styleSrc:   ["'self'", "'unsafe-inline'"],
       connectSrc: ["'self'", "http://localhost:3000"],
-      imgSrc:     ["'self'", "data:"],
+      imgSrc:     ["'self'", "data:", "http://localhost:3000"],
     },
   },
 }));

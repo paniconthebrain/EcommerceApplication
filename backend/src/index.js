@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 const { sequelize } = require('./models');
@@ -21,6 +22,7 @@ const deliveryRoutes = require('./routes/deliveries');
 const transferRoutes = require('./routes/transfers');
 const dashboardRoutes = require('./routes/dashboard');
 const deliverySlotsRoutes = require('./routes/deliverySlots');
+const emailRoutes = require('./routes/email');
 
 const app = express();
 
@@ -47,6 +49,12 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '50kb' }));
+
+// Serve uploaded shop images — cross-origin allowed so the frontend (port 3001) can load them
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -89,6 +97,7 @@ app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/transfer', transferRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/delivery-slots', deliverySlotsRoutes);
+app.use('/api/email', emailRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

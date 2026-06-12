@@ -60,16 +60,16 @@
 </head>
 <body>
   <div id="root"></div>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"
-          integrity="sha384-MhvFknC0AhqKZXwSCyPeIirpE1IhTafmLXTvTCai5pxjAqFcqEAAqKH/2lXrFVPn" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
-          integrity="sha384-VQePqH/QE94Buf4g/4MI5NrqDYjdqT7JW6KzhieQUlw6w7U7VD59fPqCAunpXEu6" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"
-          integrity="sha384-v4LZQvzduxIAwokUM+ItjOZKCVVstXSLSshmi7mAmakMq1hffVMVk+VkXpXQBQ2X" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"
+          integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"
+          integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"
+          integrity="sha384-KCD0A3BqTNZfWlXJcL7fKzDri97vicyNr4NUIr0vX6K9PZ0X5hOTeEbFh99jPEST" crossorigin="anonymous"></script>
 
   <script type="text/babel">
     console.log("🚀 Staff App starting...");
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useRef } = React;
     console.log("✅ React hooks loaded");
 
     // API BASE URL
@@ -142,11 +142,16 @@
         : { "Content-Type": "application/json" };
     }
 
+    function buildHeaders(options) {
+      // For FormData (multipart), only send Authorization — let the browser set Content-Type with boundary
+      if (options.body instanceof FormData) {
+        return window.G.token ? { Authorization: `Bearer ${window.G.token}` } : {};
+      }
+      return { ...authHeaders(), ...(options.headers || {}) };
+    }
+
     async function apiFetch(url, options = {}) {
-      const res = await fetch(url, {
-        ...options,
-        headers: { ...authHeaders(), ...(options.headers || {}) },
-      });
+      const res = await fetch(url, { ...options, headers: buildHeaders(options) });
 
       if (res.status === 401) {
         // Try to refresh the token once
@@ -163,10 +168,7 @@
               window.G.token = refreshData.token;
               sessionStorage.setItem("staff_token", refreshData.token);
               // Retry the original request with the new token
-              return fetch(url, {
-                ...options,
-                headers: { ...authHeaders(), ...(options.headers || {}) },
-              });
+              return fetch(url, { ...options, headers: buildHeaders(options) });
             }
           } catch (_) { /* fall through to logout */ }
         }
@@ -443,6 +445,7 @@
         { id: "manage-shops", label: "Manage Shops", icon: "building" },
         { id: "manage-staff", label: "Manage Staff", icon: "users" },
         { id: "manage-categories", label: "Manage Categories", icon: "folder" },
+        { id: "email-settings", label: "Email Settings", icon: "settings" },
       ];
       const nav = isAdmin ? adminNav : staffNav;
       const navLabel = isAdmin ? "Admin Operations" : "Operations";
@@ -1145,6 +1148,11 @@
       const [editing, setEditing] = useState(null);
       const [form, setForm] = useState({ id: "", name: "", city: "", code: "", hours: "" });
       const [err, setErr] = useState("");
+      const [imageFile, setImageFile] = useState(null);
+      const [imagePreview, setImagePreview] = useState(null);
+      const [currentImage, setCurrentImage] = useState(null);
+      const [uploading, setUploading] = useState(false);
+      const fileInputRef = useRef(null);
 
       const load = async () => {
         setLoading(true);
@@ -1156,16 +1164,64 @@
 
       useEffect(() => { load(); }, []);
 
-      const openCreate = () => { setEditing(null); setForm({ id: "", name: "", city: "", code: "", hours: "" }); setErr(""); setModal(true); };
-      const openEdit = s => { setEditing(s.id); setForm({ id: s.id, name: s.name, city: s.city, code: s.code, hours: s.hours || "" }); setErr(""); setModal(true); };
+      const openCreate = () => {
+        setEditing(null);
+        setForm({ id: "", name: "", city: "", code: "", hours: "" });
+        setImageFile(null); setImagePreview(null); setCurrentImage(null);
+        setErr(""); setModal(true);
+      };
+
+      const openEdit = s => {
+        setEditing(s.id);
+        setForm({ id: s.id, name: s.name, city: s.city, code: s.code, hours: s.hours || "" });
+        setImageFile(null); setImagePreview(null);
+        setCurrentImage(s.image ? `http://localhost:3000${s.image}` : null);
+        setErr(""); setModal(true);
+      };
+
+      const handleImageChange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setImageFile(file);
+        const reader = new FileReader();
+        reader.onload = ev => setImagePreview(ev.target.result);
+        reader.readAsDataURL(file);
+      };
+
+      const clearNewImage = () => {
+        setImageFile(null); setImagePreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      };
+
+      const removeCurrentImage = async () => {
+        if (!editing) return;
+        const r = await fetch(`${API_BASE}/shops/${editing}/image`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${window.G.token}` },
+        });
+        if (r.ok) { setCurrentImage(null); load(); }
+        else setErr("Failed to remove image");
+      };
 
       const save = async e => {
         e.preventDefault(); setErr("");
         const url = editing ? `${API_BASE}/shops/${editing}` : `${API_BASE}/shops`;
         const body = editing ? { name: form.name, city: form.city, code: form.code, hours: form.hours } : form;
-        const r = await fetch(url, { method: editing ? "PUT" : "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
-        if (r.ok) { setModal(false); load(); window.G.SHOPS = []; initializeAppData(); }
-        else { const d = await r.json(); setErr(d.message || d.error || "Save failed"); }
+        const r = await apiFetch(url, { method: editing ? "PUT" : "POST", body: JSON.stringify(body) });
+        if (!r || !r.ok) { const d = r ? await r.json() : {}; setErr(d.message || d.error || "Save failed"); return; }
+        const saved = await r.json();
+        const shopId = editing || saved.id;
+
+        if (imageFile && shopId) {
+          setUploading(true);
+          const fd = new FormData();
+          fd.append("image", imageFile);
+          const ir = await apiFetch(`${API_BASE}/shops/${shopId}/image`, { method: "POST", body: fd });
+          setUploading(false);
+          if (!ir || !ir.ok) { setErr("Shop saved but image upload failed"); load(); return; }
+        }
+
+        setModal(false); load(); window.G.SHOPS = []; initializeAppData();
       };
 
       const del = async s => {
@@ -1174,12 +1230,22 @@
         if (r.ok) load(); else alert("Delete failed");
       };
 
+      const displayPreview = imagePreview || currentImage;
+
       return (
         <AdminPageWrap title="Manage Shops" subtitle={`${shops.length} locations`} action={<Btn size="sm" icon="plus" onClick={openCreate}>Add Shop</Btn>}>
           {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading…</div> : (
             <MgmtTable
-              cols={["Name", "Code", "City", "Hours"]}
-              rows={shops.map(s => ({ id: s.id, raw: s, cells: [s.name, <span className="mono" style={{ fontSize: 12 }}>{s.code}</span>, s.city, s.hours || "—"] }))}
+              cols={["Image", "Name", "Code", "City", "Hours"]}
+              rows={shops.map(s => ({ id: s.id, raw: s, cells: [
+                s.image
+                  ? React.createElement("img", { src: `http://localhost:3000${s.image}`, alt: s.name, style: { width: 40, height: 40, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" } })
+                  : React.createElement("div", { style: { width: 40, height: 40, borderRadius: 8, background: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 } }, "🏪"),
+                s.name,
+                React.createElement("span", { className: "mono", style: { fontSize: 12 } }, s.code),
+                s.city,
+                s.hours || "—",
+              ]}))}
               onEdit={openEdit} onDelete={del}
             />
           )}
@@ -1190,9 +1256,33 @@
               <FieldRow label="City *"><input style={inputStyle} value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} required placeholder="San Francisco" /></FieldRow>
               <FieldRow label="Code *"><input style={inputStyle} value={form.code} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} required placeholder="MSN" /></FieldRow>
               <FieldRow label="Hours"><input style={inputStyle} value={form.hours} onChange={e => setForm({ ...form, hours: e.target.value })} placeholder="9am–9pm" /></FieldRow>
+
+              <FieldRow label="Shop Image">
+                <div>
+                  {displayPreview && (
+                    <div style={{ position: "relative", marginBottom: 8 }}>
+                      <img src={displayPreview} alt="preview" style={{ width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)", display: "block" }} />
+                      <button type="button" onClick={imagePreview ? clearNewImage : removeCurrentImage}
+                        style={{ position: "absolute", top: 6, right: 6, background: "rgba(220,53,69,0.9)", color: "#fff", border: "none", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>
+                        Remove
+                      </button>
+                      {imagePreview && <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 4 }}>Will upload on save</div>}
+                    </div>
+                  )}
+                  {!imagePreview && (
+                    <label style={{ border: "2px dashed var(--line)", borderRadius: 8, padding: "16px", textAlign: "center", cursor: "pointer", color: "var(--text-3)", fontSize: 13, display: "block" }}>
+                      <div style={{ fontSize: 24, marginBottom: 4 }}>📷</div>
+                      <div style={{ fontWeight: 600 }}>Click to upload image</div>
+                      <div style={{ fontSize: 11 }}>Any size — original quality preserved</div>
+                      <input type="file" accept="image/*" onChange={handleImageChange} style={{ display: "none" }} />
+                    </label>
+                  )}
+                </div>
+              </FieldRow>
+
               {err && <div style={{ color: "var(--red-500)", fontSize: 13, marginBottom: 12 }}>{err}</div>}
               <div style={{ display: "flex", gap: 10 }}>
-                <Btn full type="submit">{editing ? "Update" : "Create"}</Btn>
+                <Btn full type="submit" disabled={uploading}>{uploading ? "Uploading…" : editing ? "Update" : "Create"}</Btn>
                 <Btn full variant="ghost" type="button" onClick={() => setModal(false)}>Cancel</Btn>
               </div>
             </form>
@@ -1614,6 +1704,179 @@
       return STAFF_ROUTES.includes(seg) ? seg : "dashboard";
     }
 
+    function EmailSettingsScreen() {
+      const [templates, setTemplates] = React.useState([]);
+      const [selected, setSelected] = React.useState(null);
+      const [subject, setSubject] = React.useState("");
+      const [body, setBody] = React.useState("");
+      const [enabled, setEnabled] = React.useState(true);
+      const [testEmail, setTestEmail] = React.useState("");
+      const [saving, setSaving] = React.useState(false);
+      const [testing, setTesting] = React.useState(false);
+      const [msg, setMsg] = React.useState(null);
+
+      React.useEffect(() => {
+        apiFetch(`${API_BASE}/email/templates`)
+          .then(r => r && r.json())
+          .then(d => {
+            if (d?.templates?.length) {
+              setTemplates(d.templates);
+              const first = d.templates[0];
+              setSelected(first);
+              setSubject(first.subject);
+              setBody(first.body);
+              setEnabled(first.enabled);
+            }
+          })
+          .catch(() => setMsg({ type: "error", text: "Failed to load templates." }));
+      }, []);
+
+      const selectTemplate = (tpl) => {
+        setSelected(tpl);
+        setSubject(tpl.subject);
+        setBody(tpl.body);
+        setEnabled(tpl.enabled);
+        setMsg(null);
+      };
+
+      const handleSave = async () => {
+        if (!selected) return;
+        setSaving(true); setMsg(null);
+        try {
+          const res = await apiFetch(`${API_BASE}/email/templates/${selected.type}`, {
+            method: "PUT",
+            body: JSON.stringify({ subject, body, enabled }),
+          });
+          const d = await res.json();
+          if (!res.ok) { setMsg({ type: "error", text: d.error || "Save failed." }); return; }
+          setTemplates(prev => prev.map(t => t.type === selected.type ? d.template : t));
+          setSelected(d.template);
+          setMsg({ type: "success", text: "Template saved." });
+        } catch { setMsg({ type: "error", text: "Network error." }); }
+        finally { setSaving(false); }
+      };
+
+      const handleTest = async () => {
+        if (!testEmail || !selected) return;
+        setTesting(true); setMsg(null);
+        try {
+          const res = await apiFetch(`${API_BASE}/email/test`, {
+            method: "POST",
+            body: JSON.stringify({ type: selected.type, to: testEmail }),
+          });
+          const d = await res.json();
+          if (!res.ok) { setMsg({ type: "error", text: d.error || "Test failed." }); return; }
+          setMsg({ type: "success", text: d.message });
+        } catch { setMsg({ type: "error", text: "Network error." }); }
+        finally { setTesting(false); }
+      };
+
+      const placeholders = {
+        password_reset: ["{{name}}", "{{reset_link}}"],
+      };
+
+      const card = { background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 24 };
+
+      return (
+        <div style={{ padding: 28, maxWidth: 900, margin: "0 auto" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Email Settings</h2>
+          <p style={{ color: "var(--text-2)", fontSize: 14, marginBottom: 24 }}>Edit email templates sent to customers.</p>
+
+          {msg && (
+            <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 20, fontSize: 13, fontWeight: 600,
+              background: msg.type === "success" ? "var(--green-50,#f0fdf4)" : "var(--red-100,#fee2e2)",
+              color: msg.type === "success" ? "#15803d" : "#b91c1c",
+              border: `1px solid ${msg.type === "success" ? "#bbf7d0" : "#fca5a5"}` }}>
+              {msg.text}
+            </div>
+          )}
+
+          <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 20 }}>
+            {/* Template list */}
+            <div style={card}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 10 }}>Templates</div>
+              {templates.map(tpl => (
+                <button key={tpl.type} onClick={() => selectTemplate(tpl)} style={{
+                  width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 8, border: "none",
+                  background: selected?.type === tpl.type ? "var(--primary)" : "transparent",
+                  color: selected?.type === tpl.type ? "#fff" : "var(--text)",
+                  fontFamily: "var(--font-sans)", fontSize: 13.5, fontWeight: 600, cursor: "pointer", marginBottom: 2,
+                }}>
+                  {tpl.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Editor */}
+            {selected && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={card}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700 }}>{selected.label}</span>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+                      <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
+                      Enabled
+                    </label>
+                  </div>
+
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-2)", marginBottom: 6 }}>SUBJECT</div>
+                    <input value={subject} onChange={e => setSubject(e.target.value)}
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)",
+                        background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font-sans)", fontSize: 14, boxSizing: "border-box" }} />
+                  </div>
+
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-2)", marginBottom: 6 }}>BODY (HTML)</div>
+                    <textarea value={body} onChange={e => setBody(e.target.value)} rows={14}
+                      style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)",
+                        background: "var(--bg)", color: "var(--text)", fontFamily: "monospace", fontSize: 12.5,
+                        resize: "vertical", boxSizing: "border-box" }} />
+                  </div>
+
+                  <div style={{ background: "var(--surface-2,#f8f8f8)", borderRadius: 8, padding: "10px 14px", marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-2)", marginBottom: 6 }}>AVAILABLE PLACEHOLDERS</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {(placeholders[selected.type] || []).map(p => (
+                        <code key={p} style={{ background: "var(--line)", padding: "2px 8px", borderRadius: 4, fontSize: 12 }}>{p}</code>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button onClick={handleSave} disabled={saving}
+                    style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "var(--primary)",
+                      color: "#fff", fontFamily: "var(--font-sans)", fontSize: 14, fontWeight: 700, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
+                    {saving ? "Saving…" : "Save Template"}
+                  </button>
+                </div>
+
+                {/* Test send */}
+                <div style={card}>
+                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Send Test Email</div>
+                  <p style={{ fontSize: 13, color: "var(--text-2)", marginBottom: 14 }}>
+                    Sends the template with sample data to verify your Gmail config is working.
+                  </p>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <input type="email" value={testEmail} onChange={e => setTestEmail(e.target.value)}
+                      placeholder="recipient@example.com"
+                      style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid var(--line)",
+                        background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font-sans)", fontSize: 14 }} />
+                    <button onClick={handleTest} disabled={testing || !testEmail}
+                      style={{ padding: "10px 20px", borderRadius: 8, border: "1px solid var(--line)",
+                        background: "var(--surface)", color: "var(--text)", fontFamily: "var(--font-sans)",
+                        fontSize: 14, fontWeight: 600, cursor: testing || !testEmail ? "not-allowed" : "pointer",
+                        opacity: testing || !testEmail ? 0.6 : 1 }}>
+                      {testing ? "Sending…" : "Send Test"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     function StaffApp() {
       const savedUser = window.G.currentUser;
       const [shopId, setShopId] = useState(savedUser ? (savedUser.shopId || "msn") : null);
@@ -1670,6 +1933,7 @@
         "manage-shops":      () => <AdminOnly user={window.G.currentUser}><ManageShopsScreen /></AdminOnly>,
         "manage-staff":      () => <AdminOnly user={window.G.currentUser}><ManageStaffScreen /></AdminOnly>,
         "manage-categories": () => <AdminOnly user={window.G.currentUser}><ManageCategoriesScreen /></AdminOnly>,
+        "email-settings":    () => <AdminOnly user={window.G.currentUser}><EmailSettingsScreen /></AdminOnly>,
       };
 
       const renderScreen = screenMap[route] || screenMap.dashboard;

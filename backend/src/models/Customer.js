@@ -86,6 +86,11 @@ const Customer = sequelize.define('Customer', {
     allowNull: true,
     field: 'reset_token_expiry',
   },
+  cart: {
+    type: DataTypes.JSON,
+    defaultValue: {},
+    allowNull: false,
+  },
 }, {
   tableName: 'customers',
   timestamps: true,

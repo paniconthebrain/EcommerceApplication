@@ -7,6 +7,8 @@ const { blacklistToken } = require('../utils/tokenBlacklist');
 const { sanitizeText } = require('../utils/sanitize');
 const customerAuthMiddleware = require('../middleware/customerAuthMiddleware');
 const { AuthenticationError, ValidationError } = require('../utils/errors');
+const { sendEmail } = require('../utils/emailService');
+const { EmailTemplate } = require('../models');
 
 const router = express.Router();
 
@@ -243,6 +245,24 @@ router.put('/change-password', customerAuthMiddleware, async (req, res, next) =>
   }
 });
 
+// GET /api/customers/auth/cart
+router.get('/cart', customerAuthMiddleware, async (req, res, next) => {
+  try {
+    const customer = await Customer.findByPk(req.customer.id, { attributes: ['cart'] });
+    res.json({ cart: customer.cart || {} });
+  } catch (err) { next(err); }
+});
+
+// PUT /api/customers/auth/cart
+router.put('/cart', customerAuthMiddleware, async (req, res, next) => {
+  try {
+    const { cart } = req.body;
+    if (typeof cart !== 'object' || cart === null) throw new ValidationError('Invalid cart data');
+    await Customer.update({ cart }, { where: { id: req.customer.id } });
+    res.json({ cart });
+  } catch (err) { next(err); }
+});
+
 // POST /api/customers/auth/forgot-password
 router.post('/forgot-password', async (req, res, next) => {
   try {
@@ -260,9 +280,20 @@ router.post('/forgot-password', async (req, res, next) => {
     customer.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await customer.save();
 
-    // TODO: Replace console.log with real email service (e.g. Nodemailer)
-    // await sendEmail(email, 'Reset your GoGO Pantry password', rawToken)
-    console.log(`[DEV ONLY] Password reset token for ${email}: ${rawToken}`);
+    const appUrl = process.env.APP_URL || 'http://localhost:3001';
+    const resetLink = `${appUrl}/reset-password?email=${encodeURIComponent(email)}&token=${rawToken}`;
+
+    const tpl = await EmailTemplate.findOne({ where: { type: 'password_reset', enabled: true } });
+    if (tpl) {
+      await sendEmail({
+        to: email,
+        subject: tpl.subject,
+        body: tpl.body,
+        vars: { name: customer.name || email, reset_link: resetLink },
+      }).catch(err => console.error('Failed to send password reset email:', err));
+    } else {
+      console.log(`[DEV ONLY] Password reset link for ${email}: ${resetLink}`);
+    }
   } catch (error) {
     next(error);
   }

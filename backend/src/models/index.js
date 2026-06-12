@@ -10,6 +10,7 @@ const PurchaseOrder = require('./PurchaseOrder');
 const StockTransfer = require('./StockTransfer');
 const Customer = require('./Customer');
 const Order = require('./Order');
+const EmailTemplate = require('./EmailTemplate');
 
 // Define associations
 User.belongsTo(Shop, { foreignKey: 'shopId', targetKey: 'id' });
@@ -61,4 +62,5 @@ module.exports = {
   StockTransfer,
   Customer,
   Order,
+  EmailTemplate,
 };

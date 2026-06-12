@@ -7,6 +7,14 @@
       "runtimeArgs": ["src/index.js"],
       "port": 3000,
       "cwd": "backend"
+    },
+    {
+      "name": "customer-webapp",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "port": 3001,
+      "autoPort": false,
+      "cwd": "GoGO Pantry Customer WebApp"
     }
   ]
 }

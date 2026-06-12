@@ -1,26 +1,36 @@
 /* GoGO Pantry — Customer Cart page */
 
 function CustomerCart({ shopId, cartItems, onUpdateCart, onCheckout, onContinueShopping }) {
+  const [dataVersion, setDataVersion] = useState(() => window.GOGO.PRODUCTS?.length > 0 ? 1 : 0);
+
+  useEffect(() => {
+    if (window.GOGO.PRODUCTS?.length > 0) setDataVersion(n => n > 0 ? n : 1);
+    const handler = () => setDataVersion(n => n + 1);
+    window.addEventListener("dataLoaded", handler);
+    return () => window.removeEventListener("dataLoaded", handler);
+  }, []);
+
   const cartProducts = useMemo(() => {
     return Object.entries(cartItems)
       .filter(([, qty]) => qty > 0)
       .map(([id, qty]) => {
-        const p = G.PRODUCTS.find(x => x.id === id);
+        const p = G.PRODUCTS.find(x => String(x.id) === String(id));
+        if (!p) return null;
         return { ...p, qty, stock: G.shopStock(id, shopId), subtotal: p.price * qty };
-      });
-  }, [cartItems, shopId]);
+      })
+      .filter(Boolean);
+  }, [cartItems, shopId, dataVersion]);
 
   const subtotal = cartProducts.reduce((s, p) => s + p.subtotal, 0);
-  const deliveryFee = subtotal > 0 ? 3.99 : 0;
   const tax = subtotal * 0.08;
-  const total = subtotal + deliveryFee + tax;
+  const total = subtotal + tax;
 
   const isEmpty = cartProducts.length === 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--bg)" }}>
       {/* Progress indicator */}
-      <ProgressIndicator currentStep={0} />
+      <ProgressIndicator currentStep={1} steps={["Store", "Cart", "Checkout", "Confirm"]} />
 
       <div style={{ padding: "20px 16px", maxWidth: 900, margin: "0 auto", width: "100%", flex: 1 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 20px", color: "var(--text)" }}>Your cart</h1>
@@ -66,8 +76,8 @@ function CustomerCart({ shopId, cartItems, onUpdateCart, onCheckout, onContinueS
                   <span className="tnum">{G.money(subtotal)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
-                  <span>Delivery</span>
-                  <span className="tnum">{G.money(deliveryFee)}</span>
+                  <span>Pickup</span>
+                  <span className="tnum" style={{ color: "var(--green-600)", fontWeight: 700 }}>Free</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
                   <span>Tax</span>
