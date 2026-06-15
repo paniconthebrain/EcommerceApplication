@@ -48,7 +48,8 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json({ limit: '50kb' }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 // Serve uploaded shop images — cross-origin allowed so the frontend (port 3001) can load them
 app.use('/uploads', (req, res, next) => {

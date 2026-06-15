@@ -33,9 +33,14 @@ const Product = sequelize.define('Product', {
     allowNull: true,
     field: 'cost_price',
   },
+  parentId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'parent_id',
+  },
   price: {
     type: DataTypes.DECIMAL(10, 2),
-    allowNull: false,
+    allowNull: true,
   },
   unit: {
     type: DataTypes.STRING,

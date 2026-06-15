@@ -16,5 +16,13 @@
       "autoPort": false,
       "cwd": "GoGO Pantry Customer WebApp"
     }
+  ,{
+      "name": "staff-webapp",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "port": 3002,
+      "autoPort": false,
+      "cwd": "GoGO Pantry Staff"
+    }
   ]
 }

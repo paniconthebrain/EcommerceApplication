@@ -56,12 +56,12 @@ function LogoCustomer({ size = 28 }) {
 function BadgeC({ tone = "neutral", children, dot = false, size = "md" }) {
   const map = {
     ok:       ["var(--green-100)", "var(--green-700)"],
-    low:      ["var(--amber-100)", "oklch(0.5 0.12 78)"],
-    critical: ["var(--red-100)",   "var(--red-500)"],
-    out:      ["var(--red-100)",   "var(--red-500)"],
-    info:     ["var(--blue-100)",  "var(--blue-500)"],
-    warn:     ["var(--warm-100)",  "var(--warm-600)"],
-    neutral:  ["var(--surface-2)", "var(--text-2)"],
+    low:      ["var(--amber-100)", "oklch(0.42 0.14 78)"],
+    critical: ["var(--red-100)",   "var(--red-700)"],
+    out:      ["var(--red-100)",   "var(--red-700)"],
+    info:     ["var(--blue-100)",  "oklch(0.42 0.16 245)"],
+    warn:     ["var(--warm-100)",  "oklch(0.46 0.14 45)"],
+    neutral:  ["var(--surface-2)", "var(--text)"],
   };
   const [bg, fg] = map[tone] || map.neutral;
   return (

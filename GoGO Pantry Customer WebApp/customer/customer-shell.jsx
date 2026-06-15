@@ -9,6 +9,20 @@ function CustomerShell({ page, setPage, cartCount, user, onLogout, onNavigate, s
       {/* Top bar */}
       <header style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 40, boxShadow: "0 1px 3px oklch(0 0 0 / 0.05)" }}>
         <LogoCustomer size={26} />
+        {/* Macro nav links — desktop only */}
+        <nav style={{ display: "flex", alignItems: "center", gap: 2, marginLeft: 8 }} className="hideOnMobile">
+          {["Stores", "Deals", "How It Works"].map(label => (
+            <button key={label} style={{
+              background: "none", border: "none", color: "var(--text-2)", fontSize: 13,
+              fontWeight: 600, padding: "8px 12px", borderRadius: 8, cursor: "pointer",
+              fontFamily: "var(--font-sans)", transition: "all 0.15s", minHeight: 44
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-2)"; }}>
+              {label}
+            </button>
+          ))}
+        </nav>
         <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
           <button
             onClick={() => setShopSelectorOpen(true)}
@@ -149,7 +163,7 @@ function CustomerShell({ page, setPage, cartCount, user, onLogout, onNavigate, s
 }
 
 const topBarIconBtn = {
-  width: 40, height: 40, borderRadius: 10, border: "none", background: "transparent", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center", transition: "all .15s", fontFamily: "var(--font-sans)"
+  width: 44, height: 44, borderRadius: 10, border: "none", background: "transparent", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center", transition: "all .15s", fontFamily: "var(--font-sans)"
 };
 
 Object.assign(window, { CustomerShell, topBarIconBtn });

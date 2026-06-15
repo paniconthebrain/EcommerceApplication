@@ -1,6 +1,6 @@
 # ============================================================
-# GoGO Pantry — Windows Auto Setup Script
-# Run: Right-click → "Run with PowerShell" or:
+# GoGO Pantry -- Windows Auto Setup Script
+# Run: Right-click -> "Run with PowerShell" or:
 #   powershell -ExecutionPolicy Bypass -File setup.ps1
 # ============================================================
 
@@ -12,17 +12,17 @@ function Write-WARN($msg)  { Write-Host "  [!!] $msg" -ForegroundColor Yellow }
 function Write-FAIL($msg)  { Write-Host "  [XX] $msg" -ForegroundColor Red }
 
 Write-Host ""
-Write-Host "  ╔══════════════════════════════════╗" -ForegroundColor Green
-Write-Host "  ║     GoGO Pantry — Auto Setup     ║" -ForegroundColor Green
-Write-Host "  ╚══════════════════════════════════╝" -ForegroundColor Green
+Write-Host "  +----------------------------------+" -ForegroundColor Green
+Write-Host "  |   GoGO Pantry -- Auto Setup      |" -ForegroundColor Green
+Write-Host "  +----------------------------------+" -ForegroundColor Green
 Write-Host ""
 
-# ── 1. Node.js ────────────────────────────────────────────────
+# -- 1. Node.js ------------------------------------------------
 Write-Step "Checking Node.js..."
 $nodeOk = $false
 try {
     $nodeVer = node --version 2>$null
-    $major   = [int]($nodeVer -replace 'v(\d+).*','$1')
+    $major   = [int]($nodeVer -replace 'v(\d+).*', '$1')
     if ($major -ge 18) {
         Write-OK "Node.js $nodeVer found"
         $nodeOk = $true
@@ -35,8 +35,7 @@ if (-not $nodeOk) {
     Write-Step "Installing Node.js via winget..."
     try {
         winget install --id OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements -e
-        # Refresh PATH for this session
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
         $nodeVer = node --version
         Write-OK "Node.js $nodeVer installed"
     } catch {
@@ -47,7 +46,7 @@ if (-not $nodeOk) {
     }
 }
 
-# ── 2. PostgreSQL ─────────────────────────────────────────────
+# -- 2. PostgreSQL ---------------------------------------------
 Write-Step "Checking PostgreSQL..."
 $pgOk = $false
 try {
@@ -60,8 +59,7 @@ if (-not $pgOk) {
     Write-Step "Installing PostgreSQL via winget..."
     try {
         winget install --id PostgreSQL.PostgreSQL --accept-package-agreements --accept-source-agreements -e
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-        # Find psql in common install locations
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
         $psqlPaths = @(
             "C:\Program Files\PostgreSQL\17\bin",
             "C:\Program Files\PostgreSQL\16\bin",
@@ -85,13 +83,12 @@ if (-not $pgOk) {
     }
 }
 
-# ── 3. .env file ──────────────────────────────────────────────
+# -- 3. .env file ----------------------------------------------
 Write-Step "Configuring backend environment..."
 $envPath = Join-Path $PSScriptRoot "backend\.env"
 if (Test-Path $envPath) {
-    Write-OK "backend\.env already exists — skipping"
+    Write-OK "backend\.env already exists -- skipping"
 } else {
-    # Generate a random JWT secret
     $jwtSecret = -join ((48..57) + (97..122) | Get-Random -Count 64 | ForEach-Object { [char]$_ })
 
     $pgPassword = Read-Host "  Enter your PostgreSQL 'postgres' user password (default: postgres)"
@@ -116,7 +113,7 @@ JWT_REFRESH_EXPIRES_IN=7d
 # CORS
 CORS_ORIGIN=http://localhost:3001,http://localhost:3002
 
-# Email (optional — leave as-is for dev)
+# Email (optional -- leave as-is for dev)
 GMAIL_USER=your-gmail@gmail.com
 GMAIL_APP_PASSWORD=your-16-char-app-password
 APP_URL=http://localhost:3001
@@ -125,7 +122,13 @@ APP_URL=http://localhost:3001
     Write-OK "backend\.env created"
 }
 
-# ── 4. npm install ────────────────────────────────────────────
+# -- 4. npm install --------------------------------------------
+Write-Step "Installing root dependencies..."
+Push-Location $PSScriptRoot
+npm install --silent
+Write-OK "Root dependencies installed"
+Pop-Location
+
 Write-Step "Installing backend dependencies..."
 Push-Location (Join-Path $PSScriptRoot "backend")
 npm install --silent
@@ -138,7 +141,7 @@ if (Test-Path "package.json") {
     npm install --silent
     Write-OK "Customer webapp dependencies installed"
 } else {
-    Write-OK "No package.json — skipping"
+    Write-OK "No package.json -- skipping"
 }
 Pop-Location
 
@@ -148,14 +151,13 @@ if (Test-Path "package.json") {
     npm install --silent
     Write-OK "Staff webapp dependencies installed"
 } else {
-    Write-OK "No package.json — skipping"
+    Write-OK "No package.json -- skipping"
 }
 Pop-Location
 
-# ── 5. Create PostgreSQL database ────────────────────────────
+# -- 5. Create PostgreSQL database -----------------------------
 Write-Step "Setting up PostgreSQL database..."
 
-# Load password from .env
 $envVars = @{}
 Get-Content $envPath | ForEach-Object {
     if ($_ -match '^\s*([^#][^=]+)=(.*)$') {
@@ -167,10 +169,9 @@ $pgUser = $envVars["DB_USER"]
 $dbName = $envVars["DB_NAME"]
 
 try {
-    # Check if DB exists
     $exists = psql -U $pgUser -lqt 2>$null | Select-String $dbName
     if ($exists) {
-        Write-OK "Database '$dbName' already exists — skipping creation"
+        Write-OK "Database '$dbName' already exists -- skipping creation"
     } else {
         psql -U $pgUser -c "CREATE DATABASE $dbName;" 2>$null
         Write-OK "Database '$dbName' created"
@@ -180,36 +181,35 @@ try {
     Write-Host "  Run this manually in psql: CREATE DATABASE $dbName;" -ForegroundColor Yellow
 }
 
-# ── 6. Seed database ─────────────────────────────────────────
+# -- 6. Seed database ------------------------------------------
 Write-Step "Seeding database..."
 Push-Location (Join-Path $PSScriptRoot "backend")
 try {
     node seed.js
     Write-OK "Database seeded"
 } catch {
-    Write-WARN "Seed failed or already seeded — continuing"
+    Write-WARN "Seed failed or already seeded -- continuing"
 }
 Pop-Location
 
-# ── 7. Done ───────────────────────────────────────────────────
+# -- 7. Done ---------------------------------------------------
 Write-Host ""
-Write-Host "  ╔════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "  ║          Setup Complete!               ║" -ForegroundColor Green
-Write-Host "  ╠════════════════════════════════════════╣" -ForegroundColor Green
-Write-Host "  ║  Backend API:   http://localhost:3000  ║" -ForegroundColor White
-Write-Host "  ║  Customer App:  http://localhost:3001  ║" -ForegroundColor White
-Write-Host "  ║  Staff App:     http://localhost:3002  ║" -ForegroundColor White
-Write-Host "  ╚════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host "  +----------------------------------------+" -ForegroundColor Green
+Write-Host "  |          Setup Complete!               |" -ForegroundColor Green
+Write-Host "  +----------------------------------------+" -ForegroundColor Green
+Write-Host "  |  Backend API:   http://localhost:3000  |" -ForegroundColor White
+Write-Host "  |  Customer App:  http://localhost:3001  |" -ForegroundColor White
+Write-Host "  |  Staff App:     http://localhost:3002  |" -ForegroundColor White
+Write-Host "  +----------------------------------------+" -ForegroundColor Green
 Write-Host ""
-Write-Host "  To start the project, run: " -ForegroundColor Cyan
-Write-Host "    .\start.ps1" -ForegroundColor White
+Write-Host "  To start the project, run: .\start.ps1" -ForegroundColor Cyan
 Write-Host ""
 
 $launch = Read-Host "  Start all servers now? (Y/n)"
 if ($launch -ne "n" -and $launch -ne "N") {
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$(Join-Path $PSScriptRoot backend)'; npm start"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot\backend'; npm start"
     Start-Sleep 2
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$(Join-Path $PSScriptRoot 'GoGO Pantry Customer WebApp')'; node server.js"
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$(Join-Path $PSScriptRoot 'GoGO Pantry Staff')'; node server.js"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot\GoGO Pantry Customer WebApp'; node server.js"
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PSScriptRoot\GoGO Pantry Staff'; node server.js"
     Write-OK "Servers started in separate windows"
 }

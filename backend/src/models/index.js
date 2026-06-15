@@ -22,6 +22,10 @@ Department.hasMany(Category, { foreignKey: 'departmentId', sourceKey: 'id' });
 Product.belongsTo(Category, { foreignKey: 'categoryId', targetKey: 'id' });
 Category.hasMany(Product, { foreignKey: 'categoryId', sourceKey: 'id' });
 
+// Self-referencing: variable product ↔ variants
+Product.hasMany(Product, { foreignKey: 'parentId', sourceKey: 'id', as: 'variants' });
+Product.belongsTo(Product, { foreignKey: 'parentId', targetKey: 'id', as: 'parent' });
+
 Product.belongsTo(Supplier, { foreignKey: 'supplierId', targetKey: 'id' });
 Supplier.hasMany(Product, { foreignKey: 'supplierId', sourceKey: 'id' });
 

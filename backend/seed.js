@@ -1,6 +1,6 @@
 const bcryptjs = require('bcryptjs');
 require('dotenv').config();
-const { sequelize, User, Shop, Supplier, Category, Product } = require('./src/models');
+const { sequelize, User, Shop, Supplier, Category, Product, Inventory } = require('./src/models');
 
 async function seedDatabase() {
   try {
@@ -124,7 +124,7 @@ async function seedDatabase() {
     {
       await User.create({
         email: 'admin@gogopantry.com',
-        password: '123456',
+        password: 'admin123',
         name: 'Admin User',
         phone: '(555) 000-0001',
         userType: 'admin',
@@ -134,7 +134,7 @@ async function seedDatabase() {
 
       console.log('✓ Admin user created:');
       console.log('  Email: admin@gogopantry.com');
-      console.log('  Password: 123456');
+      console.log('  Password: admin123');
       console.log('  userType: admin');
     }
 
@@ -225,11 +225,75 @@ async function seedDatabase() {
       }
     }
 
+    // Seed per-shop inventory
+    const inventoryData = [
+      // msn — Mission District SF (busy, well-stocked)
+      { shopId: 'msn', productId: 'p1',  stock: 18, par: 10 },
+      { shopId: 'msn', productId: 'p2',  stock: 22, par: 15 },
+      { shopId: 'msn', productId: 'p3',  stock: 12, par: 8  },
+      { shopId: 'msn', productId: 'p4',  stock: 8,  par: 5  },
+      { shopId: 'msn', productId: 'p5',  stock: 15, par: 12 },
+      { shopId: 'msn', productId: 'p6',  stock: 28, par: 20 },
+      { shopId: 'msn', productId: 'p7',  stock: 4,  par: 6  },
+      { shopId: 'msn', productId: 'p8',  stock: 14, par: 10 },
+      { shopId: 'msn', productId: 'p9',  stock: 20, par: 15 },
+      { shopId: 'msn', productId: 'p10', stock: 11, par: 8  },
+      { shopId: 'msn', productId: 'p11', stock: 8,  par: 10 },
+      { shopId: 'msn', productId: 'p12', stock: 30, par: 25 },
+      // psl — Park Slope Brooklyn (some low stock)
+      { shopId: 'psl', productId: 'p1',  stock: 12, par: 10 },
+      { shopId: 'psl', productId: 'p2',  stock: 8,  par: 15 },
+      { shopId: 'psl', productId: 'p3',  stock: 6,  par: 8  },
+      { shopId: 'psl', productId: 'p4',  stock: 7,  par: 5  },
+      { shopId: 'psl', productId: 'p5',  stock: 18, par: 12 },
+      { shopId: 'psl', productId: 'p6',  stock: 24, par: 20 },
+      { shopId: 'psl', productId: 'p7',  stock: 9,  par: 6  },
+      { shopId: 'psl', productId: 'p8',  stock: 7,  par: 10 },
+      { shopId: 'psl', productId: 'p9',  stock: 25, par: 15 },
+      { shopId: 'psl', productId: 'p10', stock: 5,  par: 8  },
+      { shopId: 'psl', productId: 'p11', stock: 15, par: 10 },
+      { shopId: 'psl', productId: 'p12', stock: 20, par: 25 },
+      // wkr — Wicker Park Chicago (some out of stock)
+      { shopId: 'wkr', productId: 'p1',  stock: 0,  par: 10 },
+      { shopId: 'wkr', productId: 'p2',  stock: 16, par: 15 },
+      { shopId: 'wkr', productId: 'p3',  stock: 10, par: 8  },
+      { shopId: 'wkr', productId: 'p4',  stock: 3,  par: 5  },
+      { shopId: 'wkr', productId: 'p5',  stock: 0,  par: 12 },
+      { shopId: 'wkr', productId: 'p6',  stock: 32, par: 20 },
+      { shopId: 'wkr', productId: 'p7',  stock: 8,  par: 6  },
+      { shopId: 'wkr', productId: 'p8',  stock: 18, par: 10 },
+      { shopId: 'wkr', productId: 'p9',  stock: 12, par: 15 },
+      { shopId: 'wkr', productId: 'p10', stock: 9,  par: 8  },
+      { shopId: 'wkr', productId: 'p11', stock: 12, par: 10 },
+      { shopId: 'wkr', productId: 'p12', stock: 22, par: 25 },
+      // scg — South Congress Austin (mixed)
+      { shopId: 'scg', productId: 'p1',  stock: 20, par: 10 },
+      { shopId: 'scg', productId: 'p2',  stock: 30, par: 15 },
+      { shopId: 'scg', productId: 'p3',  stock: 9,  par: 8  },
+      { shopId: 'scg', productId: 'p4',  stock: 4,  par: 5  },
+      { shopId: 'scg', productId: 'p5',  stock: 14, par: 12 },
+      { shopId: 'scg', productId: 'p6',  stock: 18, par: 20 },
+      { shopId: 'scg', productId: 'p7',  stock: 0,  par: 6  },
+      { shopId: 'scg', productId: 'p8',  stock: 12, par: 10 },
+      { shopId: 'scg', productId: 'p9',  stock: 18, par: 15 },
+      { shopId: 'scg', productId: 'p10', stock: 10, par: 8  },
+      { shopId: 'scg', productId: 'p11', stock: 7,  par: 10 },
+      { shopId: 'scg', productId: 'p12', stock: 35, par: 25 },
+    ];
+
+    for (const inv of inventoryData) {
+      const existing = await Inventory.findOne({ where: { shopId: inv.shopId, productId: inv.productId } });
+      if (!existing) {
+        await Inventory.create({ ...inv, lastReceived: new Date() });
+      }
+    }
+    console.log(`✓ Inventory seeded for ${['msn','psl','wkr','scg'].length} shops × 12 products`);
+
     console.log('\n✅ Database seeded successfully!');
     console.log('\n--- LOGIN CREDENTIALS ---');
     console.log('\nAdmin User:');
     console.log('  Email: admin@gogopantry.com');
-    console.log('  Password: 1234');
+    console.log('  Password: admin123');
     console.log('  userType: admin');
     console.log('\nStaff Users:');
     console.log('  Email: staff@gogopantry.com');

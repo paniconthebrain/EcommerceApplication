@@ -101,7 +101,7 @@ function CustomerApp() {
   const cartCount = Object.values(cartItems).reduce((s, q) => s + q, 0);
 
   const screens = {
-    home: <CustomerHomepage onSelectShop={handleSelectShop} />,
+    home: <CustomerHomepage onSelectShop={handleSelectShop} onAddToCart={handleAddToCart} />,
     browse: shopId && <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onChangeShop={handleSelectShop} />,
     cart: <CustomerCart shopId={shopId} cartItems={cartItems} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} onContinueShopping={handleContinueShopping} />,
     checkout: <CustomerCheckout shopId={shopId} cartItems={cartItems} onConfirm={handleConfirm} onBack={() => setPage("cart")} />,
