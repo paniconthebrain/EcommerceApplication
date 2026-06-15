@@ -3,14 +3,27 @@ import { G } from '../globals.js';
 import { Logo, Btn } from './ui.jsx';
 import { Icon } from './icons.jsx';
 
-const NAV_ITEMS = [
-  { key: "dashboard", icon: "dashboard", label: "Dashboard" },
-  { key: "fulfill", icon: "orders", label: "Fulfillment" },
-  { key: "receive", icon: "box", label: "Receiving" },
-  { key: "transfer", icon: "transfer", label: "Transfers" },
+const NAV_SECTIONS = [
+  {
+    label: "Store",
+    items: [
+      { key: "dashboard", icon: "dashboard", label: "Dashboard" },
+      { key: "inventory", icon: "clipboard", label: "Inventory" },
+      { key: "purchase-orders", icon: "package", label: "Purchase Orders" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { key: "receive", icon: "box", label: "Receiving" },
+      { key: "transfer", icon: "transfer", label: "Transfers" },
+      { key: "fulfill", icon: "orders", label: "Fulfillment" },
+    ],
+  },
 ];
 
 const ADMIN_ITEMS = [
+  { key: "manage-suppliers", icon: "truck", label: "Suppliers" },
   { key: "manage-shops", icon: "building", label: "Shops" },
   { key: "manage-staff", icon: "users", label: "Staff" },
   { key: "manage-categories", icon: "folder", label: "Catalog" },
@@ -22,10 +35,11 @@ export function AdminOnly({ user, children }) {
   return children;
 }
 
-export default function Shell({ user, currentPage, navigate, onLogout, children }) {
+export default function Shell({ user, currentPage, navigate, onLogout, children, shopId, onShopChange }) {
   const [shopDropOpen, setShopDropOpen] = useState(false);
-  const [selectedShop, setSelectedShop] = useState(G.SHOPS[0] || null);
   const shopRef = useRef(null);
+
+  const selectedShop = G.SHOPS.find(s => s.id === shopId) || G.SHOPS[0] || null;
 
   useEffect(() => {
     function handler(e) { if (shopRef.current && !shopRef.current.contains(e.target)) setShopDropOpen(false); }
@@ -56,18 +70,25 @@ export default function Shell({ user, currentPage, navigate, onLogout, children 
           <Logo size={30} />
         </div>
 
-        {/* Shop switcher */}
+        {/* Shop display / switcher */}
         <div ref={shopRef} style={{ position: "relative", marginBottom: 20 }}>
-          <button onClick={() => setShopDropOpen(v => !v)}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface-2)", cursor: "pointer", fontFamily: "var(--font-sans)", color: "var(--text)" }}>
-            <div style={{ width: 22, height: 22, borderRadius: 6, background: selectedShop ? `oklch(0.75 0.1 ${selectedShop.tint})` : "var(--primary)", flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedShop?.name || "Select shop"}</span>
-            <Icon name="chevD" size={14} style={{ color: "var(--text-3)" }} />
-          </button>
-          {shopDropOpen && (
+          {isAdmin ? (
+            <button onClick={() => setShopDropOpen(v => !v)}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface-2)", cursor: "pointer", fontFamily: "var(--font-sans)", color: "var(--text)" }}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, background: selectedShop ? `oklch(0.75 0.1 ${selectedShop.tint})` : "var(--primary)", flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedShop?.name || "Select shop"}</span>
+              <Icon name="chevD" size={14} style={{ color: "var(--text-3)" }} />
+            </button>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface-2)" }}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, background: selectedShop ? `oklch(0.75 0.1 ${selectedShop.tint})` : "var(--primary)", flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text)" }}>{selectedShop?.name || "—"}</span>
+            </div>
+          )}
+          {isAdmin && shopDropOpen && (
             <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 11, boxShadow: "var(--shadow-lg)", zIndex: 50, overflow: "hidden" }}>
               {G.SHOPS.map(shop => (
-                <button key={shop.id} onClick={() => { setSelectedShop(shop); setShopDropOpen(false); }}
+                <button key={shop.id} onClick={() => { onShopChange?.(shop.id); setShopDropOpen(false); }}
                   style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--text)", textAlign: "left" }}>
                   <div style={{ width: 20, height: 20, borderRadius: 5, background: `oklch(0.75 0.1 ${shop.tint})`, flexShrink: 0 }} />
                   {shop.name}
@@ -80,11 +101,16 @@ export default function Shell({ user, currentPage, navigate, onLogout, children 
 
         {/* Nav */}
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, overflow: "auto" }}>
-          {NAV_ITEMS.map(({ key, icon, label }) => navLink(key, icon, label))}
+          {NAV_SECTIONS.map(section => (
+            <div key={section.label}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-3)", padding: "14px 14px 6px" }}>{section.label}</div>
+              {section.items.map(({ key, icon, label }) => navLink(key, icon, label))}
+            </div>
+          ))}
 
           {isAdmin && (
             <>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-3)", padding: "16px 14px 6px" }}>Admin</div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-3)", padding: "14px 14px 6px" }}>Admin</div>
               {ADMIN_ITEMS.map(({ key, icon, label }) => navLink(key, icon, label))}
             </>
           )}

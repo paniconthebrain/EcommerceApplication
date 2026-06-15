@@ -25,12 +25,13 @@ export default function StaffLogin({ onLogin }) {
         setError(data.message || data.error || "Invalid credentials");
         return;
       }
+      const user = { ...data.user, role: data.user.role || data.user.userType };
       G.token = data.token;
-      G.currentUser = data.user;
+      G.currentUser = user;
       sessionStorage.setItem("staff_token", data.token);
-      sessionStorage.setItem("staff_user", JSON.stringify(data.user));
+      sessionStorage.setItem("staff_user", JSON.stringify(user));
       if (data.refreshToken) sessionStorage.setItem("staff_refresh_token", data.refreshToken);
-      onLogin(data.user);
+      onLogin(user);
     } catch {
       setError("Unable to connect to server");
     } finally {

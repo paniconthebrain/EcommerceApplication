@@ -56,6 +56,7 @@ export default function CustomerApp() {
     const sid = newShopId !== undefined ? newShopId : shopId;
     const path = pageToPath(newPage, sid);
     window.history.pushState({ page: newPage, shopId: sid }, "", path);
+    window.scrollTo(0, 0);
     setPageState(newPage);
     if (newShopId !== undefined) setShopId(newShopId);
   };
@@ -75,6 +76,7 @@ export default function CustomerApp() {
   useEffect(() => {
     const onPop = (e) => {
       const s = e.state || pathToState(window.location.pathname);
+      window.scrollTo(0, 0);
       setPageState(s.page || "home");
       if (s.shopId !== undefined) setShopId(s.shopId);
     };

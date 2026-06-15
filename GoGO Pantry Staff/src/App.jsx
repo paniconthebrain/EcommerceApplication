@@ -10,8 +10,11 @@ import ManageShopsScreen from './components/admin/ManageShopsScreen.jsx';
 import ManageStaffScreen from './components/admin/ManageStaffScreen.jsx';
 import ManageCategoriesScreen from './components/admin/ManageCategoriesScreen.jsx';
 import EmailSettingsScreen from './components/admin/EmailSettingsScreen.jsx';
+import InventoryScreen from './components/screens/InventoryScreen.jsx';
+import PurchaseOrdersScreen from './components/screens/PurchaseOrdersScreen.jsx';
+import ManageSuppliersScreen from './components/admin/ManageSuppliersScreen.jsx';
 
-const STAFF_ROUTES = ["dashboard", "fulfill", "receive", "transfer", "manage-shops", "manage-staff", "manage-categories", "email-settings"];
+const STAFF_ROUTES = ["dashboard", "fulfill", "receive", "transfer", "inventory", "purchase-orders", "manage-shops", "manage-staff", "manage-categories", "manage-suppliers", "email-settings"];
 
 function staffPathToRoute(pathname) {
   const seg = pathname.replace(/^\//, "") || "dashboard";
@@ -74,13 +77,19 @@ export default function StaffApp() {
     "manage-shops":      () => <AdminOnly user={user}><ManageShopsScreen /></AdminOnly>,
     "manage-staff":      () => <AdminOnly user={user}><ManageStaffScreen /></AdminOnly>,
     "manage-categories": () => <AdminOnly user={user}><ManageCategoriesScreen /></AdminOnly>,
+    "manage-suppliers":  () => <AdminOnly user={user}><ManageSuppliersScreen /></AdminOnly>,
     "email-settings":    () => <AdminOnly user={user}><EmailSettingsScreen /></AdminOnly>,
+    "inventory":         () => <InventoryScreen shopId={shopId} setRoute={navigate} />,
+    "purchase-orders":   () => <PurchaseOrdersScreen shopId={shopId} setRoute={navigate} user={user} />,
   };
 
   const renderScreen = (screenMap[route] || screenMap.dashboard)();
 
+  const isAdmin = user?.role === "admin";
+
   return (
-    <Shell user={user} currentPage={route} navigate={navigate} onLogout={handleLogout}>
+    <Shell user={user} currentPage={route} navigate={navigate} onLogout={handleLogout}
+      shopId={shopId} onShopChange={isAdmin ? setShopId : undefined}>
       {renderScreen}
     </Shell>
   );

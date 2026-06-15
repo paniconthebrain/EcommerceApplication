@@ -6,6 +6,45 @@ const { sequelize } = require('../models');
 
 const router = express.Router();
 
+// POST /api/deliveries — create a new purchase order
+router.post('/', authMiddleware, async (req, res, next) => {
+  try {
+    const { supplierId, shopId, eta, lineItems } = req.body;
+
+    if (!supplierId || !shopId || !lineItems || !Array.isArray(lineItems) || lineItems.length === 0) {
+      throw new ValidationError('supplierId, shopId, and lineItems are required');
+    }
+
+    const supplier = await Supplier.findByPk(supplierId);
+    if (!supplier) throw new ValidationError('Supplier not found');
+
+    const shop = await Shop.findByPk(shopId);
+    if (!shop) throw new ValidationError('Shop not found');
+
+    const po = await PurchaseOrder.create({
+      id: 'PO-' + Date.now(),
+      supplierId,
+      shopId,
+      eta: eta || null,
+      status: 'scheduled',
+      lineItems: lineItems.map(item => ({
+        productId: item.productId,
+        productName: item.productName || '',
+        orderedQty: item.orderedQty || 0,
+        expectedQty: item.orderedQty || 0,
+        receivedQty: 0,
+        rejectedQty: 0,
+        rejectionReason: null,
+        unitCost: item.unitCost || 0,
+      })),
+    });
+
+    res.status(201).json(po);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/deliveries
 router.get('/', authMiddleware, async (req, res, next) => {
   try {
