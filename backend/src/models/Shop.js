@@ -32,6 +32,17 @@ const Shop = sequelize.define('Shop', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  allowStaffPO: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: 'allow_staff_po',
+  },
+  pickupTime: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'pickup_time',
+  },
 }, {
   tableName: 'shops',
   timestamps: true,

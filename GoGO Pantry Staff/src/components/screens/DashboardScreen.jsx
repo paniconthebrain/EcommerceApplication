@@ -8,9 +8,15 @@ function fmtEta(s) {
   return new Date(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+const PO_STATUS_TONE = { draft: 'neutral', ordered: 'info', in_transit: 'info', arrived: 'ok', received: 'neutral' };
+const PO_STATUS_LABEL = { draft: 'Draft', ordered: 'Ordered', in_transit: 'In transit', arrived: 'Arrived', received: 'Received' };
+const ORDER_TONE = { new: 'info', picking: 'low', ready: 'ok', completed: 'neutral', cancelled: 'neutral' };
+
 export default function DashboardScreen({ shopId, setRoute }) {
-  const [inventory, setInventory] = useState([]);
+  const [kpis, setKpis] = useState(null);
+  const [orders, setOrders] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
+  const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
@@ -18,18 +24,23 @@ export default function DashboardScreen({ shopId, setRoute }) {
   useEffect(() => {
     setLoading(true);
     Promise.all([
+      apiFetch(`${API_BASE}/shops/${shopId}/dashboard`).then(r => r?.ok ? r.json() : null),
       apiFetch(`${API_BASE}/shops/${shopId}/inventory`).then(r => r?.ok ? r.json() : []),
-      apiFetch(`${API_BASE}/deliveries?shopId=${shopId}`).then(r => r?.ok ? r.json() : []),
     ])
-      .then(([inv, del]) => {
+      .then(([dash, inv]) => {
+        if (dash) {
+          setKpis(dash.kpis);
+          setOrders(dash.orders || []);
+          setDeliveries(dash.deliveries || []);
+        }
         setInventory(inv);
-        setDeliveries(del.slice(0, 5));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [shopId]);
 
   const products = useMemo(() => inventory
+    .filter(item => item.tracked)
     .map(item => ({
       id: item.productId,
       name: item.product?.name || item.productId,
@@ -44,15 +55,37 @@ export default function DashboardScreen({ shopId, setRoute }) {
     [inventory, cat, q]);
 
   const low = inventory.filter(i => ['low', 'critical', 'out'].includes(i.status));
-  const newOrders = G.ORDERS.filter(o => o.status === 'new');
-  const inProgress = G.ORDERS.filter(o => ['picking', 'ready'].includes(o.status));
-  const revenue = G.ORDERS.reduce((s, o) => s + o.total, 0);
+  const untracked = inventory.filter(i => !i.tracked);
 
-  const kpis = [
-    { label: 'Open orders', value: newOrders.length + inProgress.length, delta: '+4', tone: 'up', icon: 'orders', sub: 'vs. yesterday' },
-    { label: 'Low / out of stock', value: low.length, delta: low.filter(i => i.status === 'out').length + ' out', tone: 'warn', icon: 'alert', sub: 'needs reorder' },
-    { label: "Today's sales", value: G.money(revenue), delta: '+12.4%', tone: 'up', icon: 'orders', sub: '8 orders' },
-    { label: 'Fill rate', value: '99.2%', delta: '+0.3%', tone: 'up', icon: 'check', sub: 'last 7 days' },
+  const kpiCards = [
+    {
+      label: 'Open orders',
+      value: loading ? '—' : (kpis?.openOrders ?? 0),
+      sub: 'new, picking, ready',
+      icon: 'orders',
+      tone: 'up',
+    },
+    {
+      label: 'Low / out of stock',
+      value: loading ? '—' : low.length,
+      sub: `${low.filter(i => i.status === 'out').length} out · ${untracked.length} not set up`,
+      icon: 'alert',
+      tone: 'warn',
+    },
+    {
+      label: "Today's sales",
+      value: loading ? '—' : G.money(kpis?.todaySales ?? 0),
+      sub: 'completed orders today',
+      icon: 'orders',
+      tone: 'up',
+    },
+    {
+      label: 'Fill rate',
+      value: loading ? '—' : `${kpis?.fillRate ?? 0}%`,
+      sub: 'tracked products at par',
+      icon: 'check',
+      tone: kpis?.fillRate >= 80 ? 'up' : 'warn',
+    },
   ];
 
   const skeletonRow = (
@@ -64,24 +97,22 @@ export default function DashboardScreen({ shopId, setRoute }) {
   return (
     <>
       <PageHead title="Dashboard" subtitle="Live store overview">
-        <Btn variant="ghost" size="sm" icon="search">Scan item</Btn>
         <Btn size="sm" icon="plus" onClick={() => setRoute('receive')}>Receive stock</Btn>
       </PageHead>
 
       <div style={{ flex: 1, padding: '22px 34px 48px', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
         {/* KPIs */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-          {kpis.map(k => (
+          {kpiCards.map(k => (
             <div key={k.label} style={card({ padding: 16 })}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--surface-2)', color: 'var(--text-2)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                   <Icon name={k.icon} size={17} />
                 </span>
                 <span style={{ fontSize: 12.5, color: 'var(--text-2)', fontWeight: 600, flex: 1 }}>{k.label}</span>
-                <Pill tone={k.tone === 'up' ? 'ok' : 'warn'} size="sm">{k.delta}</Pill>
               </div>
               <div style={{ marginTop: 12 }}>
-                <div className="tnum" style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.1, opacity: loading && k.label === 'Low / out of stock' ? 0.4 : 1 }}>{k.value}</div>
+                <div className="tnum" style={{ fontSize: 25, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.1 }}>{k.value}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{k.sub}</div>
               </div>
             </div>
@@ -94,15 +125,12 @@ export default function DashboardScreen({ shopId, setRoute }) {
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 140 }}>
                 <h2 style={sectionTitle}>Stock overview</h2>
-                <p style={sectionSub}>{loading ? 'Loading…' : `${products.length} of ${inventory.length} SKUs`}</p>
+                <p style={sectionSub}>{loading ? 'Loading…' : `${products.length} of ${inventory.filter(i => i.tracked).length} tracked SKUs`}</p>
               </div>
-              <div style={{ position: 'relative' }}>
-                <select value={cat} onChange={e => setCat(e.target.value)} style={{ padding: '8px 30px 8px 32px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: 'var(--font-sans)', appearance: 'none', cursor: 'pointer' }}>
-                  <option value="all">All categories</option>
-                  {G.CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }}><Icon name="chevD" size={14} /></span>
-              </div>
+              <select value={cat} onChange={e => setCat(e.target.value)} style={{ padding: '8px 12px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontWeight: 600, outline: 'none', fontFamily: 'var(--font-sans)', cursor: 'pointer' }}>
+                <option value="all">All categories</option>
+                {G.CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)' }}><Icon name="search" size={16} /></span>
                 <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search products…" style={{ padding: '8px 12px 8px 34px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, width: 168, outline: 'none', fontFamily: 'var(--font-sans)' }} />
@@ -120,33 +148,43 @@ export default function DashboardScreen({ shopId, setRoute }) {
                 </thead>
                 <tbody>
                   {loading
-                    ? [1, 2, 3, 4, 5].map(i => skeletonRow)
-                    : products.map(p => {
-                      const state = p.status || G.stockState(p.stock, p.par);
-                      return (
-                        <tr key={p.id} style={{ borderTop: '1px solid var(--line)' }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                          <td style={td}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-                              <ProductSwatch p={p} size={34} />
-                              <div style={{ lineHeight: 1.3, minWidth: 0, flex: 1 }}>
-                                <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                                <div style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{G.catOf(p.cat).name}</div>
+                    ? [1, 2, 3, 4, 5].map(i => <tr key={i} style={{ borderTop: '1px solid var(--line)' }}>{[1,2,3,4].map(j => <td key={j} style={td}><div style={{ height: 14, background: 'var(--surface-2)', borderRadius: 6, opacity: 0.6 }} /></td>)}</tr>)
+                    : products.length === 0
+                      ? <tr><td colSpan={4} style={{ ...td, textAlign: 'center', color: 'var(--text-3)', padding: 32 }}>No products match your filter.</td></tr>
+                      : products.map(p => {
+                        const state = p.status;
+                        const label = state === 'ok' ? 'In stock' : state === 'low' ? 'Low' : state === 'critical' ? 'Critical' : 'Out';
+                        return (
+                          <tr key={p.id} style={{ borderTop: '1px solid var(--line)' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <td style={td}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+                                <ProductSwatch p={p} size={34} />
+                                <div style={{ lineHeight: 1.3, minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{G.catOf(p.cat).name}</div>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td style={td}><StockBar stock={p.stock} par={p.par} /></td>
-                          <td style={td}><Pill tone={state} dot size="sm">{state === 'ok' ? 'In stock' : state === 'low' ? 'Low' : state === 'critical' ? 'Critical' : 'Out'}</Pill></td>
-                          <td style={{ ...td, textAlign: 'right' }}>
-                            {state !== 'ok' && <Btn size="sm" variant="soft" onClick={() => setRoute('purchase-orders')}>Reorder</Btn>}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            </td>
+                            <td style={td}><StockBar stock={p.stock} par={p.par} /></td>
+                            <td style={td}><Pill tone={state} dot size="sm">{label}</Pill></td>
+                            <td style={{ ...td, textAlign: 'right' }}>
+                              {state !== 'ok' && <Btn size="sm" variant="soft" onClick={() => setRoute('purchase-orders')}>Reorder</Btn>}
+                            </td>
+                          </tr>
+                        );
+                      })}
                 </tbody>
               </table>
             </div>
+            {untracked.length > 0 && (
+              <div style={{ padding: '12px 20px', borderTop: '1px solid var(--line)', background: 'var(--surface-2)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Icon name="alert" size={14} style={{ color: 'var(--amber-600, #d97706)' }} />
+                <span style={{ fontSize: 13, color: 'var(--text-2)', flex: 1 }}>{untracked.length} products not set up yet</span>
+                <Btn size="sm" variant="ghost" onClick={() => setRoute('inventory')}>Set up in Inventory</Btn>
+              </div>
+            )}
           </section>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -155,58 +193,61 @@ export default function DashboardScreen({ shopId, setRoute }) {
               <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
                   <h2 style={sectionTitle}>Incoming orders</h2>
-                  <p style={sectionSub}>{newOrders.length} new · {inProgress.length} in progress</p>
+                  <p style={sectionSub}>{loading ? 'Loading…' : `${orders.filter(o => o.status === 'new').length} new · ${orders.filter(o => ['picking','ready'].includes(o.status)).length} in progress`}</p>
                 </div>
                 <button onClick={() => setRoute('fulfill')} style={linkBtn}>View queue <Icon name="chevR" size={14} /></button>
               </div>
-              <div>
-                {G.ORDERS.filter(o => o.status !== 'completed').slice(0, 5).map(o => (
-                  <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', borderTop: '1px solid var(--line)', cursor: 'pointer' }}
-                    onClick={() => setRoute('fulfill')}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <div style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-2)', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12.5, flexShrink: 0 }}>{o.initials}</div>
-                    <div style={{ flex: 1, minWidth: 0, lineHeight: 1.35 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.customer}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-2)' }}><span className="mono" style={{ color: 'var(--text-3)' }}>{o.id}</span> · {o.items} items</div>
-                    </div>
-                    <Pill tone={o.status === 'new' ? 'info' : o.status === 'ready' ? 'ok' : 'low'} size="sm">
-                      {o.status === 'new' ? 'New' : o.status === 'picking' ? 'Picking' : 'Ready'}
-                    </Pill>
-                  </div>
-                ))}
-              </div>
+              {loading
+                ? [1,2].map(i => <div key={i} style={{ display: 'flex', gap: 12, padding: '13px 20px', borderTop: '1px solid var(--line)', opacity: 0.4 }}><div style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--surface-2)' }} /><div style={{ flex: 1 }}><div style={{ height: 12, background: 'var(--surface-2)', borderRadius: 4, marginBottom: 6 }} /><div style={{ height: 10, background: 'var(--surface-2)', borderRadius: 4, width: '60%' }} /></div></div>)
+                : orders.length === 0
+                  ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No active orders</div>
+                  : orders.slice(0, 5).map(o => {
+                    const name = o.Customer?.name || `Order ${o.id}`;
+                    const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                    return (
+                      <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', borderTop: '1px solid var(--line)', cursor: 'pointer' }}
+                        onClick={() => setRoute('fulfill')}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        <div style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--surface-2)', color: 'var(--text-2)', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12.5, flexShrink: 0 }}>{initials}</div>
+                        <div style={{ flex: 1, minWidth: 0, lineHeight: 1.35 }}>
+                          <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-2)' }}><span className="mono" style={{ color: 'var(--text-3)' }}>{o.id}</span> · {o.itemCount ?? (o.items?.length ?? 0)} items · {G.money(o.total ?? o.pricing?.total ?? 0)}</div>
+                        </div>
+                        <Pill tone={ORDER_TONE[o.status] || 'neutral'} size="sm">
+                          {o.status.charAt(0).toUpperCase() + o.status.slice(1)}
+                        </Pill>
+                      </div>
+                    );
+                  })}
             </section>
 
-            {/* Deliveries */}
+            {/* Purchase orders */}
             <section style={{ ...card(), padding: 0, overflow: 'hidden' }}>
               <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
-                  <h2 style={sectionTitle}>Incoming deliveries</h2>
-                  <p style={sectionSub}>{loading ? 'Loading…' : `${deliveries.length} upcoming`}</p>
+                  <h2 style={sectionTitle}>Purchase orders</h2>
+                  <p style={sectionSub}>{loading ? 'Loading…' : `${deliveries.length} open`}</p>
                 </div>
-                <button onClick={() => setRoute('receive')} style={linkBtn}>Receive <Icon name="chevR" size={14} /></button>
+                <button onClick={() => setRoute('purchase-orders')} style={linkBtn}>All POs <Icon name="chevR" size={14} /></button>
               </div>
               {loading
-                ? [1, 2].map(i => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', borderTop: '1px solid var(--line)', opacity: 0.4 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--surface-2)' }} />
-                    <div style={{ flex: 1 }}><div style={{ height: 12, background: 'var(--surface-2)', borderRadius: 4, marginBottom: 6 }} /><div style={{ height: 10, background: 'var(--surface-2)', borderRadius: 4, width: '60%' }} /></div>
-                  </div>
-                ))
+                ? [1,2].map(i => <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', borderTop: '1px solid var(--line)', opacity: 0.4 }}><div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--surface-2)' }} /><div style={{ flex: 1 }}><div style={{ height: 12, background: 'var(--surface-2)', borderRadius: 4, marginBottom: 6 }} /><div style={{ height: 10, background: 'var(--surface-2)', borderRadius: 4, width: '60%' }} /></div></div>)
                 : deliveries.length === 0
-                  ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No upcoming deliveries</div>
+                  ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No open purchase orders</div>
                   : deliveries.map(d => {
-                    const tone = d.status === 'arrived' ? 'ok' : d.status === 'in-transit' ? 'info' : 'neutral';
-                    const label = d.status === 'arrived' ? 'Arrived' : d.status === 'in-transit' ? 'In transit' : 'Scheduled';
+                    const status = d.status || 'draft';
                     return (
-                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', borderTop: '1px solid var(--line)' }}>
+                      <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 20px', borderTop: '1px solid var(--line)', cursor: 'pointer' }}
+                        onClick={() => setRoute(status === 'arrived' ? 'receive' : 'purchase-orders')}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--surface-2)', color: 'var(--text-2)', display: 'grid', placeItems: 'center', flexShrink: 0 }}><Icon name="truck" size={18} /></span>
                         <div style={{ flex: 1, minWidth: 0, lineHeight: 1.3 }}>
-                          <div style={{ fontWeight: 700, fontSize: 13.5 }}>{d.Supplier?.name || '—'}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-2)' }}><span className="mono">{d.id}</span> · {d.lineItems?.length || 0} lines · ETA {fmtEta(d.eta)}</div>
+                          <div style={{ fontWeight: 700, fontSize: 13.5 }}>{d.supplier || d.Supplier?.name || '—'}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-2)' }}><span className="mono">{d.id}</span> · {d.itemCount ?? d.lineItems?.length ?? 0} lines{d.eta ? ` · ETA ${fmtEta(d.eta)}` : ''}</div>
                         </div>
-                        <Pill tone={tone} dot size="sm">{label}</Pill>
+                        <Pill tone={PO_STATUS_TONE[status] || 'neutral'} dot size="sm">{PO_STATUS_LABEL[status] || status}</Pill>
                       </div>
                     );
                   })}

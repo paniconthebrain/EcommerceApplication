@@ -36,6 +36,16 @@ const Inventory = sequelize.define('Inventory', {
     allowNull: true,
     field: 'last_adjusted',
   },
+  openingStock: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    field: 'opening_stock',
+  },
+  openingCostValue: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    field: 'opening_cost_value',
+  },
 }, {
   tableName: 'inventory',
   timestamps: true,

@@ -18,6 +18,14 @@ export default function TransferScreen({ shopId, setRoute }) {
   const [inventoryMap, setInventoryMap] = useState({});
   const [suggestions, setSuggestions] = useState([]);
   const [loadingInv, setLoadingInv] = useState(false);
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    apiFetch(`${API_BASE}/products`)
+      .then(res => res?.ok ? res.json() : [])
+      .then(data => setProducts(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  }, []);
 
   const fromShop = G.SHOPS.find(s => s.id === from);
   const toShop = G.SHOPS.find(s => s.id === to);
@@ -44,13 +52,13 @@ export default function TransferScreen({ shopId, setRoute }) {
       .catch(() => setSuggestions([]));
   }, [from, to]);
 
-  const products = useMemo(() => G.PRODUCTS
+  const filteredProducts = useMemo(() => products
     .map(p => ({
       ...p,
       fromStock: inventoryMap[p.id] ?? G.shopStock(p.id, from),
       toStock: G.shopStock(p.id, to),
     }))
-    .filter(p => p.name.toLowerCase().includes(q.toLowerCase())), [from, to, q, inventoryMap]);
+    .filter(p => p.name.toLowerCase().includes(q.toLowerCase())), [products, from, to, q, inventoryMap]);
 
   const lines = Object.entries(cart).filter(([, v]) => v > 0);
   const totalUnits = lines.reduce((s, [, v]) => s + v, 0);
@@ -128,7 +136,7 @@ export default function TransferScreen({ shopId, setRoute }) {
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Suggested transfers</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {suggestions.map((s, i) => {
-                  const p = G.PRODUCTS.find(pr => pr.id === s.productId) || { name: s.productName || s.productId, cat: '' };
+                  const p = products.find(pr => pr.id === s.productId) || { name: s.productName || s.productId, cat: '' };
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <ProductSwatch p={p} size={28} />
@@ -163,7 +171,7 @@ export default function TransferScreen({ shopId, setRoute }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map(p => {
+                  {filteredProducts.map(p => {
                     const inCart = cart[p.id] || 0;
                     return (
                       <tr key={p.id} style={{ borderTop: '1px solid var(--line)', background: inCart ? 'color-mix(in oklch, var(--green-500) 6%, transparent)' : 'transparent' }}>
@@ -215,7 +223,7 @@ export default function TransferScreen({ shopId, setRoute }) {
                   <p style={{ fontSize: 13.5, margin: '10px 0 0' }}>No items added</p>
                 </div>
               : lines.map(([id, qty]) => {
-                const p = G.PRODUCTS.find(x => x.id === id);
+                const p = products.find(x => x.id === id);
                 if (!p) return null;
                 return (
                   <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 20px', borderTop: '1px solid var(--line)' }}>

@@ -108,14 +108,14 @@ router.get('/shops/:shopId/dashboard', authMiddleware, async (req, res, next) =>
       limit: 5,
     });
 
-    // Get upcoming deliveries
+    // Get upcoming purchase orders (draft/ordered/in transit/arrived)
     const deliveries = await PurchaseOrder.findAll({
       where: {
         shopId,
-        status: { [Op.in]: ['scheduled', 'in-transit', 'arrived'] },
+        status: { [Op.in]: ['draft', 'ordered', 'in_transit', 'arrived'] },
       },
       include: [{ model: Supplier, attributes: ['id', 'name', 'type'] }],
-      order: [['eta', 'ASC']],
+      order: [['createdAt', 'DESC']],
       limit: 5,
     });
 

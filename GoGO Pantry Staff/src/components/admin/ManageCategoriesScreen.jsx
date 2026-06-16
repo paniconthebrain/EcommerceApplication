@@ -85,13 +85,13 @@ function CategoriesTab() {
 
   const load = async () => {
     setLoading(true);
-    try { const r = await fetch(`${API_BASE}/categories`, { headers: authHeaders() }); if (r.ok) { const d = await r.json(); setItems(d); G.CATEGORIES = d.map(c => ({ id: c.id, name: c.name, hue: c.hue || 152 })); } }
+    try { const r = await fetch(`${API_BASE}/categories`, { headers: authHeaders() }); if (r.ok) { const d = await r.json(); setItems(d); G.CATEGORIES = d.map(c => ({ id: c.id, name: c.name, hue: c.hue ?? 152 })); } }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
 
   const openCreate = () => { setEditing(null); setForm({ id: "", name: "", hue: 152, blurb: "" }); setErr(""); setModal(true); };
-  const openEdit = c => { setEditing(c.id); setForm({ id: c.id, name: c.name, hue: c.hue || 152, blurb: c.blurb || "" }); setErr(""); setModal(true); };
+  const openEdit = c => { setEditing(c.id); setForm({ id: c.id, name: c.name, hue: c.hue ?? 152, blurb: c.blurb || "" }); setErr(""); setModal(true); };
 
   const save = async e => {
     e.preventDefault(); setErr("");

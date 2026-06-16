@@ -1,12 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { G, API_BASE, apiFetch } from '../../globals.js';
 import { PageHead, ProductSwatch, Pill, Btn, card, sectionTitle, th, td, inputStyle, linkBtn } from '../ui.jsx';
 import { Icon } from '../icons.jsx';
 
-const STATUS_TABS = ['all', 'scheduled', 'in-transit', 'arrived', 'received'];
-const STATUS_LABEL = { scheduled: 'Scheduled', 'in-transit': 'In transit', arrived: 'Arrived', received: 'Received' };
-const STATUS_TONE = { scheduled: 'neutral', 'in-transit': 'info', arrived: 'ok', received: 'neutral' };
-const NEXT_STATUS = { scheduled: 'in-transit', 'in-transit': 'arrived' };
+const STATUS_TABS = ['all', 'draft', 'ordered', 'in_transit', 'arrived', 'received'];
+const STATUS_LABEL = { draft: 'Draft', ordered: 'Ordered', in_transit: 'In transit', arrived: 'Arrived', received: 'Received' };
+const STATUS_TONE = { draft: 'neutral', ordered: 'info', in_transit: 'info', arrived: 'ok', received: 'neutral' };
+const NEXT_STATUS = { draft: 'ordered', ordered: 'in_transit', in_transit: 'arrived' };
 
 function fmtDate(s) {
   if (!s) return '—';
@@ -17,6 +17,7 @@ function fmtDate(s) {
 function PoDetail({ po, onClose, onStatusUpdate, onReceive }) {
   const [updating, setUpdating] = useState(false);
   const next = NEXT_STATUS[po.status];
+  const grandTotal = (po.lineItems || []).reduce((s, l) => s + (parseFloat(l.unitCost) || 0) * (l.orderedQty || 0), 0);
 
   async function advance() {
     setUpdating(true);
@@ -42,6 +43,7 @@ function PoDetail({ po, onClose, onStatusUpdate, onReceive }) {
           <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 3 }}>ETA</div><div style={{ fontWeight: 700 }}>{fmtDate(po.eta)}</div></div>
           <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 3 }}>Created</div><div style={{ fontWeight: 700 }}>{fmtDate(po.createdAt)}</div></div>
           <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 3 }}>Lines</div><div style={{ fontWeight: 700 }}>{po.lineItems?.length || 0}</div></div>
+          <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 3 }}>Total value</div><div style={{ fontWeight: 700 }}>${grandTotal.toFixed(2)}</div></div>
           <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 3 }}>Contact</div><div style={{ fontWeight: 700, fontSize: 13 }}>{po.Supplier?.contactName || '—'}</div></div>
         </div>
 
@@ -53,22 +55,27 @@ function PoDetail({ po, onClose, onStatusUpdate, onReceive }) {
                 <th style={{ ...th, textAlign: 'center' }}>Ordered</th>
                 <th style={{ ...th, textAlign: 'center' }}>Received</th>
                 <th style={{ ...th, textAlign: 'right' }}>Unit cost</th>
+                <th style={{ ...th, textAlign: 'right' }}>Total</th>
               </tr>
             </thead>
             <tbody>
-              {(po.lineItems || []).map((l, i) => (
-                <tr key={i} style={{ borderTop: '1px solid var(--line)' }}>
-                  <td style={td}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <ProductSwatch p={{ name: l.productName || '', cat: G.PRODUCTS.find(p => p.id === l.productId)?.cat || '' }} size={30} />
-                      <span style={{ fontSize: 13.5, fontWeight: 600 }}>{l.productName}</span>
-                    </div>
-                  </td>
-                  <td style={{ ...td, textAlign: 'center', fontWeight: 700 }}>{l.orderedQty}</td>
-                  <td style={{ ...td, textAlign: 'center', color: l.receivedQty > 0 ? 'var(--green-700)' : 'var(--text-3)' }}>{l.receivedQty ?? '—'}</td>
-                  <td style={{ ...td, textAlign: 'right', fontSize: 13 }}>{l.unitCost ? `$${parseFloat(l.unitCost).toFixed(2)}` : '—'}</td>
-                </tr>
-              ))}
+              {(po.lineItems || []).map((l, i) => {
+                const lineTotal = (parseFloat(l.unitCost) || 0) * (l.orderedQty || 0);
+                return (
+                  <tr key={i} style={{ borderTop: '1px solid var(--line)' }}>
+                    <td style={td}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <ProductSwatch p={{ name: l.productName || '', cat: G.PRODUCTS.find(p => p.id === l.productId)?.cat || '' }} size={30} />
+                        <span style={{ fontSize: 13.5, fontWeight: 600 }}>{l.productName}</span>
+                      </div>
+                    </td>
+                    <td style={{ ...td, textAlign: 'center', fontWeight: 700 }}>{l.orderedQty}</td>
+                    <td style={{ ...td, textAlign: 'center', color: l.receivedQty > 0 ? 'var(--green-700)' : 'var(--text-3)' }}>{l.receivedQty ?? '—'}</td>
+                    <td style={{ ...td, textAlign: 'right', fontSize: 13 }}>{l.unitCost ? `$${parseFloat(l.unitCost).toFixed(2)}` : '—'}</td>
+                    <td style={{ ...td, textAlign: 'right', fontWeight: 700 }}>{lineTotal > 0 ? `$${lineTotal.toFixed(2)}` : '—'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -77,7 +84,7 @@ function PoDetail({ po, onClose, onStatusUpdate, onReceive }) {
           {po.status === 'arrived'
             ? <Btn full icon="box" onClick={() => onReceive(po.id)}>Receive stock</Btn>
             : next
-              ? <Btn full onClick={advance} style={{ opacity: updating ? 0.7 : 1 }}>{updating ? 'Updating…' : `Mark as ${STATUS_LABEL[next]}`}</Btn>
+              ? <Btn full onClick={advance} style={{ opacity: updating ? 0.7 : 1 }}>{updating ? 'Updating…' : `Advance to ${STATUS_LABEL[next]}`}</Btn>
               : <div style={{ flex: 1, fontSize: 13, color: 'var(--text-3)', display: 'flex', alignItems: 'center' }}>PO is {po.status === 'received' ? 'fully received' : 'complete'}.</div>
           }
         </div>
@@ -94,9 +101,29 @@ function CreateWizard({ suppliers, user, onDone, onCancel }) {
   const [q, setQ] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState('');
+  const [products, setProducts] = useState(G.PRODUCTS);
+  const [shopInventory, setShopInventory] = useState([]);
+  const inventoryFetched = useRef('');
 
-  const isAdmin = user?.role === 'admin';
-  const filteredProducts = useMemo(() => G.PRODUCTS.filter(p => p.name.toLowerCase().includes(q.toLowerCase())), [q]);
+  const isAdmin = user?.userType === 'admin';
+
+  // Fetch fresh product list on mount
+  useEffect(() => {
+    apiFetch(`${API_BASE}/products`).then(r => r?.ok && r.json()).then(d => {
+      if (d) setProducts(d.map(p => ({ ...p, cat: p.categoryId || p.cat || '' })));
+    }).catch(() => {});
+  }, []);
+
+  // Fetch shop inventory when entering step 2
+  useEffect(() => {
+    if (step !== 2 || !form.shopId || inventoryFetched.current === form.shopId) return;
+    inventoryFetched.current = form.shopId;
+    apiFetch(`${API_BASE}/shops/${form.shopId}/inventory`).then(r => r?.ok && r.json()).then(d => {
+      if (d) setShopInventory(d);
+    }).catch(() => {});
+  }, [step, form.shopId]);
+
+  const filteredProducts = useMemo(() => products.filter(p => p.name.toLowerCase().includes(q.toLowerCase())), [q, products]);
   const totalCost = lineItems.reduce((s, l) => s + (l.orderedQty * (parseFloat(l.unitCost) || 0)), 0);
 
   function addProduct(p) {
@@ -108,7 +135,7 @@ function CreateWizard({ suppliers, user, onDone, onCancel }) {
     setLineItems(ls => ls.map((l, i) => i === idx ? { ...l, [field]: val } : l));
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(submitAs = 'draft') {
     setSubmitting(true);
     setErr('');
     try {
@@ -116,9 +143,10 @@ function CreateWizard({ suppliers, user, onDone, onCancel }) {
         supplierId: form.supplierId,
         shopId: form.shopId,
         eta: form.eta || null,
+        status: submitAs,
         lineItems: lineItems.map(l => ({ ...l, orderedQty: parseInt(l.orderedQty) || 1, unitCost: parseFloat(l.unitCost) || 0 })),
       };
-      const res = await apiFetch(`${API_BASE}/deliveries`, { method: 'POST', body: JSON.stringify(payload) });
+      const res = await apiFetch(`${API_BASE}/purchase-orders`, { method: 'POST', body: JSON.stringify(payload) });
       if (!res || !res.ok) { const d = await res?.json(); setErr(d?.error || 'Failed to create PO'); return; }
       onDone();
     } catch { setErr('Network error'); }
@@ -188,11 +216,14 @@ function CreateWizard({ suppliers, user, onDone, onCancel }) {
             <div style={{ maxHeight: 420, overflowY: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
-                  <tr><th style={th}>Product</th><th style={th}>Category</th><th style={{ ...th, textAlign: 'right' }}></th></tr>
+                  <tr><th style={th}>Product</th><th style={th}>Category</th><th style={{ ...th, textAlign: 'center' }}>Stock</th><th style={{ ...th, textAlign: 'right' }}></th></tr>
                 </thead>
                 <tbody>
                   {filteredProducts.map(p => {
                     const added = !!lineItems.find(l => l.productId === p.id);
+                    const inv = shopInventory.find(i => i.productId === p.id);
+                    const stockLabel = inv ? (inv.tracked ? `${inv.stock} / ${inv.par}` : 'Not set up') : '—';
+                    const stockColor = !inv || !inv.tracked ? 'var(--text-3)' : inv.stock < inv.par ? 'var(--amber-600, #d97706)' : 'var(--green-700)';
                     return (
                       <tr key={p.id} style={{ borderTop: '1px solid var(--line)', background: added ? 'color-mix(in oklch, var(--primary) 6%, transparent)' : 'transparent' }}>
                         <td style={td}>
@@ -202,6 +233,7 @@ function CreateWizard({ suppliers, user, onDone, onCancel }) {
                           </div>
                         </td>
                         <td style={{ ...td, fontSize: 13, color: 'var(--text-3)' }}>{G.catOf(p.cat).name}</td>
+                        <td style={{ ...td, textAlign: 'center', fontSize: 12, fontWeight: 600, color: stockColor }}>{stockLabel}</td>
                         <td style={{ ...td, textAlign: 'right' }}>
                           {added
                             ? <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 700 }}>Added ✓</span>
@@ -266,22 +298,27 @@ function CreateWizard({ suppliers, user, onDone, onCancel }) {
               <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', marginBottom: 3 }}>Lines</div><div style={{ fontWeight: 700 }}>{lineItems.length} items · ${totalCost.toFixed(2)}</div></div>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead><tr style={{ background: 'var(--surface-2)' }}><th style={th}>Product</th><th style={{ ...th, textAlign: 'right' }}>Qty</th><th style={{ ...th, textAlign: 'right' }}>Unit cost</th></tr></thead>
+              <thead><tr style={{ background: 'var(--surface-2)' }}><th style={th}>Product</th><th style={{ ...th, textAlign: 'right' }}>Qty</th><th style={{ ...th, textAlign: 'right' }}>Unit cost</th><th style={{ ...th, textAlign: 'right' }}>Total</th></tr></thead>
               <tbody>
-                {lineItems.map((l, i) => (
-                  <tr key={i} style={{ borderTop: '1px solid var(--line)' }}>
-                    <td style={td}>{l.productName}</td>
-                    <td style={{ ...td, textAlign: 'right', fontWeight: 700 }}>{l.orderedQty}</td>
-                    <td style={{ ...td, textAlign: 'right' }}>{l.unitCost ? `$${parseFloat(l.unitCost).toFixed(2)}` : '—'}</td>
-                  </tr>
-                ))}
+                {lineItems.map((l, i) => {
+                  const lineTotal = (parseFloat(l.unitCost) || 0) * (parseInt(l.orderedQty) || 0);
+                  return (
+                    <tr key={i} style={{ borderTop: '1px solid var(--line)' }}>
+                      <td style={td}>{l.productName}</td>
+                      <td style={{ ...td, textAlign: 'right', fontWeight: 700 }}>{l.orderedQty}</td>
+                      <td style={{ ...td, textAlign: 'right' }}>{l.unitCost ? `$${parseFloat(l.unitCost).toFixed(2)}` : '—'}</td>
+                      <td style={{ ...td, textAlign: 'right', fontWeight: 700 }}>{lineTotal > 0 ? `$${lineTotal.toFixed(2)}` : '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           {err && <div style={{ color: 'var(--red-500)', fontSize: 13, marginBottom: 12, fontWeight: 600 }}>{err}</div>}
           <div style={{ display: 'flex', gap: 10 }}>
             <Btn variant="ghost" onClick={() => setStep(2)}>Back</Btn>
-            <Btn full icon="package" onClick={handleSubmit} style={{ opacity: submitting ? 0.7 : 1 }}>{submitting ? 'Creating PO…' : 'Create purchase order'}</Btn>
+            <Btn variant="soft" onClick={() => handleSubmit('draft')} style={{ opacity: submitting ? 0.7 : 1 }}>Save as draft</Btn>
+            <Btn full icon="package" onClick={() => handleSubmit('ordered')} style={{ opacity: submitting ? 0.7 : 1 }}>{submitting ? 'Creating PO…' : 'Submit to supplier'}</Btn>
           </div>
         </div>
       )}
@@ -303,7 +340,7 @@ export default function PurchaseOrdersScreen({ shopId, setRoute, user }) {
     setLoading(true);
     try {
       const [posRes, supRes] = await Promise.all([
-        apiFetch(`${API_BASE}/deliveries?shopId=${shopId}`),
+        apiFetch(`${API_BASE}/purchase-orders?shopId=${shopId}`),
         apiFetch(`${API_BASE}/suppliers`),
       ]);
       if (posRes?.ok) setPos(await posRes.json());
@@ -315,7 +352,7 @@ export default function PurchaseOrdersScreen({ shopId, setRoute, user }) {
   useEffect(() => { load(); }, [shopId]);
 
   async function handleStatusUpdate(poId, newStatus) {
-    const res = await apiFetch(`${API_BASE}/deliveries/${poId}/status`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+    const res = await apiFetch(`${API_BASE}/purchase-orders/${poId}/status`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
     if (res?.ok) {
       setPos(ps => ps.map(p => p.id === poId ? { ...p, status: newStatus } : p));
       setSelectedPo(sp => sp ? { ...sp, status: newStatus } : sp);

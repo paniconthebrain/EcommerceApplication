@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { G, API_BASE, authHeaders } from '../../globals.js';
+import { G, API_BASE, apiFetch } from '../../globals.js';
 import { Btn, Pill } from '../ui.jsx';
 import { AdminPageWrap, MgmtModal, FieldRow, inputStyle, MgmtTable } from './shared.jsx';
 
@@ -15,8 +15,8 @@ export default function ManageStaffScreen() {
   const load = async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API_BASE}/staff`, { headers: authHeaders() });
-      if (r.ok) setStaff(await r.json());
+      const r = await apiFetch(`${API_BASE}/staff`);
+      if (r?.ok) setStaff(await r.json());
     } finally { setLoading(false); }
   };
 
@@ -29,21 +29,21 @@ export default function ManageStaffScreen() {
     e.preventDefault(); setErr("");
     const url = editing ? `${API_BASE}/staff/${editing}` : `${API_BASE}/staff`;
     const body = editing ? { name: form.name, phone: form.phone, shopId: form.shopId } : form;
-    const r = await fetch(url, { method: editing ? "PUT" : "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (r.ok) { setModal(false); load(); }
-    else { const d = await r.json(); setErr(d.message || d.error || "Save failed"); }
+    const r = await apiFetch(url, { method: editing ? "PUT" : "POST", body: JSON.stringify(body) });
+    if (r?.ok) { setModal(false); load(); }
+    else { const d = r ? await r.json() : {}; setErr(d.message || d.error || "Save failed"); }
   };
 
   const del = async s => {
     if (!confirm(`Delete staff member "${s.name}"?`)) return;
-    const r = await fetch(`${API_BASE}/staff/${s.id}`, { method: "DELETE", headers: authHeaders() });
-    if (r.ok) load(); else alert("Delete failed");
+    const r = await apiFetch(`${API_BASE}/staff/${s.id}`, { method: "DELETE" });
+    if (r?.ok) load(); else alert("Delete failed");
   };
 
   const resetPw = async s => {
     if (!confirm(`Reset password for "${s.name}"? A temporary password will be generated.`)) return;
-    const r = await fetch(`${API_BASE}/staff/${s.id}/reset-password`, { method: "POST", headers: authHeaders() });
-    if (r.ok) { const d = await r.json(); setResetInfo(d); } else alert("Reset failed");
+    const r = await apiFetch(`${API_BASE}/staff/${s.id}/reset-password`, { method: "POST" });
+    if (r?.ok) { const d = await r.json(); setResetInfo(d); } else alert("Reset failed");
   };
 
   const shopName = id => G.SHOPS.find(s => s.id === id)?.name || id || "—";

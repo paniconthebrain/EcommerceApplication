@@ -10,11 +10,11 @@ export function AdminPageWrap({ title, subtitle, action, children }) {
   );
 }
 
-export function MgmtModal({ open, title, onClose, children }) {
+export function MgmtModal({ open, title, onClose, children, maxWidth = 460 }) {
   if (!open) return null;
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "grid", placeItems: "center", padding: 20 }} onClick={onClose}>
-      <div style={{ background: "var(--surface)", borderRadius: 16, padding: 28, width: "100%", maxWidth: 460, border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, padding: 28, width: "100%", maxWidth, border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)", maxHeight: "92vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--text)" }}>{title}</h2>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "var(--text-3)", lineHeight: 1 }}>×</button>

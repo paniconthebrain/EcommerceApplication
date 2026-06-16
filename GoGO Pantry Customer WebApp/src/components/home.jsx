@@ -40,7 +40,7 @@ const HERO_SLIDES = [
     badge: "New customer offer inside",
     badgeIcon: "gift",
     title: ["Save 20% on", "Your First Order"],
-    sub: "Welcome to GoGO Pantry! Use code WELCOME20 at checkout and enjoy fresh groceries at a great price.",
+    sub: "Welcome to GoGoPantry! Use code WELCOME20 at checkout and enjoy fresh groceries at a great price.",
     cta1: "Claim Offer", cta1Icon: "gift", cta2: "Learn More",
     decorIcons: [["gift","-10%","10%",72],["star","78%","8%",56],["check","88%","55%",48],["bell","5%","70%",44],["heart","55%","80%",40],["gift","35%","-5%",52]],
     cards: [["gift","#ede9fe"],["star","#dbeafe"],["check","#fef3c7"],["heart","#fce7f3"]],
@@ -188,7 +188,12 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
             <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>No stores found</p>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 320px))",
+            gap: 20,
+            maxWidth: filteredShops.length === 1 ? 360 : filteredShops.length === 2 ? 720 : "100%",
+          }}>
             {filteredShops.map(shop => <ShopCard key={shop.id} shop={shop} onSelect={() => onSelectShop(shop.id)} />)}
           </div>
         )}
@@ -241,7 +246,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
           <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 32px", color: "var(--text)", textAlign: "center" }}>How It Works</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 24 }}>
             {[
-              { icon: "pin", title: "Select Store", desc: "Choose your nearest GoGO Pantry" },
+              { icon: "pin", title: "Select Store", desc: "Choose your nearest GoGoPantry" },
               { icon: "cart", title: "Browse & Shop", desc: "Add fresh items to your cart" },
               { icon: "truck", title: "Pickup Anytime", desc: "Pick up at your own time, no rush" }
             ].map((step, i) => (

@@ -10,15 +10,15 @@ const DEFAULT_TEMPLATES = [
   {
     type: 'password_reset',
     label: 'Password Reset',
-    subject: 'Reset your GoGO Pantry password',
+    subject: 'Reset your GoGoPantry password',
     body: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#fff;border-radius:12px;">
   <h2 style="color:#1a1a1a;margin-bottom:8px;">Reset your password</h2>
   <p style="color:#555;margin-bottom:24px;">Hi {{name}},</p>
-  <p style="color:#555;margin-bottom:24px;">We received a request to reset the password for your GoGO Pantry account.</p>
+  <p style="color:#555;margin-bottom:24px;">We received a request to reset the password for your GoGoPantry account.</p>
   <a href="{{reset_link}}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin-bottom:24px;">Reset Password</a>
   <p style="color:#888;font-size:13px;">This link expires in 1 hour. If you didn't request a reset, you can safely ignore this email.</p>
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-  <p style="color:#aaa;font-size:12px;">GoGO Pantry · Fresh groceries delivered to your door</p>
+  <p style="color:#aaa;font-size:12px;">GoGoPantry · Fresh groceries delivered to your door</p>
 </div>`,
     enabled: true,
   },

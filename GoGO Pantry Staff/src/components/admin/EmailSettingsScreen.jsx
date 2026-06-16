@@ -39,8 +39,8 @@ export default function EmailSettingsScreen() {
       const res = await apiFetch(`${API_BASE}/email/templates/${selected.type}`, {
         method: "PUT", body: JSON.stringify({ subject, body, enabled }),
       });
+      if (!res?.ok) { const d = res ? await res.json().catch(() => ({})) : {}; setMsg({ type: "error", text: d.error || "Save failed." }); return; }
       const d = await res.json();
-      if (!res.ok) { setMsg({ type: "error", text: d.error || "Save failed." }); return; }
       setTemplates(prev => prev.map(t => t.type === selected.type ? d.template : t));
       setSelected(d.template);
       setMsg({ type: "success", text: "Template saved." });
@@ -55,8 +55,8 @@ export default function EmailSettingsScreen() {
       const res = await apiFetch(`${API_BASE}/email/test`, {
         method: "POST", body: JSON.stringify({ type: selected.type, to: testEmail }),
       });
+      if (!res?.ok) { const d = res ? await res.json().catch(() => ({})) : {}; setMsg({ type: "error", text: d.error || "Test failed." }); return; }
       const d = await res.json();
-      if (!res.ok) { setMsg({ type: "error", text: d.error || "Test failed." }); return; }
       setMsg({ type: "success", text: d.message });
     } catch { setMsg({ type: "error", text: "Network error." }); }
     finally { setTesting(false); }

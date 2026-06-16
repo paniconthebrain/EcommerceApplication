@@ -2,203 +2,105 @@ import { useState, useEffect, useRef } from 'react';
 import { G, APP_CONFIG } from '../globals.js';
 import { IconC } from './icons.jsx';
 
-const POPUP_ANALYTICS = {
-  track(event, data = {}) {
-    console.log("[StorePopup]", event, data);
-  }
-};
-
-export function StorePopup({ shop, isOpen, onClose, onSelectShop, product = null, promoText = "Free delivery on orders over $25" }) {
-  const primaryCTARef = useRef(null);
+export function StorePopup({ shop, isOpen, onClose, onSelectShop }) {
   const popupRef = useRef(null);
-  const dismissTimer = useRef(null);
-  const isMobile = window.matchMedia("(max-width: 640px)").matches;
-  const isOpen_ = isOpen && !!shop;
 
   useEffect(() => {
-    if (isOpen_) POPUP_ANALYTICS.track("store_popup_impression", { shopId: shop?.id, isMobile });
-  }, [isOpen_]);
-
-  useEffect(() => {
-    if (isOpen_ && primaryCTARef.current) setTimeout(() => primaryCTARef.current?.focus(), 50);
-  }, [isOpen_]);
-
-  useEffect(() => {
-    if (isOpen_ && isMobile) {
-      dismissTimer.current = setTimeout(() => {
-        if (!popupRef.current?.contains(document.activeElement)) {
-          POPUP_ANALYTICS.track("store_popup_auto_dismiss", { shopId: shop?.id });
-          onClose();
-        }
-      }, 6000);
-    }
-    return () => clearTimeout(dismissTimer.current);
-  }, [isOpen_]);
-
-  useEffect(() => {
-    if (!isOpen_) return;
-    const el = popupRef.current;
-    const focusable = () => el?.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])') || [];
-    const onKey = (e) => {
-      if (e.key === "Escape") { POPUP_ANALYTICS.track("store_popup_dismiss_esc", { shopId: shop?.id }); onClose(); return; }
-      if (e.key !== "Tab") return;
-      const items = [...focusable()];
-      if (!items.length) return;
-      const first = items[0], last = items[items.length - 1];
-      if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
-      else { if (document.activeElement === last) { e.preventDefault(); first.focus(); } }
-    };
+    if (!isOpen) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [isOpen_]);
+  }, [isOpen]);
 
-  if (!isOpen_) return null;
+  if (!isOpen || !shop) return null;
 
   const hue = typeof shop.tint === "number" ? shop.tint : 152;
-  const storeStatus = "Open";
-  const etaRange = "25–40 min";
-  const deliveryFee = "$3.99 delivery";
-  const isOpenStatus = storeStatus === "Open";
+  const imageUrl = shop.image ? `http://localhost:3000${shop.image}` : null;
+  const itemCount = G.PRODUCTS.filter(p => G.shopStock(p.id, shop.id) > 0).length;
 
-  const handlePrimary = () => { POPUP_ANALYTICS.track("store_popup_cta_primary", { shopId: shop.id }); onSelectShop(shop.id); onClose(); };
-  const handleSecondary = () => { POPUP_ANALYTICS.track("store_popup_cta_secondary", { shopId: shop.id }); onSelectShop(shop.id); onClose(); };
-  const handleClose = () => { POPUP_ANALYTICS.track("store_popup_dismiss_x", { shopId: shop.id }); onClose(); };
-
-  const popupId = "store-popup-heading";
-
-  const inner = (
-    <>
-      {/* Coloured header band */}
-      <div style={{ margin: "-24px -24px 20px", padding: "20px 24px 20px", background: `linear-gradient(135deg, oklch(0.38 0.13 ${hue}), oklch(0.52 0.11 ${hue + 18}))`, borderRadius: "20px 20px 0 0", display: "flex", alignItems: "center", gap: 14, position: "relative" }}>
-        <div style={{ width: 52, height: 52, borderRadius: 14, background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", display: "grid", placeItems: "center", flexShrink: 0, border: "1px solid rgba(255,255,255,0.25)" }}>
-          <IconC name="pin" size={26} style={{ color: "#fff" }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 id={popupId} style={{ fontSize: 18, fontWeight: 900, color: "#fff", margin: "0 0 3px", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{shop.name}</h2>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: isOpenStatus ? "#4ade80" : "#f87171", display: "inline-block", flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>{storeStatus}</span>
-            {shop.city && <><span style={{ color: "rgba(255,255,255,0.4)" }}>·</span><span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>{shop.city}</span></>}
-          </div>
-        </div>
-        <button onClick={handleClose} aria-label="Close store popup"
-          style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", flexShrink: 0, outline: "none", backdropFilter: "blur(4px)" }}
-          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.3)"}
-          onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.18)"}
-          onFocus={e => e.currentTarget.style.boxShadow = "0 0 0 3px rgba(255,255,255,0.5)"}
-          onBlur={e => e.currentTarget.style.boxShadow = "none"}>
-          <IconC name="x" size={16} />
-        </button>
-      </div>
-
-      {/* Store detail rows */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 16, borderRadius: 12, border: "1px solid var(--line)", overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid var(--line)" }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: `oklch(0.94 0.05 ${hue})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-            <IconC name="clock" size={16} style={{ color: `oklch(0.45 0.14 ${hue})` }} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 1 }}>Hours</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{shop.hours || "9:00 AM – 9:00 PM"}</div>
-          </div>
-          <span style={{ fontSize: 11, fontWeight: 800, background: "#d1fae5", color: "#065f46", padding: "3px 10px", borderRadius: 999 }}>Open now</span>
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid var(--line)" }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: `oklch(0.94 0.05 ${hue})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-            <IconC name="truck" size={16} style={{ color: `oklch(0.45 0.14 ${hue})` }} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 1 }}>
-              {APP_CONFIG.deliveryEnabled ? "Delivery" : "Pickup"}
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
-              {APP_CONFIG.deliveryEnabled ? `${etaRange} · ${deliveryFee}` : "Ready in 30–45 minutes"}
-            </div>
-          </div>
-        </div>
-
-        {shop.address && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: `oklch(0.94 0.05 ${hue})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-              <IconC name="pin" size={16} style={{ color: `oklch(0.45 0.14 ${hue})` }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 1 }}>Address</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{shop.address}</div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {product && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", background: "var(--surface-2)", borderRadius: 10, marginBottom: 16 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 10, background: `hsl(${hue},55%,92%)`, overflow: "hidden", flexShrink: 0, display: "grid", placeItems: "center" }}>
-            {product.image
-              ? <img src={product.image} alt={product.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <IconC name="box" size={24} style={{ color: `hsl(${hue},45%,50%)` }} />}
-          </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 2 }}>{product.name}</div>
-            <div style={{ fontSize: 12, color: "var(--text-3)" }}>{product.unit} · ${(parseFloat(product.price) || 0).toFixed(2)}</div>
-            <div style={{ fontSize: 11, color: "#059669", fontWeight: 700, marginTop: 3 }}>Available at this store</div>
-          </div>
-        </div>
-      )}
-
-      {/* Promo strip */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", background: `oklch(0.96 0.04 ${hue})`, borderRadius: 10, marginBottom: 18, border: `1px solid oklch(0.88 0.08 ${hue})` }}>
-        <div style={{ width: 28, height: 28, borderRadius: 7, background: `oklch(0.88 0.1 ${hue})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
-          <IconC name="checkCircle" size={16} style={{ color: `oklch(0.4 0.14 ${hue})` }} />
-        </div>
-        <span style={{ fontSize: 13, fontWeight: 700, color: `oklch(0.32 0.1 ${hue})` }}>
-          {APP_CONFIG.deliveryEnabled ? promoText : "Quick pickup — no waiting in line"}
-        </span>
-      </div>
-
-      {/* CTAs */}
-      <div style={{ display: "flex", gap: 10 }}>
-        <button ref={primaryCTARef} onClick={handlePrimary} aria-describedby={popupId}
-          style={{ flex: 1, padding: "14px 0", borderRadius: 11, border: "none", background: `oklch(0.45 0.15 ${hue})`, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "filter 0.15s, transform 0.1s", outline: "none" }}
-          onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.92)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-          onMouseLeave={e => { e.currentTarget.style.filter = "none"; e.currentTarget.style.transform = "none"; }}
-          onFocus={e => e.currentTarget.style.boxShadow = `0 0 0 3px oklch(0.65 0.15 ${hue})`}
-          onBlur={e => e.currentTarget.style.boxShadow = "none"}>
-          <IconC name="cart" size={18} />
-          Shop Now
-        </button>
-        <button onClick={handleSecondary}
-          style={{ padding: "14px 20px", borderRadius: 11, border: "1px solid var(--line)", background: "var(--surface-2)", color: "var(--text)", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "border-color 0.15s, background 0.15s", outline: "none", whiteSpace: "nowrap" }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = `oklch(0.55 0.13 ${hue})`; e.currentTarget.style.background = "var(--surface)"; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "var(--surface-2)"; }}
-          onFocus={e => e.currentTarget.style.boxShadow = `0 0 0 3px oklch(0.65 0.15 ${hue})`}
-          onBlur={e => e.currentTarget.style.boxShadow = "none"}>
-          View Store
-        </button>
-      </div>
-    </>
-  );
-
-  if (isMobile) {
-    return (
-      <div role="dialog" aria-modal="true" aria-labelledby={popupId}
-        style={{ position: "fixed", bottom: 16, left: 16, right: 16, zIndex: 300, animation: "slideUp 0.25s cubic-bezier(0.34,1.56,0.64,1)" }}>
-        <div ref={popupRef} style={{ background: "var(--surface)", borderRadius: 16, padding: 16, boxShadow: "0 8px 40px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.08)", border: "1px solid var(--line)" }}>
-          {inner}
-          <div style={{ marginTop: 12, height: 3, background: "var(--line)", borderRadius: 999, overflow: "hidden" }}>
-            <div style={{ height: "100%", background: "var(--primary)", borderRadius: 999, animation: "shrink 6s linear forwards" }} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const stats = [
+    { icon: "clock", label: "Hours", value: shop.hours || "9am–9pm" },
+    { icon: "truck", label: "Pickup", value: shop.pickupTime || "In-store" },
+    { icon: "box",   label: "In stock", value: itemCount > 0 ? `${itemCount} products` : "Check in store" },
+  ];
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 300, display: "grid", placeItems: "center", padding: 16 }}
-      onClick={e => { if (e.target === e.currentTarget) handleClose(); }}>
-      <div ref={popupRef} role="dialog" aria-modal="true" aria-labelledby={popupId}
-        style={{ background: "var(--surface)", borderRadius: 20, padding: 24, width: "100%", maxWidth: 480, boxShadow: "0 24px 80px rgba(0,0,0,0.28)", border: "1px solid var(--line)", animation: "fadeScaleIn 0.2s ease" }}>
-        {inner}
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 300, display: "grid", placeItems: "center", padding: 16, backdropFilter: "blur(6px)", animation: "fadeIn 0.18s ease" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div ref={popupRef} role="dialog" aria-modal="true"
+        style={{ background: "var(--surface)", borderRadius: 24, width: "100%", maxWidth: 500, overflow: "hidden", boxShadow: "0 32px 100px rgba(0,0,0,0.4)", animation: "fadeScaleIn 0.22s cubic-bezier(0.34,1.4,0.64,1)" }}>
+
+        {/* ── Hero image ── */}
+        <div style={{ position: "relative", height: 230 }}>
+          {imageUrl
+            ? <img src={imageUrl} alt={shop.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            : <div style={{ width: "100%", height: "100%", background: `linear-gradient(135deg, oklch(0.32 0.16 ${hue}) 0%, oklch(0.5 0.14 ${hue + 22}) 100%)` }}>
+                <div style={{ position: "absolute", right: -20, bottom: -20, opacity: 0.12 }}>
+                  <IconC name="pin" size={160} stroke={1} style={{ color: "#fff" }} />
+                </div>
+              </div>
+          }
+          {/* gradient overlay so text is always readable */}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.72) 100%)" }} />
+
+          {/* close btn */}
+          <button onClick={onClose} aria-label="Close"
+            style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 999, border: "none", background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", outline: "none", transition: "background 0.15s" }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.55)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0.35)"}>
+            <IconC name="x" size={16} />
+          </button>
+
+          {/* Open badge */}
+          <div style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(22,163,74,0.92)", backdropFilter: "blur(6px)", color: "#fff", padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#86efac", display: "inline-block", boxShadow: "0 0 6px #86efac" }} />
+            Open Now
+          </div>
+
+          {/* Shop name over image */}
+          <div style={{ position: "absolute", bottom: 20, left: 22, right: 22 }}>
+            <h2 style={{ fontSize: 26, fontWeight: 900, color: "#fff", margin: "0 0 4px", letterSpacing: "-0.025em", textShadow: "0 2px 12px rgba(0,0,0,0.4)", lineHeight: 1.1 }}>{shop.name}</h2>
+            {shop.city && <p style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", margin: 0, fontWeight: 500 }}>{shop.city}</p>}
+          </div>
+        </div>
+
+        {/* ── Stats row ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", background: "var(--surface-2)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
+          {stats.map(({ icon, label, value }, i) => (
+            <div key={label} style={{ padding: "16px 12px", textAlign: "center", borderRight: i < 2 ? "1px solid var(--line)" : "none" }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: `oklch(0.93 0.06 ${hue})`, display: "grid", placeItems: "center", margin: "0 auto 8px" }}>
+                <IconC name={icon} size={17} style={{ color: `oklch(0.42 0.15 ${hue})` }} />
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "var(--text)", lineHeight: 1.3 }}>{value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Promo strip ── */}
+        <div style={{ margin: "16px 20px 0", padding: "11px 14px", background: `oklch(0.96 0.04 ${hue})`, borderRadius: 12, border: `1px solid oklch(0.87 0.07 ${hue})`, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: `oklch(0.87 0.1 ${hue})`, display: "grid", placeItems: "center", flexShrink: 0 }}>
+            <IconC name="checkCircle" size={15} style={{ color: `oklch(0.38 0.14 ${hue})` }} />
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: `oklch(0.3 0.1 ${hue})` }}>Quick pickup — no waiting in line</span>
+        </div>
+
+        {/* ── CTA buttons ── */}
+        <div style={{ padding: "14px 20px 22px", display: "flex", gap: 10 }}>
+          <button onClick={() => { onSelectShop(shop.id); onClose(); }}
+            style={{ flex: 1, padding: "15px 0", borderRadius: 14, border: "none", background: `oklch(0.44 0.15 ${hue})`, color: "#fff", fontWeight: 800, fontSize: 16, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, boxShadow: `0 6px 22px oklch(0.44 0.13 ${hue} / 0.42)`, transition: "filter 0.15s, transform 0.1s", outline: "none" }}
+            onMouseEnter={e => { e.currentTarget.style.filter = "brightness(0.9)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.filter = "none"; e.currentTarget.style.transform = "none"; }}>
+            <IconC name="cart" size={19} />
+            Start Shopping
+          </button>
+          <button onClick={onClose}
+            style={{ padding: "15px 18px", borderRadius: 14, border: "1px solid var(--line)", background: "transparent", color: "var(--text-2)", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)", whiteSpace: "nowrap", transition: "border-color 0.15s, background 0.15s", outline: "none" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.borderColor = "var(--text-3)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "var(--line)"; }}>
+            Not now
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -217,7 +119,7 @@ export function ShopInfoCard({ shop, onChangeShop }) {
           <div style={{ display: "flex", gap: 6 }}>
             <span style={{ fontSize: 10, fontWeight: 700, background: "#d1fae5", color: "#065f46", padding: "2px 7px", borderRadius: 999 }}>● Open</span>
             <span style={{ fontSize: 10, color: "var(--text-3)", padding: "2px 0" }}>
-              {APP_CONFIG.deliveryEnabled ? "25–40 min" : "30–45 min pickup"}
+              {APP_CONFIG.deliveryEnabled ? "25–40 min" : shop.pickupTime ? `${shop.pickupTime} pickup` : "pickup"}
             </span>
           </div>
         </div>
@@ -236,9 +138,11 @@ export function ShopInfoCard({ shop, onChangeShop }) {
             </div>
           </>
         ) : (
-          <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
-            <span>Pickup time</span><span style={{ fontWeight: 600, color: "var(--text)" }}>30–45 min</span>
-          </div>
+          shop.pickupTime ? (
+            <div style={{ display: "flex", justifyContent: "space-between", color: "var(--text-2)" }}>
+              <span>Pickup time</span><span style={{ fontWeight: 600, color: "var(--text)" }}>{shop.pickupTime}</span>
+            </div>
+          ) : null
         )}
       </div>
       <button onClick={onChangeShop} style={{ marginTop: 14, width: "100%", padding: "10px", borderRadius: 9, border: "1px solid var(--line)", background: "transparent", color: "var(--text)", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "border-color 0.15s" }}
@@ -357,7 +261,7 @@ export function ShopSelector({ isOpen, onClose, onSelectShop, currentShopId }) {
                       </span>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-3)", fontWeight: 600 }}>
                         <IconC name="truck" size={12} style={{ color: "var(--text-3)" }} />
-                        {APP_CONFIG.deliveryEnabled ? "25–40 min delivery" : "30–45 min pickup"}
+                        {APP_CONFIG.deliveryEnabled ? "25–40 min delivery" : shop.pickupTime ? `${shop.pickupTime} pickup` : "pickup"}
                       </span>
                     </div>
                   </div>
@@ -395,9 +299,7 @@ export function ShopCard({ shop, onSelect }) {
   const hue = typeof shop.tint === "number" ? shop.tint : 152;
   const imageUrl = shop.image ? `http://localhost:3000${shop.image}` : null;
   const itemCount = G.PRODUCTS.filter(p => G.shopStock(p.id, shop.id) > 0).length;
-  const pickupMins = [20, 25, 30, 35, 45];
-  const pickupBase = pickupMins[shop.id?.charCodeAt(0) % pickupMins.length] || 30;
-  const pickupLabel = `${pickupBase}–${pickupBase + 15} min`;
+  const pickupLabel = shop.pickupTime || null;
 
   return (
     <div role="button" tabIndex={0} aria-label={`Shop at ${shop.name}, ${shop.city}`}
@@ -427,9 +329,11 @@ export function ShopCard({ shop, onSelect }) {
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
             <IconC name="clock" size={12} /> {shop.hours || "9am–9pm"}
           </span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--blue-100)", color: "var(--blue-500)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-            <IconC name="truck" size={12} /> Pickup {pickupLabel}
-          </span>
+          {pickupLabel && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--blue-100)", color: "var(--blue-500)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+              <IconC name="truck" size={12} /> Pickup {pickupLabel}
+            </span>
+          )}
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
             <IconC name="box" size={12} /> {itemCount > 0 ? `${itemCount} items` : "Check in store"}
           </span>

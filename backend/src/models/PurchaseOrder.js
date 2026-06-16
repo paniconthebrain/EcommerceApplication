@@ -18,8 +18,8 @@ const PurchaseOrder = sequelize.define('PurchaseOrder', {
     field: 'shop_id',
   },
   status: {
-    type: DataTypes.ENUM('scheduled', 'in-transit', 'arrived', 'received'),
-    defaultValue: 'scheduled',
+    type: DataTypes.ENUM('draft', 'ordered', 'in_transit', 'arrived', 'received'),
+    defaultValue: 'draft',
   },
   eta: {
     type: DataTypes.DATE,

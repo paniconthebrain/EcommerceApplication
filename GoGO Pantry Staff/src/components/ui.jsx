@@ -4,11 +4,9 @@ import { Icon } from './icons.jsx';
 export function Logo({ size = 30 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ width: size, height: size, borderRadius: 9, background: "var(--primary)", display: "grid", placeItems: "center", color: "white", flexShrink: 0 }}>
-        <Icon name="leaf" size={size * 0.62} stroke={2.4} />
-      </div>
+      <img src="/Logo.webp" alt="Gogo Pantry" style={{ height: size * 1.4, objectFit: "contain", flexShrink: 0 }} />
       <span style={{ fontWeight: 800, fontSize: size * 0.6, letterSpacing: "-0.02em", color: "var(--text)" }}>
-        GoGO<span style={{ color: "var(--primary)" }}>Pantry</span>
+        GoGo<span style={{ color: "var(--primary)" }}>Pantry</span>
       </span>
     </div>
   );

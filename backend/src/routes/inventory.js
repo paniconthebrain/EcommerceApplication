@@ -97,46 +97,61 @@ router.post('/shops/:shopId/inventory', authMiddleware, requireRole('admin'), as
 });
 
 // GET /api/shops/:shopId/inventory
+// Returns ALL products (left join) so untracked products are visible too
 router.get('/shops/:shopId/inventory', authMiddleware, async (req, res, next) => {
   try {
     const { shopId } = req.params;
     assertShopAccess(req, shopId);
 
-    const inventory = await Inventory.findAll({
-      where: { shopId },
+    const products = await Product.findAll({
+      where: { parentId: null }, // only top-level products, not variants
+      attributes: ['id', 'name', 'price', 'unit', 'tag', 'categoryId', 'supplierId'],
       include: [
         {
-          model: Product,
-          attributes: ['id', 'name', 'price', 'unit', 'tag', 'categoryId', 'supplierId'],
-          include: [
-            {
-              model: Supplier,
-              attributes: ['leadTime'],
-            },
-          ],
+          model: Inventory,
+          where: { shopId },
+          required: false, // LEFT JOIN — include products with no inventory record
+        },
+        {
+          model: Supplier,
+          attributes: ['leadTime'],
+          required: false,
         },
       ],
     });
 
-    const response = inventory.map(item => {
-      const leadTimeDays = getLeadTimeDays(item.Product?.Supplier?.leadTime);
-      const reorderPoint = calculateReorderPoint(item.par, leadTimeDays);
-      const needsReorder = item.stock <= reorderPoint;
+    const response = products.map(product => {
+      const inv = product.Inventories?.[0] || null;
+      const tracked = !!inv;
+      const stock = inv ? inv.stock : 0;
+      const par = inv ? inv.par : 10;
+      const leadTimeDays = getLeadTimeDays(product.Supplier?.leadTime);
+      const reorderPoint = calculateReorderPoint(par, leadTimeDays);
+      const needsReorder = tracked && stock <= reorderPoint;
 
       return {
-        id: item.id,
-        productId: item.productId,
-        product: item.Product,
-        shopId: item.shopId,
-        stock: item.stock,
-        par: item.par,
-        status: getStockStatus(item.stock, item.par),
-        reorderPoint,
+        id: inv?.id || null,
+        productId: product.id,
+        product: {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          unit: product.unit,
+          tag: product.tag,
+          categoryId: product.categoryId,
+          supplierId: product.supplierId,
+        },
+        shopId,
+        stock,
+        par,
+        tracked,
+        status: tracked ? getStockStatus(stock, par) : 'untracked',
+        reorderPoint: tracked ? reorderPoint : null,
         needsReorder,
-        lastReceived: item.lastReceived,
-        lastAdjusted: item.lastAdjusted,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
+        lastReceived: inv?.lastReceived || null,
+        lastAdjusted: inv?.lastAdjusted || null,
+        createdAt: inv?.createdAt || null,
+        updatedAt: inv?.updatedAt || null,
       };
     });
 
@@ -150,49 +165,63 @@ router.get('/shops/:shopId/inventory', authMiddleware, async (req, res, next) =>
 router.patch('/shops/:shopId/inventory/:productId', authMiddleware, async (req, res, next) => {
   try {
     const { shopId, productId } = req.params;
-    const { stock, par, action = 'set', reason } = req.body;
+    const { stock, par, action = 'set', reason, openingCostValue } = req.body;
 
     // Check authorization: admin can do anything, staff can adjust their own shop
     if (req.user.userType !== 'admin' && req.user.shopId !== shopId) {
-      throw new AuthenticationError('Staff can only adjust inventory for their own shop');
+      throw new AuthorizationError('Staff can only adjust inventory for their own shop');
     }
 
     if (stock === undefined && action === 'set') {
       throw new ValidationError('Stock is required when action is "set"');
     }
 
-    const inventory = await Inventory.findOne({
+    let inventory = await Inventory.findOne({
       where: { shopId, productId },
-      include: [
-        {
-          model: Product,
-          attributes: ['id', 'name'],
-        },
-      ],
+      include: [{ model: Product, attributes: ['id', 'name'] }],
     });
+
+    let oldStock = 0;
+    let newStock = 0;
 
     if (!inventory) {
-      throw new NotFoundError('Inventory record not found');
-    }
-
-    let newStock = inventory.stock;
-    const oldStock = inventory.stock;
-
-    if (action === 'set') {
+      // First-time setup: create the inventory record
+      if (action !== 'set') {
+        throw new ValidationError('Use action "set" to initialize a new inventory record');
+      }
       newStock = parseInt(stock);
-    } else if (action === 'add') {
-      newStock = inventory.stock + parseInt(stock);
-    } else if (action === 'subtract') {
-      newStock = Math.max(0, inventory.stock - parseInt(stock));
+      inventory = await Inventory.create({
+        shopId,
+        productId,
+        stock: newStock,
+        par: par !== undefined ? parseInt(par) : 10,
+        openingStock: newStock,
+        openingCostValue: openingCostValue != null ? parseFloat(openingCostValue) : null,
+        lastAdjusted: new Date(),
+      });
+      inventory = await Inventory.findOne({
+        where: { shopId, productId },
+        include: [{ model: Product, attributes: ['id', 'name'] }],
+      });
     } else {
-      throw new ValidationError('Invalid action. Use: set, add, or subtract');
-    }
+      oldStock = inventory.stock;
 
-    await inventory.update({
-      stock: newStock,
-      par: par !== undefined ? parseInt(par) : inventory.par,
-      lastAdjusted: new Date(),
-    });
+      if (action === 'set') {
+        newStock = parseInt(stock);
+      } else if (action === 'add') {
+        newStock = inventory.stock + parseInt(stock);
+      } else if (action === 'subtract') {
+        newStock = Math.max(0, inventory.stock - parseInt(stock));
+      } else {
+        throw new ValidationError('Invalid action. Use: set, add, or subtract');
+      }
+
+      await inventory.update({
+        stock: newStock,
+        par: par !== undefined ? parseInt(par) : inventory.par,
+        lastAdjusted: new Date(),
+      });
+    }
 
     res.json({
       productId: inventory.productId,

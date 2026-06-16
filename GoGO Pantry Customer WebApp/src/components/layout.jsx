@@ -89,7 +89,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
       <header style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, position: "sticky", top: 0, zIndex: 40, boxShadow: "0 1px 3px oklch(0 0 0 / 0.05)" }}>
         <LogoCustomer size={26} onClick={() => setPage("home")} />
         <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={() => setShopSelectorOpen(true)} className="hideOnMobile"
+          <button onClick={() => { if (G.SHOPS.length === 1) { setStorePopupShop(G.SHOPS[0]); } else { setShopSelectorOpen(true); } }} className="hideOnMobile"
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface-2)", color: "var(--text-2)", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "all 0.15s" }}
             onMouseEnter={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.color = "var(--primary-ink)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--text-2)"; }}>
@@ -204,8 +204,8 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
         <div style={{ padding: "32px 20px" }} className="footer-links">
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--primary)", display: "grid", placeItems: "center" }}><IconC name="leaf" size={18} /></div>
-              <span style={{ fontSize: 16, fontWeight: 900, letterSpacing: "-0.01em" }}>GoGO<span style={{ color: "var(--primary)" }}>Pantry</span></span>
+              <img src="/Logo.webp" alt="Gogo Pantry" style={{ height: 44, objectFit: "contain" }} />
+              <span style={{ fontSize: 16, fontWeight: 900, letterSpacing: "-0.01em" }}>GoGo<span style={{ color: "var(--primary)" }}>Pantry</span></span>
             </div>
             <p style={{ fontSize: 13, opacity: 0.6, lineHeight: 1.6, margin: 0 }}>Fresh groceries, delivered fast. Supporting local stores every day.</p>
           </div>
@@ -234,7 +234,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
 
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", padding: "16px 20px" }}>
           <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, fontSize: 12, opacity: 0.5 }}>
-            <span>© 2026 GoGO Pantry. All rights reserved.</span>
+            <span>© 2026 GoGoPantry. All rights reserved.</span>
             <div style={{ display: "flex", gap: 20 }}>
               {["Privacy Policy", "Terms of Service", "Cookie Settings"].map(l => <span key={l} style={{ cursor: "pointer" }}>{l}</span>)}
             </div>

@@ -3,14 +3,9 @@ import { IconC } from './icons.jsx';
 export function LogoCustomer({ size = 28, onClick }) {
   return (
     <button onClick={onClick} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: onClick ? "pointer" : "default", padding: 0, fontFamily: "inherit" }}>
-      <div style={{
-        width: size, height: size, borderRadius: 7, background: "var(--green-500)",
-        display: "grid", placeItems: "center", color: "#fff", flexShrink: 0, boxShadow: "0 2px 8px oklch(0.68 0.13 152 / 0.2)"
-      }}>
-        <IconC name="leaf" size={size * 0.6} stroke={2.2} />
-      </div>
+      <img src="/Logo.webp" alt="Gogo Pantry" style={{ height: size * 1.4, width: size * 1.4, objectFit: "contain", flexShrink: 0 }} />
       <span style={{ fontWeight: 800, fontSize: size * 0.7, letterSpacing: "-0.02em", color: "var(--text)" }}>
-        GoGO<span style={{ color: "var(--primary)" }}>Pantry</span>
+        GoGo<span style={{ color: "var(--primary)" }}>Pantry</span>
       </span>
     </button>
   );

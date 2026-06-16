@@ -149,7 +149,7 @@ export function CustomerSignup({ onSignupSuccess, onLoginClick }) {
           <LogoCustomer size={32} />
         </div>
         <h1 style={authHeadingStyle}>Create your account</h1>
-        <p style={authSubtitleStyle}>Join GoGO Pantry for fast, fresh grocery delivery</p>
+        <p style={authSubtitleStyle}>Join GoGoPantry for fast, fresh grocery delivery</p>
 
         {error && (
           <div style={{ background: "var(--red-100)", color: "var(--red-700)", padding: "12px 14px", borderRadius: 10, fontSize: 13, marginBottom: 16, border: "1px solid var(--red-300)" }}>

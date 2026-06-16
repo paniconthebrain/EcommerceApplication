@@ -47,8 +47,8 @@ async function sendEmail({ to, subject, body, vars = {} }) {
   const transport = await getTransporter();
   const info = await transport.sendMail({
     from: process.env.GMAIL_USER && process.env.GMAIL_USER !== 'your-gmail@gmail.com'
-      ? `"GoGO Pantry" <${process.env.GMAIL_USER}>`
-      : '"GoGO Pantry" <noreply@gogopantry.com>',
+      ? `"GoGoPantry" <${process.env.GMAIL_USER}>`
+      : '"GoGoPantry" <noreply@gogopantry.com>',
     to,
     subject: resolvedSubject,
     html: resolvedBody,

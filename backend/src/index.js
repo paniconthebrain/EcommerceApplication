@@ -65,7 +65,7 @@ app.get('/health', (req, res) => {
 // API root endpoint
 app.get('/api', (req, res) => {
   res.json({
-    message: 'GoGO Pantry API',
+    message: 'GoGoPantry API',
     version: '1.0.0',
     status: 'ready',
     endpoints: {
@@ -95,6 +95,7 @@ app.use('/api', inventoryRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/purchase-orders', deliveryRoutes);
 app.use('/api/transfer', transferRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/delivery-slots', deliverySlotsRoutes);

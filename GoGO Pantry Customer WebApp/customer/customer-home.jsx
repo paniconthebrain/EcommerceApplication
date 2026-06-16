@@ -450,19 +450,20 @@ function ShopCard({ shop, onSelect }) {
           <div style={{ fontSize: 13, color: "var(--text-2)" }}>{shop.city}</div>
         </div>
 
-        {/* Pickup time — highlighted for quick decision-making */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "8px 10px", background: "var(--green-100)", borderRadius: 8,
-          border: "1px solid var(--green-300)"
-        }}>
-          <IconC name="clock" size={15} style={{ color: "var(--green-700)", flexShrink: 0 }} />
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 800, color: "var(--green-700)" }}>30–45 min pickup</span>
-            <span style={{ fontSize: 12, color: "var(--green-700)", opacity: 0.75, marginLeft: 6 }}>
-              · {shop.hours}
+        {/* Pickup time + hours badges */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {shop.hours && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
+              <IconC name="clock" size={12} />
+              {shop.hours}
             </span>
-          </div>
+          )}
+          {shop.pickupTime && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--blue-100)", color: "var(--blue-500)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+              <IconC name="truck" size={12} />
+              Pickup {shop.pickupTime}
+            </span>
+          )}
         </div>
 
         {/* CTA — always brand emerald, never per-shop color */}

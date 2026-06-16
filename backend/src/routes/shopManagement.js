@@ -58,7 +58,7 @@ router.get('/:id', authMiddleware, requireRole('admin'), async (req, res, next) 
 // POST /api/shops - Create new shop (admin only)
 router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
-    const { id, name, city, code, hours, tint } = req.body;
+    const { id, name, city, code, hours, tint, allowStaffPO, pickupTime } = req.body;
 
     if (!id || !name || !city || !code) {
       throw new ValidationError('ID, name, city, and code are required');
@@ -84,6 +84,8 @@ router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) =>
       code,
       hours: hours || null,
       tint: tint || null,
+      allowStaffPO: !!allowStaffPO,
+      pickupTime: pickupTime || null,
     });
 
     res.status(201).json(shop);
@@ -95,7 +97,7 @@ router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) =>
 // PUT /api/shops/:id - Update shop (admin only)
 router.put('/:id', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
-    const { name, city, code, hours, tint } = req.body;
+    const { name, city, code, hours, tint, pickupTime } = req.body;
 
     const shop = await Shop.findByPk(req.params.id);
 
@@ -117,6 +119,8 @@ router.put('/:id', authMiddleware, requireRole('admin'), async (req, res, next) 
     if (code) shop.code = code;
     if (hours !== undefined) shop.hours = hours || null;
     if (tint !== undefined) shop.tint = tint || null;
+    if (req.body.allowStaffPO !== undefined) shop.allowStaffPO = !!req.body.allowStaffPO;
+    if (pickupTime !== undefined) shop.pickupTime = pickupTime || null;
 
     await shop.save();
 
