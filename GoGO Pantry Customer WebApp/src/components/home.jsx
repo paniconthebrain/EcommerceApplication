@@ -4,6 +4,146 @@ import { IconC, getCategoryIcon } from './icons.jsx';
 import { BtnC } from './ui.jsx';
 import { ShopCard } from './shop.jsx';
 
+const HERO_SLIDES = [
+  {
+    gradient: "linear-gradient(135deg, oklch(0.38 0.1 152) 0%, oklch(0.5 0.13 152) 60%, oklch(0.55 0.08 180) 100%)",
+    badge: "Easy pickup at your local store",
+    badgeIcon: "pin",
+    title: ["Fresh Groceries,", "Delivered Fast"],
+    sub: "Shop local stores. Get fresh produce, dairy, bakery & more at your door in under an hour.",
+    cta1: "Shop Now", cta1Icon: "cart", cta2: "Browse Stores",
+    decorIcons: [["leaf","-10%","10%",72],["cart","78%","8%",56],["box","88%","55%",48],["star","5%","70%",44],["check","55%","80%",40],["leaf","35%","-5%",52]],
+    cards: [["leaf","#d1fae5"],["cart","#dbeafe"],["check","#fef3c7"],["star","#ede9fe"]],
+  },
+  {
+    gradient: "linear-gradient(135deg, oklch(0.45 0.12 55) 0%, oklch(0.55 0.15 48) 60%, oklch(0.6 0.1 38) 100%)",
+    badge: "Baked fresh every morning",
+    badgeIcon: "clock",
+    title: ["Warm Bread &", "Bakery Treats"],
+    sub: "Artisan breads, pastries, croissants, and muffins — baked daily in-store and ready for pickup.",
+    cta1: "Shop Bakery", cta1Icon: "cart", cta2: "All Stores",
+    decorIcons: [["box","-10%","10%",72],["clock","78%","8%",56],["star","88%","55%",48],["check","5%","70%",44],["bell","55%","80%",40],["box","35%","-5%",52]],
+    cards: [["box","#ffedd5"],["clock","#fef3c7"],["star","#fce7f3"],["bell","#fee2e2"]],
+  },
+  {
+    gradient: "linear-gradient(135deg, oklch(0.33 0.1 175) 0%, oklch(0.43 0.12 160) 60%, oklch(0.48 0.09 140) 100%)",
+    badge: "Locally sourced every day",
+    badgeIcon: "leaf",
+    title: ["Farm Fresh", "Produce Daily"],
+    sub: "Handpicked fruits and vegetables from local farms — fresh, seasonal, and full of flavor.",
+    cta1: "Shop Produce", cta1Icon: "cart", cta2: "Browse Stores",
+    decorIcons: [["leaf","-10%","10%",72],["check","78%","8%",56],["star","88%","55%",48],["leaf","5%","70%",44],["box","55%","80%",40],["clock","35%","-5%",52]],
+    cards: [["leaf","#d1fae5"],["check","#fee2e2"],["star","#ffedd5"],["box","#ede9fe"]],
+  },
+  {
+    gradient: "linear-gradient(135deg, oklch(0.38 0.12 260) 0%, oklch(0.48 0.15 255) 60%, oklch(0.54 0.1 245) 100%)",
+    badge: "New customer offer inside",
+    badgeIcon: "gift",
+    title: ["Save 20% on", "Your First Order"],
+    sub: "Welcome to GoGO Pantry! Use code WELCOME20 at checkout and enjoy fresh groceries at a great price.",
+    cta1: "Claim Offer", cta1Icon: "gift", cta2: "Learn More",
+    decorIcons: [["gift","-10%","10%",72],["star","78%","8%",56],["check","88%","55%",48],["bell","5%","70%",44],["heart","55%","80%",40],["gift","35%","-5%",52]],
+    cards: [["gift","#ede9fe"],["star","#dbeafe"],["check","#fef3c7"],["heart","#fce7f3"]],
+  },
+];
+
+function HeroCarousel({ onSelectShop, onBrowse }) {
+  const [slide, setSlide] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const total = HERO_SLIDES.length;
+
+  useEffect(() => {
+    if (paused) return;
+    const t = setInterval(() => setSlide(s => (s + 1) % total), 5000);
+    return () => clearInterval(t);
+  }, [paused]);
+
+  const prev = () => { setPaused(true); setSlide(s => (s - 1 + total) % total); };
+  const next = () => { setPaused(true); setSlide(s => (s + 1) % total); };
+
+  const arrowBtn = (dir) => (
+    <button onClick={dir === "prev" ? prev : next}
+      style={{ position: "absolute", [dir === "prev" ? "left" : "right"]: 16, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 44, height: 44, borderRadius: 999, border: "none", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", transition: "background 0.2s" }}
+      onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.32)"}
+      onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.18)"}>
+      <IconC name="chevR" size={20} style={{ transform: dir === "prev" ? "rotate(180deg)" : "none" }} />
+    </button>
+  );
+
+  return (
+    <div style={{ position: "relative", overflow: "hidden", minHeight: "55vh" }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}>
+      {/* Slides track */}
+      <div style={{ display: "flex", transform: `translateX(-${slide * 100}%)`, transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)" }}>
+        {HERO_SLIDES.map((s, i) => (
+          <div key={i} style={{ minWidth: "100%", background: s.gradient, color: "#fff", padding: "72px 20px 80px", minHeight: "55vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
+            {/* floating icon decorations */}
+            <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
+              {s.decorIcons.map(([iconName, l, t, sz], di) => (
+                <div key={di} style={{ position: "absolute", left: l, top: t, opacity: 0.15, color: "#fff" }}>
+                  <IconC name={iconName} size={sz} stroke={1.5} />
+                </div>
+              ))}
+            </div>
+            {/* content */}
+            <div style={{ maxWidth: 1400, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "center", position: "relative", zIndex: 1 }}>
+              <div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 18, backdropFilter: "blur(4px)" }}>
+                  <IconC name={s.badgeIcon} size={14} stroke={2.5} />{s.badge}
+                </div>
+                <h1 style={{ fontSize: "clamp(32px, 6vw, 56px)", fontWeight: 900, margin: "0 0 16px", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
+                  {s.title[0]}<br />{s.title[1]}
+                </h1>
+                <p style={{ fontSize: "clamp(14px, 2vw, 18px)", margin: "0 0 32px", opacity: 0.9, lineHeight: 1.7, maxWidth: 480 }}>{s.sub}</p>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <button onClick={() => { const sh = G.SHOPS[0]; if (sh) onSelectShop(sh.id); }}
+                    style={{ padding: "14px 28px", borderRadius: 12, border: "none", background: "#fff", color: "oklch(0.38 0.1 152)", fontWeight: 900, fontSize: 16, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 4px 20px rgba(0,0,0,0.2)", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 8 }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.25)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)"; }}>
+                    <IconC name={s.cta1Icon} size={18} stroke={2.5} />{s.cta1}
+                  </button>
+                  <button onClick={onBrowse}
+                    style={{ padding: "14px 24px", borderRadius: 12, border: "2px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", backdropFilter: "blur(4px)" }}>
+                    {s.cta2}
+                  </button>
+                </div>
+                <div style={{ display: "flex", gap: 24, marginTop: 28, flexWrap: "wrap" }}>
+                  {[["star", "4.9 rating"], ["pin", `${G.SHOPS.length || 4} stores`], ["zap", "Under 1hr"]].map(([ic, lb]) => (
+                    <div key={lb} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, opacity: 0.9 }}>
+                      <IconC name={ic} size={16} stroke={2} /><span style={{ fontWeight: 600 }}>{lb}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, flexShrink: 0, width: 220 }} className="hideOnMobile">
+                {s.cards.map(([iconName, bg], ci) => (
+                  <div key={ci} style={{ height: 90, borderRadius: 16, background: bg, display: "grid", placeItems: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.12)", color: "oklch(0.35 0.1 152)" }}>
+                    <IconC name={iconName} size={36} stroke={1.5} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Arrows */}
+      {arrowBtn("prev")}
+      {arrowBtn("next")}
+
+      {/* Dots */}
+      <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8, zIndex: 10 }}>
+        {HERO_SLIDES.map((_, i) => (
+          <button key={i} onClick={() => { setPaused(true); setSlide(i); }}
+            style={{ width: i === slide ? 24 : 8, height: 8, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.45)", border: "none", cursor: "pointer", transition: "all 0.35s", padding: 0 }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
 export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
   const goToBrowseOrScroll = () => {
     if (shopId) { onGoToBrowse(); }
@@ -25,53 +165,11 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
 
   return (
     <div style={{ padding: "0", background: "var(--bg)" }}>
-      {/* Hero */}
-      <div style={{ background: "linear-gradient(135deg, oklch(0.38 0.1 152) 0%, oklch(0.5 0.13 152) 60%, oklch(0.55 0.08 180) 100%)", color: "#fff", padding: "72px 20px 60px", minHeight: "55vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", overflow: "hidden" }}>
-          {[["🥦","-10%","10%","7rem"],["🍅","78%","8%","5.5rem"],["🥕","88%","55%","4.5rem"],["🍋","5%","70%","4rem"],["🫐","55%","80%","3.5rem"],["🥑","35%","-5%","4rem"]].map(([e,l,t,fs]) => (
-            <span key={l} style={{ position:"absolute", left:l, top:t, fontSize:fs, opacity:0.18, userSelect:"none" }}>{e}</span>
-          ))}
-        </div>
-        <div style={{ maxWidth: 1400, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "center", position: "relative", zIndex: 1 }}>
-          <div>
-            {APP_CONFIG.deliveryEnabled ? (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 18, backdropFilter: "blur(4px)" }}>
-                🚀 Same-day delivery available
-              </div>
-            ) : (
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 18, backdropFilter: "blur(4px)" }}>
-                🛒 Easy pickup at your local store
-              </div>
-            )}
-            <h1 style={{ fontSize: "clamp(32px, 6vw, 56px)", fontWeight: 900, margin: "0 0 16px", letterSpacing: "-0.03em", lineHeight: 1.1 }}>Fresh Groceries,<br/>Delivered Fast 🛒</h1>
-            <p style={{ fontSize: "clamp(14px, 2vw, 18px)", margin: "0 0 32px", opacity: 0.9, lineHeight: 1.7, maxWidth: 480 }}>Shop local stores. Get fresh produce, dairy, bakery & more at your door in under an hour.</p>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <button onClick={() => { const s = G.SHOPS[0]; if (s) onSelectShop(s.id); }}
-                style={{ padding: "14px 28px", borderRadius: 12, border: "none", background: "#fff", color: "oklch(0.38 0.1 152)", fontWeight: 900, fontSize: 16, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 4px 20px rgba(0,0,0,0.2)", transition: "all 0.2s" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.25)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)"; }}>
-                🛍️ Shop Now
-              </button>
-              <button onClick={() => document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" })}
-                style={{ padding: "14px 24px", borderRadius: 12, border: "2px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", backdropFilter: "blur(4px)" }}>
-                Browse Stores
-              </button>
-            </div>
-            <div style={{ display: "flex", gap: 24, marginTop: 28, flexWrap: "wrap" }}>
-              {[["⭐","4.9 rating"],["🏪",`${G.SHOPS.length} stores`],["⚡","Under 1hr"]].map(([ic,lb]) => (
-                <div key={lb} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, opacity: 0.9 }}>
-                  <span>{ic}</span><span style={{ fontWeight: 600 }}>{lb}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, flexShrink: 0, width: 220 }} className="hideOnMobile">
-            {[["🥦","#d1fae5"],["🍅","#fee2e2"],["🧀","#fef3c7"],["🥖","#ffedd5"]].map(([e,bg]) => (
-              <div key={e} style={{ height: 90, borderRadius: 16, background: bg, display: "grid", placeItems: "center", fontSize: "2.8rem", boxShadow: "0 4px 12px rgba(0,0,0,0.12)" }}>{e}</div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Hero Carousel */}
+      <HeroCarousel
+        onSelectShop={onSelectShop}
+        onBrowse={() => document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" })}
+      />
 
       {/* Featured Stores */}
       <div id="featured-stores" style={{ padding: "48px 20px", maxWidth: 1400, margin: "0 auto" }}>

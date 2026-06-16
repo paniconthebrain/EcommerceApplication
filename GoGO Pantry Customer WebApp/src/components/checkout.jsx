@@ -126,12 +126,12 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
   const renderSummary = (showNewsletter) => (
     <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, overflow: "hidden", boxShadow: "var(--shadow-md)" }}>
       <div style={{ background: "linear-gradient(135deg, oklch(0.42 0.14 152) 0%, oklch(0.35 0.11 152) 100%)", padding: "14px 18px", display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontSize: "1.4rem", flexShrink: 0 }}>🏪</span>
+        <IconC name="pin" size={22} style={{ color: "#fff", flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.55)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Supporting local</div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{shop ? shop.name : "Your local store"}</div>
         </div>
-        <div style={{ background: "rgba(255,255,255,0.18)", borderRadius: 99, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>✓ Local</div>
+        <div style={{ background: "rgba(255,255,255,0.18)", borderRadius: 99, padding: "3px 10px", fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}><IconC name="check" size={11} stroke={3} /> Local</div>
       </div>
 
       <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)", maxHeight: 180, overflowY: "auto" }}>
@@ -177,10 +177,10 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
       {showNewsletter && (
         <div style={{ padding: "16px 16px" }}>
           {newsletterDone
-            ? <div style={{ textAlign: "center", padding: "8px", fontSize: 13, color: "var(--green-600)", fontWeight: 700 }}>🎉 You're subscribed!</div>
+            ? <div style={{ textAlign: "center", padding: "8px", fontSize: 13, color: "var(--green-600)", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><IconC name="checkCircle" size={16} />You're subscribed!</div>
             : (
               <div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text)", marginBottom: 3 }}>🌿 Weekly fresh deals</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text)", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}><IconC name="leaf" size={13} />Weekly fresh deals</div>
                 <div style={{ fontSize: 12, color: "var(--text-2)", marginBottom: 10, lineHeight: 1.5 }}>Exclusive local offers · New arrivals · Zero spam</div>
                 <div style={{ display: "flex", gap: 7 }}>
                   <input type="email" value={newsletterEmail} onChange={e => setNewsletterEmail(e.target.value)} placeholder="your@email.com"
@@ -214,7 +214,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
           <div style={{ maxWidth: 560 }}>
             <div style={{ background: "linear-gradient(135deg, var(--green-100) 0%, var(--amber-100) 100%)", border: "1px solid var(--green-300)", borderRadius: 14, padding: "16px 20px", marginBottom: 24, display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ width: 46, height: 46, borderRadius: 13, background: "var(--green-600)", display: "grid", placeItems: "center", flexShrink: 0 }}>
-                <span style={{ fontSize: "1.4rem" }}>🏪</span>
+                <IconC name="pin" size={22} style={{ color: "#fff" }} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -232,7 +232,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
                 <div style={{ width: 22, height: 22, borderRadius: 999, border: "2px solid var(--line-strong)", flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>🚚 Home Delivery</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", display: "inline-flex", alignItems: "center", gap: 7 }}><IconC name="truck" size={16} />Home Delivery</span>
                     <span style={{ fontSize: 11, fontWeight: 700, background: "var(--amber-100)", color: "var(--warm-600)", padding: "2px 9px", borderRadius: 99 }}>Coming soon</span>
                   </div>
                   <div style={{ fontSize: 13, color: "var(--text-2)", marginTop: 3 }}>Delivered to your door within 2 hours</div>
@@ -246,7 +246,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
                 <div style={{ width: 8, height: 8, borderRadius: 999, background: "#fff" }} />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>🏪 In-store Pickup</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", display: "flex", alignItems: "center", gap: 7 }}><IconC name="pin" size={16} />In-store Pickup</div>
                 <div style={{ fontSize: 13, color: "var(--text-2)", marginTop: 3 }}>
                   Ready in ~15 min at <strong style={{ color: "var(--text)" }}>{shop ? shop.name : "your selected store"}</strong>
                 </div>
@@ -265,13 +265,13 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 28, alignItems: "start" }}>
             <div>
               <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
-                {[["all","⏱ All times"],["morning","🌅 Morning"],["afternoon","☀️ Afternoon"],["evening","🌙 Evening"]].map(([v, l]) => (
+                {[["all","clock","All times"],["morning","sun","Morning"],["afternoon","sun","Afternoon"],["evening","moon","Evening"]].map(([v, ic, l]) => (
                   <button key={v} onClick={() => setTimeFilter(v)} aria-pressed={timeFilter === v}
-                    style={{ padding: "8px 16px", borderRadius: 99, border: "1.5px solid", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "all 0.15s",
+                    style={{ padding: "8px 16px", borderRadius: 99, border: "1.5px solid", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "all 0.15s", display: "inline-flex", alignItems: "center", gap: 6,
                       borderColor: timeFilter === v ? "var(--primary)" : "var(--line)",
                       background: timeFilter === v ? "var(--primary)" : "transparent",
                       color: timeFilter === v ? "#fff" : "var(--text-2)" }}>
-                    {l}
+                    <IconC name={ic} size={14} />{l}
                   </button>
                 ))}
               </div>
@@ -316,7 +316,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
                                 onMouseLeave={e => { if (!isFull && !isSel) { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.background = "var(--bg)"; } }}>
                                 <div style={{ fontSize: 12, fontWeight: 800, marginBottom: 3 }}>{t.short}</div>
                                 <div style={{ fontSize: 11, fontWeight: 600, color: isSel ? "var(--primary)" : "var(--text-3)" }}>
-                                  {isFull ? "Full" : isSel ? "✓ Selected" : t.period}
+                                  {isFull ? "Full" : isSel ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><IconC name="check" size={11} stroke={3} />Selected</span> : t.period}
                                 </div>
                               </button>
                             );
@@ -344,12 +344,12 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 28, alignItems: "start" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ background: "linear-gradient(135deg, var(--green-100) 0%, var(--blue-100) 100%)", border: "1px solid var(--green-300)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: "1.5rem", flexShrink: 0 }}>🌱</span>
+                <IconC name="leaf" size={24} style={{ color: "var(--green-600)", flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: "var(--green-700)" }}>Supporting local stores</div>
                   <div style={{ fontSize: 12, color: "var(--text-2)" }}>This order supports <strong>{shop ? shop.name : "your community"}</strong> directly. No middlemen.</div>
                 </div>
-                <div style={{ background: "var(--green-600)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 99, whiteSpace: "nowrap", flexShrink: 0 }}>✓ Local</div>
+                <div style={{ background: "var(--green-600)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 99, whiteSpace: "nowrap", flexShrink: 0, display: "flex", alignItems: "center", gap: 4 }}><IconC name="check" size={11} stroke={3} />Local</div>
               </div>
 
               <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 20 }}>

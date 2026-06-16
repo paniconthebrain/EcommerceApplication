@@ -48,7 +48,7 @@ export function CustomerCart({ shopId, cartItems, onUpdateCart, onCheckout, onCo
               <div>
                 {cartProducts.map((p, i) => (
                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderTop: i ? "1px solid var(--line)" : "none" }}>
-                    <div style={{ width: 70, height: 70, borderRadius: 11, background: `oklch(0.92 0.07 ${G.catOf(p.cat)?.hue || 152})`, display: "grid", placeItems: "center", flexShrink: 0, fontSize: "1.8rem" }}>🛒</div>
+                    <div style={{ width: 70, height: 70, borderRadius: 11, background: `oklch(0.92 0.07 ${G.catOf(p.cat)?.hue || 152})`, display: "grid", placeItems: "center", flexShrink: 0, color: `oklch(0.6 0.08 ${G.catOf(p.cat)?.hue || 152})` }}><IconC name="cart" size={32} stroke={1.5} /></div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text)", marginBottom: 2 }}>{p.name}</div>
                       <div style={{ fontSize: 12, color: "var(--text-2)" }}>{p.unit} · {G.money(p.price)}</div>

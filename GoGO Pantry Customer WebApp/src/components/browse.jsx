@@ -57,7 +57,7 @@ export function FilterSidebar({ priceRange = [0, 500], onPriceChange, showInStoc
       <button onClick={() => setShowMore(v => !v)} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "1px dashed var(--line)", borderRadius: 10, padding: "9px 14px", cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600, color: "var(--text-2)", transition: "all 0.15s" }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.color = "var(--primary)"; }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.color = "var(--text-2)"; }}>
-        <span style={{ fontSize: 14 }}>{showMore ? "▲" : "▼"}</span>
+        <IconC name="chevD" size={14} style={{ transform: showMore ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
         {showMore ? "Less filters" : "More filters"}
         {showOnSaleOnly && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 800, background: "#fee2e2", color: "#991b1b", padding: "2px 7px", borderRadius: 999 }}>+1</span>}
       </button>
@@ -65,7 +65,7 @@ export function FilterSidebar({ priceRange = [0, 500], onPriceChange, showInStoc
         <div style={{ background: "var(--surface-2)", borderRadius: 12, padding: "4px 14px", animation: "fadeIn 0.15s ease" }}>
           <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "10px 0" }}>
             <input type="checkbox" checked={showOnSaleOnly} onChange={e => onSaleToggle(e.target.checked)} style={{ width: 18, height: 18, cursor: "pointer", accentColor: "var(--primary)" }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", userSelect: "none" }}>🏷️ On Sale</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", userSelect: "none" }}>On Sale</span>
             {showOnSaleOnly && <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 800, background: "#fee2e2", color: "#991b1b", padding: "2px 7px", borderRadius: 999 }}>ON</span>}
           </label>
         </div>
@@ -83,21 +83,21 @@ export function ProductCardEnhanced({ product, inCart, disabled, stockState, onA
       <div style={{ position: "relative", paddingBottom: "100%", background: `oklch(0.92 0.07 ${categoryColor.hue})`, overflow: "hidden" }}>
         {product.image
           ? <img src={product.image} alt={product.name} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-          : <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontSize: "3rem" }}>🛒</div>
+          : <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: `oklch(0.7 0.08 ${categoryColor.hue})` }}><IconC name="cart" size={48} stroke={1.5} /></div>
         }
         {stockState !== "ok" && (
           <div style={{ position: "absolute", top: 8, right: 8, background: stockState === "low" ? "var(--amber-500)" : "var(--red-500)", color: "#fff", padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700 }}>
-            {stockState === "low" ? "⚠️ Low" : "🚫 Out"}
+            {stockState === "low" ? "Low" : "Out"}
           </div>
         )}
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 14 }}>
         {(product.tag || product.isNew) && (
           <div style={{ display: "flex", gap: 5, marginBottom: 7, flexWrap: "wrap" }}>
-            {product.tag === "popular" && <span style={{ fontSize: 10, fontWeight: 800, background: "#fef3c7", color: "#92400e", padding: "2px 7px", borderRadius: 999 }}>⭐ Popular</span>}
-            {product.tag === "organic" && <span style={{ fontSize: 10, fontWeight: 800, background: "#d1fae5", color: "#065f46", padding: "2px 7px", borderRadius: 999 }}>🌿 Organic</span>}
-            {product.tag === "sale" && <span style={{ fontSize: 10, fontWeight: 800, background: "#fee2e2", color: "#991b1b", padding: "2px 7px", borderRadius: 999 }}>🏷️ On Sale</span>}
-            {product.tag === "new" && <span style={{ fontSize: 10, fontWeight: 800, background: "#ede9fe", color: "#5b21b6", padding: "2px 7px", borderRadius: 999 }}>✨ New</span>}
+            {product.tag === "popular" && <span style={{ fontSize: 10, fontWeight: 800, background: "#fef3c7", color: "#92400e", padding: "2px 7px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 3 }}><IconC name="star" size={9} fill="current" />Popular</span>}
+            {product.tag === "organic" && <span style={{ fontSize: 10, fontWeight: 800, background: "#d1fae5", color: "#065f46", padding: "2px 7px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 3 }}><IconC name="leaf" size={9} />Organic</span>}
+            {product.tag === "sale" && <span style={{ fontSize: 10, fontWeight: 800, background: "#fee2e2", color: "#991b1b", padding: "2px 7px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 3 }}><IconC name="tag" size={9} />On Sale</span>}
+            {product.tag === "new" && <span style={{ fontSize: 10, fontWeight: 800, background: "#ede9fe", color: "#5b21b6", padding: "2px 7px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 3 }}><IconC name="zap" size={9} />New</span>}
             {product.tag && !["popular","organic","sale","new"].includes(product.tag) && <span style={{ fontSize: 10, fontWeight: 700, background: "var(--surface-2)", color: "var(--text-2)", padding: "2px 7px", borderRadius: 999 }}>{product.tag}</span>}
           </div>
         )}
@@ -117,7 +117,7 @@ export function ProductCardEnhanced({ product, inCart, disabled, stockState, onA
             <button onClick={e => { e.stopPropagation(); onAdd(); }} disabled={disabled} style={{ width: "100%", padding: "10px 0", borderRadius: 10, border: "none", background: disabled ? "var(--line)" : "var(--primary)", color: disabled ? "var(--text-3)" : "#fff", fontWeight: 700, fontSize: 13, cursor: disabled ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", transition: "filter 0.15s, transform 0.1s", outline: "none" }}
               onMouseEnter={e => { if (!disabled) { e.currentTarget.style.filter = "brightness(0.92)"; e.currentTarget.style.transform = "translateY(-1px)"; }}}
               onMouseLeave={e => { e.currentTarget.style.filter = "none"; e.currentTarget.style.transform = "none"; }}>
-              🛒 Add to Cart
+              <IconC name="cart" size={14} /> Add to Cart
             </button>
           )}
         </div>
@@ -150,12 +150,14 @@ export function ProductDetailModal({ product, inCart, onClose, onAdd, onUpdateCa
         <div style={{ position: "relative", background: `linear-gradient(135deg, oklch(0.9 0.09 ${hue}) 0%, oklch(0.85 0.12 ${hue}) 100%)`, height: 260, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "20px 20px 0 0", flexShrink: 0, overflow: "hidden" }}>
           {product.image
             ? <img src={product.image} alt={product.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-            : <span style={{ fontSize: "5rem" }}>🛒</span>
+            : <div style={{ color: `oklch(0.7 0.08 ${hue})` }}><IconC name="cart" size={80} stroke={1.5} /></div>
           }
-          <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 999, background: "rgba(0,0,0,0.25)", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)" }}>×</button>
+          <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 999, background: "rgba(0,0,0,0.25)", border: "none", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)" }}>
+            <IconC name="x" size={18} />
+          </button>
           {stockState !== "ok" && (
             <div style={{ position: "absolute", top: 14, left: 14, background: stockColor, color: "#fff", padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
-              {stockState === "low" ? "⚠️ Low stock" : "🚫 Out of stock"}
+              {stockState === "low" ? "Low stock" : "Out of stock"}
             </div>
           )}
         </div>
@@ -281,7 +283,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
 
       {/* Category hero */}
       <div style={{ background: `linear-gradient(135deg, oklch(0.38 0.12 ${currentCat.hue}) 0%, oklch(0.5 0.1 ${currentCat.hue}) 100%)`, color: "#fff", padding: "20px 20px", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", right: -20, top: -20, fontSize: "7rem", opacity: 0.1, userSelect: "none", lineHeight: 1 }}>🛒</div>
+        <div style={{ position: "absolute", right: -16, top: -16, opacity: 0.12, color: "#fff", pointerEvents: "none" }}><IconC name="cart" size={96} stroke={1} /></div>
         <div style={{ maxWidth: 1600, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, position: "relative", zIndex: 1 }}>
           <div>
             <p style={{ margin: "0 0 4px", fontSize: 20, fontWeight: 900, letterSpacing: "-0.02em" }}>{currentCat.name}</p>

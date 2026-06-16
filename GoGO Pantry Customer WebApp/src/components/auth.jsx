@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { API_BASE, customerFetch } from '../globals.js';
 import { LogoCustomer, BtnC, AuthField, authInputStyle, authContainerStyle, authCardStyle, authHeadingStyle, authSubtitleStyle } from './ui.jsx';
+import { IconC } from './icons.jsx';
 
 export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick }) {
   const [email, setEmail] = useState("");
@@ -121,7 +122,9 @@ export function CustomerSignup({ onSignupSuccess, onLoginClick }) {
       <div style={authContainerStyle}>
         <div style={authCardStyle}>
           <div style={{ textAlign: "center", marginBottom: 28 }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📧</div>
+            <div style={{ width: 72, height: 72, borderRadius: 999, background: "var(--surface-2)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}>
+              <IconC name="mail" size={36} style={{ color: "var(--text-2)" }} />
+            </div>
             <h1 style={authHeadingStyle}>Verify your email</h1>
             <p style={authSubtitleStyle}>We've sent a verification link to {formData.email}</p>
           </div>
@@ -206,7 +209,9 @@ export function ForgotPassword({ onBack }) {
       <div style={authContainerStyle}>
         <div style={authCardStyle}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>✉️</div>
+            <div style={{ width: 72, height: 72, borderRadius: 999, background: "var(--surface-2)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}>
+              <IconC name="mail" size={36} style={{ color: "var(--text-2)" }} />
+            </div>
             <h1 style={authHeadingStyle}>Check your email</h1>
             <p style={authSubtitleStyle}>We've sent password reset instructions to {email}</p>
             <div style={{ background: "var(--surface-2)", padding: "20px", borderRadius: 12, marginTop: 20, marginBottom: 20, textAlign: "center", fontSize: 13, color: "var(--text-2)" }}>
@@ -268,7 +273,9 @@ export function ResetPasswordPage({ onDone }) {
       <div style={authContainerStyle}>
         <div style={authCardStyle}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+            <div style={{ width: 72, height: 72, borderRadius: 999, background: "var(--green-100)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}>
+              <IconC name="checkCircle" size={36} style={{ color: "var(--green-600)" }} />
+            </div>
             <h1 style={authHeadingStyle}>Password Reset!</h1>
             <p style={{ color: "var(--text-2)", marginBottom: 24 }}>Your password has been updated. You can now sign in.</p>
             <BtnC full onClick={onDone}>Go to Login</BtnC>

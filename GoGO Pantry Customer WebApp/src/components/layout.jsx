@@ -169,7 +169,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
           <div className="footer-newsletter">
             <div>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.1)", borderRadius: 99, padding: "5px 13px", marginBottom: 14 }}>
-                <span style={{ fontSize: "0.9rem" }}>🌿</span>
+                <IconC name="leaf" size={16} />
                 <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", opacity: 0.85 }}>Newsletter</span>
               </div>
               <h3 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 10px", letterSpacing: "-0.02em", lineHeight: 1.2 }}>Stay fresh, save more</h3>
@@ -177,7 +177,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
               <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
                 {["Weekly deals", "New arrivals", "Zero spam"].map(b => (
                   <div key={b} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, opacity: 0.75 }}>
-                    <span style={{ color: "var(--green-500)", fontSize: "0.9rem" }}>✓</span> {b}
+                    <IconC name="check" size={14} style={{ color: "var(--green-500)", flexShrink: 0 }} /> {b}
                   </div>
                 ))}
               </div>
@@ -220,15 +220,15 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
           <div>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.5, marginBottom: 14 }}>Follow Us</div>
             <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-              {[["📘","Facebook"],["📸","Instagram"],["🐦","Twitter"],["▶️","YouTube"]].map(([ic, lb]) => (
-                <button key={lb} title={lb} style={{ width: 38, height: 38, borderRadius: 10, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.07)", cursor: "pointer", fontSize: "1.1rem", display: "grid", placeItems: "center" }}
+              {[["F","Facebook"],["I","Instagram"],["X","Twitter"],["Y","YouTube"]].map(([ic, lb]) => (
+                <button key={lb} title={lb} style={{ width: 38, height: 38, borderRadius: 10, border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.07)", cursor: "pointer", fontSize: 14, fontWeight: 800, color: "#fff", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)" }}
                   onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.18)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.07)"; e.currentTarget.style.transform = "none"; }}>
                   {ic}
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 11, opacity: 0.5 }}>App coming soon 📱</div>
+            <div style={{ fontSize: 11, opacity: 0.5, display: "flex", alignItems: "center", gap: 6 }}><IconC name="bell" size={12} />App coming soon</div>
           </div>
         </div>
 
