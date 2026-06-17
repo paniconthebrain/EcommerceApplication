@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { G } from '../globals.js';
 import { IconC } from './icons.jsx';
-import { BtnC } from './ui.jsx';
+import { BtnC, EmptyState } from './ui.jsx';
 import { ProgressIndicator } from './checkout.jsx';
 
 export function CustomerCart({ shopId, cartItems, onUpdateCart, onCheckout, onContinueShopping }) {
   const [dataVersion, setDataVersion] = useState(() => G.PRODUCTS?.length > 0 ? 1 : 0);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   useEffect(() => {
     if (G.PRODUCTS?.length > 0) setDataVersion(n => n > 0 ? n : 1);
@@ -33,11 +34,12 @@ export function CustomerCart({ shopId, cartItems, onUpdateCart, onCheckout, onCo
       <div style={{ padding: "20px 16px", maxWidth: 900, margin: "0 auto", width: "100%", flex: 1 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 20px", color: "var(--text)" }}>Your cart</h1>
         {isEmpty ? (
-          <div style={{ textAlign: "center", padding: "80px 20px", color: "var(--text-3)" }}>
-            <IconC name="cart" size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
-            <p style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>Your cart is empty</p>
-            <p style={{ fontSize: 13, margin: "6px 0 0", color: "var(--text-3)" }}>Add some fresh groceries to get started</p>
-          </div>
+          <EmptyState
+            icon="leaf"
+            title="Your cart is empty"
+            sub="Browse fresh groceries from your local store and add them here"
+            action={<BtnC icon="leaf" onClick={onContinueShopping}>Browse products</BtnC>}
+          />
         ) : (
           <div className="cart-grid" style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24 }}>
             {/* ITEMS */}
@@ -82,7 +84,7 @@ export function CustomerCart({ shopId, cartItems, onUpdateCart, onCheckout, onCo
                 <span style={{ fontWeight: 700, color: "var(--text)" }}>Total</span>
                 <span style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>{G.money(total)}</span>
               </div>
-              <BtnC full onClick={onCheckout} style={{ marginBottom: 10 }}>Proceed to checkout</BtnC>
+              <BtnC full loading={checkingOut} onClick={() => { setCheckingOut(true); onCheckout(); }} style={{ marginBottom: 10 }}>Proceed to checkout</BtnC>
               <BtnC full variant="ghost" onClick={onContinueShopping}>Continue shopping</BtnC>
             </div>
           </div>

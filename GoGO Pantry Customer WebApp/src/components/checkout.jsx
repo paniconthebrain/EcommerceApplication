@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { G } from '../globals.js';
 import { IconC } from './icons.jsx';
-import { BtnC } from './ui.jsx';
+import { BtnC, ConfirmDialog } from './ui.jsx';
 
 export function ProgressIndicator({ currentStep, steps = ["Cart", "Checkout", "Confirm"] }) {
   return (
@@ -35,6 +35,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
   const [newsletterEmail, setNewsletterEmail] = useState("");
   const [newsletterDone, setNewsletterDone] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -115,12 +116,14 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
 
   const handleNext = () => {
     if (step === 2 && !slot) return;
-    if (step === 3) {
-      setProcessing(true);
-      setTimeout(() => onConfirm({ deliveryType: "pickup", slot: selectedSlotLabel, email, name, total }), 800);
-      return;
-    }
+    if (step === 3) { setConfirmOpen(true); return; }
     setStep(s => s + 1);
+  };
+
+  const handlePlaceOrder = () => {
+    setConfirmOpen(false);
+    setProcessing(true);
+    setTimeout(() => onConfirm({ deliveryType: "pickup", slot: selectedSlotLabel, email, name, total }), 800);
   };
 
   const renderSummary = (showNewsletter) => (
@@ -198,6 +201,16 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--bg)" }}>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Ready to place your order?"
+        body={`${cartProducts.length} item${cartProducts.length !== 1 ? 's' : ''} · ${G.money(total)} · ${selectedSlotLabel || 'pickup'}`}
+        confirm="Place order"
+        cancel="Review again"
+        tone="primary"
+        onConfirm={handlePlaceOrder}
+        onCancel={() => setConfirmOpen(false)}
+      />
       <ProgressIndicator currentStep={2} steps={["Store", "Cart", "Checkout", "Confirm"]} />
 
       <div style={{ padding: "28px 16px 56px", maxWidth: 1100, margin: "0 auto", width: "100%", flex: 1 }}>
@@ -384,8 +397,8 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
 
               <div style={{ display: "flex", gap: 12 }}>
                 <BtnC variant="ghost" onClick={() => setStep(2)}>← Back</BtnC>
-                <BtnC full onClick={handleNext} style={{ opacity: processing ? 0.7 : 1 }}>
-                  {processing ? "Placing order…" : "Place order →"}
+                <BtnC full loading={processing} onClick={handleNext}>
+                  Place order →
                 </BtnC>
               </div>
             </div>
@@ -466,20 +479,31 @@ export function CustomerConfirmation({ orderData, onNewOrder }) {
         <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, padding: 24, marginBottom: 24 }}>
           <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 20px", color: "var(--text)" }}>Order status</h2>
           <div style={{ position: "relative", paddingLeft: 32 }}>
-            {timeline.map((step, i) => (
-              <div key={step.id} style={{ marginBottom: i < timeline.length - 1 ? 20 : 0, opacity: step.done ? 1 : 0.6 }}>
-                <div style={{ position: "absolute", left: 0, top: 6, width: 24, height: 24, borderRadius: 999, background: step.done ? "var(--primary)" : "var(--surface-2)", border: step.done ? "2px solid var(--primary)" : "2px solid var(--line-strong)", display: "grid", placeItems: "center", color: "var(--primary-ink)", fontWeight: 700, fontSize: 12 }}>
-                  {step.done && <IconC name="check" size={13} stroke={3} />}
-                </div>
-                {i < timeline.length - 1 && (
-                  <div style={{ position: "absolute", left: 11, top: 24, width: 2, height: 20, background: step.done ? "var(--primary)" : "var(--line-strong)" }} />
-                )}
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)", marginBottom: 2 }}>{step.label}</div>
-                  <div style={{ fontSize: 12, color: "var(--text-2)" }}>{step.time}</div>
-                </div>
-              </div>
-            ))}
+            {(() => {
+              const firstPending = timeline.findIndex(s => !s.done);
+              return timeline.map((step, i) => {
+                const isCurrent = i === firstPending;
+                const dotBg = step.done ? "var(--green-500)" : isCurrent ? "var(--amber-100)" : "var(--surface-2)";
+                const dotBorder = step.done ? "var(--green-500)" : isCurrent ? "var(--amber-500)" : "var(--line-strong)";
+                const lineColor = step.done ? "var(--green-500)" : isCurrent ? "var(--amber-300, #fcd34d)" : "var(--line-strong)";
+                return (
+                  <div key={step.id} style={{ marginBottom: i < timeline.length - 1 ? 20 : 0, opacity: !step.done && !isCurrent ? 0.45 : 1 }}>
+                    <div style={{ position: "absolute", left: 0, top: 6, width: 24, height: 24, borderRadius: 999, background: dotBg, border: `2px solid ${dotBorder}`, display: "grid", placeItems: "center", color: step.done ? "white" : "var(--amber-500)", fontWeight: 700, fontSize: 12 }}>
+                      {step.done
+                        ? <IconC name="check" size={13} stroke={3} />
+                        : isCurrent && <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--amber-500)", display: "block" }} />}
+                    </div>
+                    {i < timeline.length - 1 && (
+                      <div style={{ position: "absolute", left: 11, top: 24, width: 2, height: 20, background: lineColor }} />
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: step.done ? "var(--green-700)" : isCurrent ? "var(--text)" : "var(--text-2)", marginBottom: 2 }}>{step.label}</div>
+                      <div style={{ fontSize: 12, color: isCurrent ? "var(--amber-600, #d97706)" : "var(--text-3)" }}>{step.time}</div>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
 

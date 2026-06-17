@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { G, API_BASE, STATIC_BASE, apiFetch, initializeAppData } from '../../globals.js';
-import { Btn, Pill } from '../ui.jsx';
+import { Btn, Pill, ConfirmDialog } from '../ui.jsx';
 import { AdminPageWrap, MgmtModal, FieldRow, inputStyle, MgmtTable } from './shared.jsx';
 
 export default function ManageShopsScreen() {
@@ -14,6 +14,7 @@ export default function ManageShopsScreen() {
   const [imagePreview, setImagePreview] = useState(null);
   const [currentImage, setCurrentImage] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [confirmDel, setConfirmDel] = useState({ open: false, item: null });
   const fileInputRef = useRef(null);
 
   const load = async () => {
@@ -85,15 +86,26 @@ export default function ManageShopsScreen() {
     setModal(false); load(); G.SHOPS = []; initializeAppData();
   };
 
-  const del = async s => {
-    if (!confirm(`Delete shop "${s.name}"?`)) return;
+  const del = (s) => { setConfirmDel({ open: true, item: s }); };
+
+  const doDel = async (s) => {
+    setConfirmDel({ open: false, item: null });
     const r = await apiFetch(`${API_BASE}/shops/${s.id}`, { method: "DELETE" });
-    if (r?.ok) load(); else alert("Delete failed");
+    if (r?.ok) load();
   };
 
   const displayPreview = imagePreview || currentImage;
 
   return (
+    <>
+    <ConfirmDialog
+      open={confirmDel.open}
+      title={`Delete "${confirmDel.item?.name}"?`}
+      body="This shop and all associated inventory data will be permanently removed."
+      confirm="Delete" tone="danger"
+      onConfirm={() => doDel(confirmDel.item)}
+      onCancel={() => setConfirmDel({ open: false, item: null })}
+    />
     <AdminPageWrap title="Manage Shops" subtitle={`${shops.length} locations`} action={<Btn size="sm" icon="plus" onClick={openCreate}>Add Shop</Btn>}>
       {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading...</div> : (
         <MgmtTable
@@ -180,5 +192,6 @@ export default function ManageShopsScreen() {
         </form>
       </MgmtModal>
     </AdminPageWrap>
+    </>
   );
 }

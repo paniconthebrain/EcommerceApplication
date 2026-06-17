@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { G, API_BASE, apiFetch } from '../../globals.js';
-import { PageHead, ProductSwatch, Pill, StockBar, Btn, card, sectionTitle, sectionSub, th, td, linkBtn } from '../ui.jsx';
+import { PageHead, ProductSwatch, Pill, StockBar, Btn, SortableTh, card, sectionTitle, sectionSub, th, td, linkBtn } from '../ui.jsx';
 import { Icon } from '../icons.jsx';
 
 function fmtEta(s) {
@@ -20,6 +20,7 @@ export default function DashboardScreen({ shopId, setRoute }) {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('all');
+  const [sort, setSort] = useState({ key: 'name', dir: 'asc' });
 
   useEffect(() => {
     setLoading(true);
@@ -51,8 +52,15 @@ export default function DashboardScreen({ shopId, setRoute }) {
       par: item.par,
       status: item.status,
     }))
-    .filter(p => (cat === 'all' || p.cat === cat) && p.name.toLowerCase().includes(q.toLowerCase())),
-    [inventory, cat, q]);
+    .filter(p => (cat === 'all' || p.cat === cat) && p.name.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => {
+      const dir = sort.dir === 'asc' ? 1 : -1;
+      if (sort.key === 'name') return a.name.localeCompare(b.name) * dir;
+      if (sort.key === 'stock') return (a.stock - b.stock) * dir;
+      if (sort.key === 'status') return a.status.localeCompare(b.status) * dir;
+      return 0;
+    }),
+    [inventory, cat, q, sort]);
 
   const low = inventory.filter(i => ['low', 'critical', 'out'].includes(i.status));
   const untracked = inventory.filter(i => !i.tracked);
@@ -102,7 +110,7 @@ export default function DashboardScreen({ shopId, setRoute }) {
 
       <div style={{ flex: 1, padding: '22px 34px 48px', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto' }}>
         {/* KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
           {kpiCards.map(k => (
             <div key={k.label} style={card({ padding: 16 })}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -140,9 +148,9 @@ export default function DashboardScreen({ shopId, setRoute }) {
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
                   <tr>
-                    <th style={th}>Product</th>
-                    <th style={{ ...th, width: 150 }}>Stock level</th>
-                    <th style={{ ...th, width: 110 }}>Status</th>
+                    <SortableTh label="Product" sortKey="name" currentSort={sort} onSort={setSort} />
+                    <SortableTh label="Stock level" sortKey="stock" currentSort={sort} onSort={setSort} style={{ width: 150 }} />
+                    <SortableTh label="Status" sortKey="status" currentSort={sort} onSort={setSort} style={{ width: 110 }} />
                     <th style={{ ...th, width: 96, textAlign: 'right' }}></th>
                   </tr>
                 </thead>

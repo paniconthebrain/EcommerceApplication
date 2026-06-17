@@ -6,45 +6,29 @@ import { ShopCard } from './shop.jsx';
 
 const HERO_SLIDES = [
   {
-    gradient: "linear-gradient(135deg, oklch(0.38 0.1 152) 0%, oklch(0.5 0.13 152) 60%, oklch(0.55 0.08 180) 100%)",
+    gradient: "linear-gradient(135deg, oklch(0.3 0.12 152) 0%, oklch(0.42 0.16 152) 55%, oklch(0.5 0.1 175) 100%)",
     badge: "Easy pickup at your local store",
     badgeIcon: "pin",
-    title: ["Fresh Groceries,", "Delivered Fast"],
-    sub: "Shop local stores. Get fresh produce, dairy, bakery & more at your door in under an hour.",
+    title: ["Fresh Groceries,", "Ready for Pickup"],
+    sub: "Shop local stores. Get fresh produce, dairy, bakery & more — order online, pick up in minutes.",
     cta1: "Shop Now", cta1Icon: "cart", cta2: "Browse Stores",
-    decorIcons: [["leaf","-10%","10%",72],["cart","78%","8%",56],["box","88%","55%",48],["star","5%","70%",44],["check","55%","80%",40],["leaf","35%","-5%",52]],
-    cards: [["leaf","#d1fae5"],["cart","#dbeafe"],["check","#fef3c7"],["star","#ede9fe"]],
+    accent: "oklch(0.55 0.17 152)",
   },
   {
-    gradient: "linear-gradient(135deg, oklch(0.45 0.12 55) 0%, oklch(0.55 0.15 48) 60%, oklch(0.6 0.1 38) 100%)",
-    badge: "Baked fresh every morning",
-    badgeIcon: "clock",
-    title: ["Warm Bread &", "Bakery Treats"],
-    sub: "Artisan breads, pastries, croissants, and muffins — baked daily in-store and ready for pickup.",
-    cta1: "Shop Bakery", cta1Icon: "cart", cta2: "All Stores",
-    decorIcons: [["box","-10%","10%",72],["clock","78%","8%",56],["star","88%","55%",48],["check","5%","70%",44],["bell","55%","80%",40],["box","35%","-5%",52]],
-    cards: [["box","#ffedd5"],["clock","#fef3c7"],["star","#fce7f3"],["bell","#fee2e2"]],
-  },
-  {
-    gradient: "linear-gradient(135deg, oklch(0.33 0.1 175) 0%, oklch(0.43 0.12 160) 60%, oklch(0.48 0.09 140) 100%)",
+    gradient: "linear-gradient(135deg, oklch(0.27 0.1 170) 0%, oklch(0.37 0.13 158) 55%, oklch(0.44 0.1 140) 100%)",
     badge: "Locally sourced every day",
     badgeIcon: "leaf",
     title: ["Farm Fresh", "Produce Daily"],
     sub: "Handpicked fruits and vegetables from local farms — fresh, seasonal, and full of flavor.",
     cta1: "Shop Produce", cta1Icon: "cart", cta2: "Browse Stores",
-    decorIcons: [["leaf","-10%","10%",72],["check","78%","8%",56],["star","88%","55%",48],["leaf","5%","70%",44],["box","55%","80%",40],["clock","35%","-5%",52]],
-    cards: [["leaf","#d1fae5"],["check","#fee2e2"],["star","#ffedd5"],["box","#ede9fe"]],
+    accent: "oklch(0.62 0.15 155)",
   },
-  {
-    gradient: "linear-gradient(135deg, oklch(0.38 0.12 260) 0%, oklch(0.48 0.15 255) 60%, oklch(0.54 0.1 245) 100%)",
-    badge: "New customer offer inside",
-    badgeIcon: "gift",
-    title: ["Save 20% on", "Your First Order"],
-    sub: "Welcome to GoGoPantry! Use code WELCOME20 at checkout and enjoy fresh groceries at a great price.",
-    cta1: "Claim Offer", cta1Icon: "gift", cta2: "Learn More",
-    decorIcons: [["gift","-10%","10%",72],["star","78%","8%",56],["check","88%","55%",48],["bell","5%","70%",44],["heart","55%","80%",40],["gift","35%","-5%",52]],
-    cards: [["gift","#ede9fe"],["star","#dbeafe"],["check","#fef3c7"],["heart","#fce7f3"]],
-  },
+];
+
+const HERO_STATS = [
+  { icon: "star", label: "4.9 rating" },
+  { icon: "pin",  label: (n) => `${n || 4} stores` },
+  { icon: "zap",  label: "Under 1hr" },
 ];
 
 function HeroCarousel({ onSelectShop, onBrowse }) {
@@ -54,72 +38,89 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
 
   useEffect(() => {
     if (paused) return;
-    const t = setInterval(() => setSlide(s => (s + 1) % total), 5000);
+    const t = setInterval(() => setSlide(s => (s + 1) % total), 5500);
     return () => clearInterval(t);
   }, [paused]);
 
   const prev = () => { setPaused(true); setSlide(s => (s - 1 + total) % total); };
   const next = () => { setPaused(true); setSlide(s => (s + 1) % total); };
 
-  const arrowBtn = (dir) => (
-    <button onClick={dir === "prev" ? prev : next}
-      style={{ position: "absolute", [dir === "prev" ? "left" : "right"]: 16, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 44, height: 44, borderRadius: 999, border: "none", background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", transition: "background 0.2s" }}
-      onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.32)"}
-      onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.18)"}>
-      <IconC name="chevR" size={20} style={{ transform: dir === "prev" ? "rotate(180deg)" : "none" }} />
-    </button>
-  );
+  const s = HERO_SLIDES[slide];
 
   return (
-    <div style={{ position: "relative", overflow: "hidden", minHeight: "55vh" }}
+    <div
+      style={{ position: "relative", overflow: "hidden", minHeight: "58vh", background: s.gradient, transition: "background 0.7s var(--ease)" }}
       onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}>
-      {/* Slides track */}
-      <div style={{ display: "flex", transform: `translateX(-${slide * 100}%)`, transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)" }}>
-        {HERO_SLIDES.map((s, i) => (
-          <div key={i} style={{ minWidth: "100%", background: s.gradient, color: "#fff", padding: "72px 20px 80px", minHeight: "55vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
-            {/* floating icon decorations */}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* Slide track */}
+      <div style={{ display: "flex", transform: `translateX(-${slide * 100}%)`, transition: "transform 0.65s cubic-bezier(0.4, 0, 0.2, 1)", willChange: "transform" }}>
+        {HERO_SLIDES.map((sl, i) => (
+          <div key={i} style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "72px 24px 88px", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
+            {/* Background texture dots */}
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-              {s.decorIcons.map(([iconName, l, t, sz], di) => (
-                <div key={di} style={{ position: "absolute", left: l, top: t, opacity: 0.15, color: "#fff" }}>
-                  <IconC name={iconName} size={sz} stroke={1.5} />
-                </div>
+              {[["-8%","8%",72,0.1],["-5%","55%",48,0.07],["82%","6%",64,0.09],["90%","52%",52,0.08],["55%","82%",40,0.07],["38%","-6%",56,0.08]].map(([l, t, sz, op], di) => (
+                <div key={di} style={{ position: "absolute", left: l, top: t, opacity: op, color: "#fff", borderRadius: "50%", width: sz, height: sz, border: "2px solid currentColor" }} />
               ))}
             </div>
-            {/* content */}
-            <div style={{ maxWidth: 1400, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: "1fr auto", gap: 32, alignItems: "center", position: "relative", zIndex: 1 }}>
-              <div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 18, backdropFilter: "blur(4px)" }}>
-                  <IconC name={s.badgeIcon} size={14} stroke={2.5} />{s.badge}
+
+            {/* Content */}
+            <div style={{ maxWidth: 1400, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: "1fr auto", gap: 40, alignItems: "center", position: "relative", zIndex: 1 }}>
+              <div style={{ maxWidth: 560 }}>
+                {/* Badge */}
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.14)", padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 22, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)" }}>
+                  <IconC name={sl.badgeIcon} size={13} stroke={2.5} />{sl.badge}
                 </div>
-                <h1 style={{ fontSize: "clamp(32px, 6vw, 56px)", fontWeight: 900, margin: "0 0 16px", letterSpacing: "-0.03em", lineHeight: 1.1 }}>
-                  {s.title[0]}<br />{s.title[1]}
+
+                {/* Title */}
+                <h1 style={{ fontSize: "clamp(34px, 5.5vw, 60px)", fontWeight: 900, margin: "0 0 18px", letterSpacing: "-0.04em", lineHeight: 1.05 }}>
+                  {sl.title[0]}<br />{sl.title[1]}
                 </h1>
-                <p style={{ fontSize: "clamp(14px, 2vw, 18px)", margin: "0 0 32px", opacity: 0.9, lineHeight: 1.7, maxWidth: 480 }}>{s.sub}</p>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <button onClick={() => { const sh = G.SHOPS[0]; if (sh) onSelectShop(sh.id); }}
-                    style={{ padding: "14px 28px", borderRadius: 12, border: "none", background: "#fff", color: "oklch(0.38 0.1 152)", fontWeight: 900, fontSize: 16, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 4px 20px rgba(0,0,0,0.2)", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 8 }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.25)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)"; }}>
-                    <IconC name={s.cta1Icon} size={18} stroke={2.5} />{s.cta1}
+
+                <p style={{ fontSize: "clamp(14px, 1.8vw, 17px)", margin: "0 0 34px", opacity: 0.85, lineHeight: 1.7, maxWidth: 440 }}>{sl.sub}</p>
+
+                {/* CTAs */}
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                  <button
+                    onClick={() => { const sh = G.SHOPS[0]; if (sh) onSelectShop(sh.id); }}
+                    style={{ padding: "14px 28px", borderRadius: 14, border: "none", background: "#fff", color: "oklch(0.3 0.12 152)", fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 4px 24px rgba(0,0,0,0.22)", transition: "all 0.2s var(--spring)", display: "flex", alignItems: "center", gap: 8, letterSpacing: "-0.01em" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 10px 32px rgba(0,0,0,0.28)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.22)"; }}
+                  >
+                    <IconC name={sl.cta1Icon} size={17} stroke={2.5} />{sl.cta1}
                   </button>
-                  <button onClick={onBrowse}
-                    style={{ padding: "14px 24px", borderRadius: 12, border: "2px solid rgba(255,255,255,0.5)", background: "transparent", color: "#fff", fontWeight: 700, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", backdropFilter: "blur(4px)" }}>
-                    {s.cta2}
+                  <button
+                    onClick={onBrowse}
+                    style={{ padding: "13px 22px", borderRadius: 14, border: "1.5px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.1)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)", backdropFilter: "blur(8px)", transition: "all 0.2s" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.6)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.4)"; }}
+                  >
+                    {sl.cta2}
                   </button>
                 </div>
-                <div style={{ display: "flex", gap: 24, marginTop: 28, flexWrap: "wrap" }}>
-                  {[["star", "4.9 rating"], ["pin", `${G.SHOPS.length || 4} stores`], ["zap", "Under 1hr"]].map(([ic, lb]) => (
-                    <div key={lb} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, opacity: 0.9 }}>
-                      <IconC name={ic} size={16} stroke={2} /><span style={{ fontWeight: 600 }}>{lb}</span>
+
+                {/* Stats */}
+                <div style={{ display: "flex", gap: 24, marginTop: 30, flexWrap: "wrap" }}>
+                  {HERO_STATS.map(({ icon, label }) => (
+                    <div key={icon} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, opacity: 0.85 }}>
+                      <IconC name={icon} size={15} stroke={2} />
+                      <span style={{ fontWeight: 600 }}>{typeof label === "function" ? label(G.SHOPS.length) : label}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, flexShrink: 0, width: 220 }} className="hideOnMobile">
-                {s.cards.map(([iconName, bg], ci) => (
-                  <div key={ci} style={{ height: 90, borderRadius: 16, background: bg, display: "grid", placeItems: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.12)", color: "oklch(0.35 0.1 152)" }}>
-                    <IconC name={iconName} size={36} stroke={1.5} />
+
+              {/* Feature cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, flexShrink: 0 }} className="hideOnMobile">
+                {[
+                  { icon: "leaf",  bg: "rgba(255,255,255,0.15)", label: "Organic" },
+                  { icon: "cart",  bg: "rgba(255,255,255,0.1)",  label: "Fast" },
+                  { icon: "check", bg: "rgba(255,255,255,0.1)",  label: "Fresh" },
+                  { icon: "star",  bg: "rgba(255,255,255,0.15)", label: "Top Rated" },
+                ].map((c, ci) => (
+                  <div key={ci} style={{ height: 100, width: 100, borderRadius: 18, background: c.bg, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "#fff" }}>
+                    <IconC name={c.icon} size={32} stroke={1.5} />
+                    <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.85 }}>{c.label}</span>
                   </div>
                 ))}
               </div>
@@ -128,15 +129,22 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
         ))}
       </div>
 
-      {/* Arrows */}
-      {arrowBtn("prev")}
-      {arrowBtn("next")}
+      {/* Arrow buttons */}
+      {[["prev", "left", prev], ["next", "right", next]].map(([dir, side, fn]) => (
+        <button key={dir} onClick={fn}
+          style={{ position: "absolute", [side]: 16, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 44, height: 44, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", transition: "all 0.2s" }}
+          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.28)"}
+          onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.12)"}
+        >
+          <IconC name="chevR" size={19} style={{ transform: dir === "prev" ? "rotate(180deg)" : "none" }} />
+        </button>
+      ))}
 
-      {/* Dots */}
-      <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8, zIndex: 10 }}>
+      {/* Progress dots */}
+      <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6, zIndex: 10 }}>
         {HERO_SLIDES.map((_, i) => (
           <button key={i} onClick={() => { setPaused(true); setSlide(i); }}
-            style={{ width: i === slide ? 24 : 8, height: 8, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.45)", border: "none", cursor: "pointer", transition: "all 0.35s", padding: 0 }} />
+            style={{ width: i === slide ? 28 : 8, height: 8, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.35)", border: "none", cursor: "pointer", transition: "all 0.32s var(--spring)", padding: 0 }} />
         ))}
       </div>
     </div>
@@ -145,10 +153,11 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
 
 
 export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
-  const goToBrowseOrScroll = () => {
-    if (shopId) { onGoToBrowse(); }
+  const goToBrowse = (catId) => {
+    if (shopId) { onGoToBrowse(catId); }
     else { document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" }); }
   };
+
   const [search, setSearch] = useState("");
   const [dataVersion, setDataVersion] = useState(() => G.SHOPS?.length > 0 ? 1 : 0);
 
@@ -164,110 +173,171 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
     : G.SHOPS;
 
   return (
-    <div style={{ padding: "0", background: "var(--bg)" }}>
-      {/* Hero Carousel */}
+    <div style={{ background: "var(--bg)" }}>
+      {/* Hero */}
       <HeroCarousel
         onSelectShop={onSelectShop}
         onBrowse={() => document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" })}
       />
 
-      {/* Featured Stores */}
-      <div id="featured-stores" style={{ padding: "48px 20px", maxWidth: 1400, margin: "0 auto" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: "oklch(0.94 0.06 152)", display: "grid", placeItems: "center" }}>
-            <IconC name="pin" size={22} style={{ color: "oklch(0.45 0.13 152)" }} />
-          </div>
-          <div>
-            <h2 style={{ fontSize: 26, fontWeight: 900, margin: 0, color: "var(--text)", letterSpacing: "-0.02em" }}>{search ? "Search Results" : "Featured Stores"}</h2>
-            <p style={{ fontSize: 13, color: "var(--text-3)", margin: "2px 0 0" }}>{filteredShops.length} store{filteredShops.length !== 1 ? "s" : ""} available near you</p>
-          </div>
-        </div>
+      {/* ── Featured Stores ── */}
+      <div id="featured-stores" style={{ padding: "56px 24px", maxWidth: 1400, margin: "0 auto" }}>
+        <SectionHeader icon="pin" iconBg="oklch(0.94 0.06 152)" iconColor="oklch(0.42 0.14 152)"
+          title={search ? "Search Results" : "Featured Stores"}
+          sub={`${filteredShops.length} store${filteredShops.length !== 1 ? "s" : ""} available near you`}
+          action={
+            <div style={{ position: "relative", maxWidth: 220 }}>
+              <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }}><IconC name="search" size={15} /></span>
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores…"
+                style={{ width: "100%", padding: "8px 12px 8px 33px", borderRadius: 999, border: "1.5px solid var(--line)", background: "var(--surface)", color: "var(--text)", fontSize: 13, fontFamily: "var(--font-sans)", outline: "none" }} />
+            </div>
+          }
+        />
         {filteredShops.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text-3)", background: "var(--surface-2)", borderRadius: 16 }}>
-            <IconC name="search" size={40} style={{ opacity: 0.3, marginBottom: 16 }} />
-            <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>No stores found</p>
-          </div>
+          <EmptyState icon="search" title="No stores found" sub="Try a different search term" />
         ) : (
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 320px))",
-            gap: 20,
-            maxWidth: filteredShops.length === 1 ? 360 : filteredShops.length === 2 ? 720 : "100%",
-          }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 320px))", gap: 20, maxWidth: filteredShops.length === 1 ? 360 : filteredShops.length === 2 ? 720 : "100%" }}>
             {filteredShops.map(shop => <ShopCard key={shop.id} shop={shop} onSelect={() => onSelectShop(shop.id)} />)}
           </div>
         )}
       </div>
 
-      {/* Shop by Category */}
-      <div style={{ padding: "48px 20px", background: "oklch(0.97 0.02 152)" }}>
+      {/* ── Shop by Category ── */}
+      <div style={{ padding: "52px 24px", background: "var(--primary-soft)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: "oklch(0.88 0.1 152)", display: "grid", placeItems: "center" }}>
-              <IconC name="box" size={22} style={{ color: "oklch(0.4 0.15 152)" }} />
-            </div>
-            <div>
-              <h2 style={{ fontSize: 26, fontWeight: 900, margin: 0, color: "var(--text)", letterSpacing: "-0.02em" }}>Shop by Category</h2>
-              <p style={{ fontSize: 13, color: "var(--text-3)", margin: "2px 0 0" }}>Browse {G.CATEGORIES.length} departments</p>
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 14 }}>
+          <SectionHeader icon="box" iconBg="oklch(0.88 0.1 152)" iconColor="oklch(0.38 0.16 152)"
+            title="Shop by Category"
+            sub={`Browse ${G.CATEGORIES.length} departments`}
+          />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(128px, 1fr))", gap: 12 }}>
             {G.CATEGORIES.map(c => (
-              <div key={c.id} role="button" tabIndex={0} aria-label={`Browse ${c.name}`}
-                onClick={goToBrowseOrScroll} onKeyDown={e => (e.key === "Enter" || e.key === " ") && goToBrowseOrScroll()}
-                style={{ textAlign: "center", padding: "22px 14px 18px", borderRadius: 16, background: "var(--surface)", cursor: "pointer", transition: "all 0.2s var(--ease)", border: `2px solid hsl(${c.hue},40%,88%)`, display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = `0 8px 24px hsl(${c.hue},40%,80%)`; e.currentTarget.style.borderColor = `hsl(${c.hue},55%,70%)`; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = `hsl(${c.hue},40%,88%)`; }}>
-                <div style={{ width: 56, height: 56, borderRadius: 14, background: `hsl(${c.hue},55%,92%)`, display: "grid", placeItems: "center" }}>
-                  <span className="iconify" data-icon={getCategoryIcon(c.name)} style={{ fontSize: 28, color: `hsl(${c.hue},60%,40%)` }}></span>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text)", lineHeight: 1.3 }}>{c.name}</div>
-                <div style={{ fontSize: 11, color: `hsl(${c.hue},50%,45%)`, fontWeight: 600 }}>{G.productsByCat(c.id).length} items</div>
-              </div>
+              <CategoryTile key={c.id} category={c} onClick={() => goToBrowse(c.id)} />
             ))}
           </div>
         </div>
       </div>
 
-      {/* Promo banner */}
-      <div style={{ padding: "40px 20px", background: "linear-gradient(135deg, oklch(0.6 0.12 245) 0%, oklch(0.55 0.1 245) 100%)", color: "#fff" }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+      {/* ── Promo Banner ── */}
+      <div style={{ margin: "0 24px 0", maxWidth: 1400, marginLeft: "auto", marginRight: "auto" }}>
+        <div style={{ background: "linear-gradient(135deg, oklch(0.42 0.18 255) 0%, oklch(0.35 0.16 255) 100%)", borderRadius: 24, color: "#fff", padding: "44px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap", margin: "48px 24px", position: "relative", overflow: "hidden" }}>
+          {/* bg decoration */}
+          <div style={{ position: "absolute", right: -20, top: -20, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", right: 60, bottom: -40, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
           <div>
-            <h3 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.01em" }}>New Customer? Save 20%</h3>
-            <p style={{ fontSize: 14, margin: 0, opacity: 0.9 }}>Use code WELCOME20 on your first order</p>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.14)", borderRadius: 999, padding: "4px 12px", marginBottom: 12, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              <IconC name="gift" size={12} />Limited offer
+            </div>
+            <h3 style={{ fontSize: 30, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.03em", lineHeight: 1.1 }}>New Customer? Save 20%</h3>
+            <p style={{ fontSize: 14, margin: 0, opacity: 0.8 }}>Use code <strong>WELCOME20</strong> on your first order</p>
           </div>
-          <BtnC onClick={() => document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" })} style={{ background: "#fff", color: "oklch(0.6 0.12 245)" }}>Explore Stores</BtnC>
+          <button
+            onClick={() => document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" })}
+            style={{ padding: "14px 28px", borderRadius: 14, border: "none", background: "#fff", color: "oklch(0.42 0.18 255)", fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 4px 20px rgba(0,0,0,0.2)", transition: "all 0.2s var(--spring)", flexShrink: 0 }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.28)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)"; }}
+          >
+            Explore Stores →
+          </button>
         </div>
       </div>
 
-      {/* How it works */}
-      <div style={{ padding: "40px 20px", background: "var(--surface-2)" }}>
+      {/* ── How It Works ── */}
+      <div style={{ padding: "52px 24px 64px", background: "var(--surface-2)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-          <h2 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 32px", color: "var(--text)", textAlign: "center" }}>How It Works</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 24 }}>
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <h2 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 8px", color: "var(--text)", letterSpacing: "-0.03em" }}>How It Works</h2>
+            <p style={{ fontSize: 14, color: "var(--text-3)", margin: 0 }}>Three simple steps to fresh groceries</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
             {[
-              { icon: "pin", title: "Select Store", desc: "Choose your nearest GoGoPantry" },
-              { icon: "cart", title: "Browse & Shop", desc: "Add fresh items to your cart" },
-              { icon: "truck", title: "Pickup Anytime", desc: "Pick up at your own time, no rush" }
-            ].map((step, i) => (
-              <div key={i} style={{ textAlign: "center", padding: 24, background: "var(--surface)", borderRadius: 14, border: "1px solid var(--line)" }}>
-                <div style={{ width: 56, height: 56, borderRadius: 12, background: "var(--primary)", color: "var(--primary-ink)", display: "grid", placeItems: "center", margin: "0 auto 16px" }}><IconC name={step.icon} size={28} /></div>
-                <h4 style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: "0 0 6px" }}>{step.title}</h4>
-                <p style={{ fontSize: 12, color: "var(--text-2)", margin: 0 }}>{step.desc}</p>
+              { n: 1, icon: "pin",   title: "Select Store",   desc: "Choose your nearest GoGoPantry location" },
+              { n: 2, icon: "cart",  title: "Browse & Shop",  desc: "Add fresh items to your cart with ease" },
+              { n: 3, icon: "truck", title: "Pickup Anytime", desc: "Pick up at your own time — no rush" },
+            ].map((step, i, arr) => (
+              <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative" }}>
+                {i < arr.length - 1 && (
+                  <div className="hideOnMobile" style={{ position: "absolute", top: 28, left: "calc(50% + 36px)", right: "calc(-50% + 36px)", height: 2, background: `linear-gradient(90deg, var(--primary) 0%, var(--line) 100%)`, zIndex: 0, borderRadius: 1 }} />
+                )}
+                <div style={{ width: 56, height: 56, borderRadius: 16, background: "var(--primary)", color: "var(--primary-ink)", display: "grid", placeItems: "center", marginBottom: 18, boxShadow: "var(--shadow-primary)", position: "relative", zIndex: 1 }}>
+                  <IconC name={step.icon} size={26} />
+                  <span style={{ position: "absolute", top: -8, right: -8, width: 22, height: 22, borderRadius: "50%", background: "var(--surface)", border: "2px solid var(--primary)", fontSize: 10, fontWeight: 900, color: "var(--primary)", display: "grid", placeItems: "center" }}>{step.n}</span>
+                </div>
+                <div style={{ background: "var(--surface)", borderRadius: 16, padding: "22px 20px", textAlign: "center", border: "1px solid var(--line)", boxShadow: "var(--shadow-xs)", width: "100%" }}>
+                  <h4 style={{ fontSize: 15, fontWeight: 800, color: "var(--text)", margin: "0 0 6px", letterSpacing: "-0.01em" }}>{step.title}</h4>
+                  <p style={{ fontSize: 13, color: "var(--text-2)", margin: 0, lineHeight: 1.55 }}>{step.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Trust badges */}
-      <div style={{ padding: "32px 20px", maxWidth: 1400, margin: "0 auto", textAlign: "center" }}>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 32, fontSize: 13, color: "var(--text-2)" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 8 }}><IconC name="checkCircle" size={20} />100% Fresh Guarantee</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 8 }}><IconC name="truck" size={20} />Same-Day Delivery</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 8 }}><IconC name="check" size={20} />Secure Checkout</span>
+      {/* ── Trust Badges ── */}
+      <div style={{ padding: "32px 24px", maxWidth: 1400, margin: "0 auto" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 32 }}>
+          {[
+            { icon: "checkCircle", label: "100% Fresh Guarantee" },
+            { icon: "pin",         label: "Same-Day Pickup Available" },
+            { icon: "check",       label: "Secure Checkout" },
+          ].map(({ icon, label }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--text-2)", fontWeight: 600 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--primary-soft)", display: "grid", placeItems: "center" }}>
+                <IconC name={icon} size={17} style={{ color: "var(--green-600)" }} />
+              </div>
+              {label}
+            </div>
+          ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Shared helpers ── */
+
+function SectionHeader({ icon, iconBg, iconColor, title, sub, action }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 28, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1 }}>
+        <div style={{ width: 46, height: 46, borderRadius: 13, background: iconBg, display: "grid", placeItems: "center", flexShrink: 0 }}>
+          <IconC name={icon} size={22} style={{ color: iconColor }} />
+        </div>
+        <div>
+          <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "var(--text)", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{title}</h2>
+          {sub && <p style={{ fontSize: 13, color: "var(--text-3)", margin: "3px 0 0", fontWeight: 500 }}>{sub}</p>}
+        </div>
+      </div>
+      {action && <div style={{ flexShrink: 0 }}>{action}</div>}
+    </div>
+  );
+}
+
+function CategoryTile({ category: c, onClick }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={`Browse ${c.name}`}
+      onClick={onClick}
+      onKeyDown={e => (e.key === "Enter" || e.key === " ") && onClick()}
+      className="card-hover"
+      style={{ textAlign: "center", padding: "22px 12px 18px", borderRadius: 18, background: "var(--surface)", cursor: "pointer", border: "1.5px solid var(--line)", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, boxShadow: "var(--shadow-xs)" }}
+    >
+      <div style={{ width: 54, height: 54, borderRadius: 15, background: `hsl(${c.hue},55%,92%)`, display: "grid", placeItems: "center" }}>
+        <span className="iconify" data-icon={getCategoryIcon(c.name)} style={{ fontSize: 26, color: `hsl(${c.hue},60%,38%)` }} />
+      </div>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: "var(--text)", lineHeight: 1.3 }}>{c.name}</div>
+      <div style={{ fontSize: 11, color: `hsl(${c.hue},50%,45%)`, fontWeight: 600 }}>{G.productsByCat(c.id).length} items</div>
+    </div>
+  );
+}
+
+function EmptyState({ icon, title, sub }) {
+  return (
+    <div style={{ textAlign: "center", padding: "64px 20px", color: "var(--text-3)", background: "var(--surface-2)", borderRadius: 18 }}>
+      <IconC name={icon} size={40} style={{ opacity: 0.25, marginBottom: 14 }} />
+      <p style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px", color: "var(--text-2)" }}>{title}</p>
+      {sub && <p style={{ fontSize: 13, margin: 0 }}>{sub}</p>}
     </div>
   );
 }

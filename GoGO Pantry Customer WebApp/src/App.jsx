@@ -31,12 +31,16 @@ export default function CustomerApp() {
   const [authPage, setAuthPage] = useState("login");
   const [showAuth, setShowAuth] = useState(false);
   const [pendingCartId, setPendingCartId] = useState(null);
+  const [savedItems, setSavedItems] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("savedItems") || "[]")); } catch { return new Set(); }
+  });
 
   const initState = pathToState(window.location.pathname);
   const [page, setPageState] = useState(initState.page);
   const [shopId, setShopId] = useState(() => initState.shopId || localStorage.getItem("shopId") || null);
   const [cartItems, setCartItems] = useState({});
   const [orderData, setOrderData] = useState(null);
+  const [initialCat, setInitialCat] = useState(null);
   const cartSyncTimer = useRef(null);
 
   const syncCartToServer = (items) => {
@@ -130,6 +134,15 @@ export default function CustomerApp() {
     navigate("confirmation");
   };
 
+  const handleToggleSave = (productId) => {
+    setSavedItems(prev => {
+      const next = new Set(prev);
+      next.has(productId) ? next.delete(productId) : next.add(productId);
+      localStorage.setItem("savedItems", JSON.stringify([...next]));
+      return next;
+    });
+  };
+
   const handleNewOrder = () => {
     setShopId(null);
     navigate("home", null);
@@ -191,8 +204,8 @@ export default function CustomerApp() {
   const cartCount = Object.values(cartItems).reduce((s, q) => s + q, 0);
 
   const screens = {
-    home: <CustomerHomepage onSelectShop={handleSelectShop} shopId={shopId} onGoToBrowse={() => setPage("browse")} />,
-    browse: shopId && <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={() => navigate("home", null)} />,
+    home: <CustomerHomepage onSelectShop={handleSelectShop} shopId={shopId} onGoToBrowse={(catId) => { setInitialCat(catId || null); setPage("browse"); }} />,
+    browse: shopId && <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={() => navigate("home", null)} initialCat={initialCat} savedItems={savedItems} onToggleSave={handleToggleSave} />,
     cart: <CustomerCart shopId={shopId} cartItems={cartItems} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} onContinueShopping={() => navigate("browse")} />,
     checkout: <CustomerCheckout shopId={shopId} cartItems={cartItems} onConfirm={handleConfirm} onBack={() => setPage("cart")} />,
     confirmation: orderData && <CustomerConfirmation orderData={orderData} onNewOrder={handleNewOrder} />,
@@ -209,6 +222,11 @@ export default function CustomerApp() {
       onNavigate={screens[page]}
       shopId={shopId}
       onSelectShop={handleSelectShop}
+      savedItems={savedItems}
+      onToggleSave={handleToggleSave}
+      onAddToCart={handleAddToCart}
+      onUpdateCart={handleUpdateCart}
+      cartItems={cartItems}
     />
   );
 }

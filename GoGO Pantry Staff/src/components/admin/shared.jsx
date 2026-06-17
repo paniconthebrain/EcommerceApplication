@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { G } from '../../globals.js';
 import { Btn, PageHead, card, th, td } from '../ui.jsx';
 
@@ -12,8 +13,11 @@ export function AdminPageWrap({ title, subtitle, action, children }) {
 
 export function MgmtModal({ open, title, onClose, children, maxWidth = 460 }) {
   if (!open) return null;
+  const mouseDownOnBackdrop = useRef(false);
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "grid", placeItems: "center", padding: 20 }} onClick={onClose}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100, display: "grid", placeItems: "center", padding: 20 }}
+      onMouseDown={e => { mouseDownOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={e => { if (mouseDownOnBackdrop.current) onClose(); }}>
       <div style={{ background: "var(--surface)", borderRadius: 16, padding: 28, width: "100%", maxWidth, border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)", maxHeight: "92vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--text)" }}>{title}</h2>
@@ -25,10 +29,11 @@ export function MgmtModal({ open, title, onClose, children, maxWidth = 460 }) {
   );
 }
 
-export function FieldRow({ label, children }) {
+export function FieldRow({ label, helper, children }) {
   return (
     <label style={{ display: "block", marginBottom: 14 }}>
-      <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 6 }}>{label}</span>
+      <span style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: helper ? 2 : 6 }}>{label}</span>
+      {helper && <span style={{ display: "block", fontSize: 11, color: "var(--text-3)", marginBottom: 6 }}>{helper}</span>}
       {children}
     </label>
   );

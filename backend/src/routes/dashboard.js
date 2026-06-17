@@ -83,7 +83,7 @@ router.get('/shops/:shopId/dashboard', authMiddleware, async (req, res, next) =>
       include: [
         {
           model: Product,
-          attributes: ['id', 'name', 'price', 'unit', 'categoryId', 'tag'],
+          attributes: ['id', 'name', 'price', 'unit', 'categoryId'],
           include: [{ model: Category, attributes: ['id', 'name'] }],
         },
       ],
@@ -98,7 +98,6 @@ router.get('/shops/:shopId/dashboard', authMiddleware, async (req, res, next) =>
       par: item.par,
       status: getStockStatus(item.stock, item.par),
       category: item.Product.Category,
-      tag: item.Product.tag,
     }));
 
     // Get recent orders
@@ -114,7 +113,7 @@ router.get('/shops/:shopId/dashboard', authMiddleware, async (req, res, next) =>
         shopId,
         status: { [Op.in]: ['draft', 'ordered', 'in_transit', 'arrived'] },
       },
-      include: [{ model: Supplier, attributes: ['id', 'name', 'type'] }],
+      include: [{ model: Supplier, attributes: ['id', 'name', 'type'], required: false }],
       order: [['createdAt', 'DESC']],
       limit: 5,
     });
@@ -143,8 +142,8 @@ router.get('/shops/:shopId/dashboard', authMiddleware, async (req, res, next) =>
       })),
       deliveries: deliveries.map(d => ({
         id: d.id,
-        supplier: d.Supplier.name,
-        type: d.Supplier.type,
+        supplier: d.Supplier?.name || '—',
+        type: d.Supplier?.type,
         status: d.status,
         eta: d.eta,
         itemCount: d.lineItems.length,

@@ -97,7 +97,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/purchase-orders', deliveryRoutes);
 app.use('/api/transfer', transferRoutes);
-app.use('/api/dashboard', dashboardRoutes);
+app.use('/api', dashboardRoutes);
 app.use('/api/delivery-slots', deliverySlotsRoutes);
 app.use('/api/email', emailRoutes);
 

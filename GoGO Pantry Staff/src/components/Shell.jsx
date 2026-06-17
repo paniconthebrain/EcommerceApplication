@@ -53,7 +53,7 @@ export default function Shell({ user, currentPage, navigate, onLogout, children,
     const active = currentPage === key;
     return (
       <button key={key} onClick={() => navigate(key)}
-        style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 14px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "var(--font-sans)", fontWeight: active ? 700 : 500, fontSize: 13.5, textAlign: "left", transition: "all .12s", background: active ? "var(--primary)" : "transparent", color: active ? "white" : "var(--text-2)" }}>
+        style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 14px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "var(--font-sans)", fontWeight: active ? 700 : 500, fontSize: 13.5, textAlign: "left", transition: "all .12s", background: active ? "var(--primary-soft)" : "transparent", color: active ? "var(--primary)" : "var(--text-2)", boxShadow: active ? "inset 3px 0 0 var(--primary)" : "none" }}>
         <Icon name={icon} size={18} />
         {label}
       </button>

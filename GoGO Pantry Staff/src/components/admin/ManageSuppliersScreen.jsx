@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_BASE, apiFetch } from '../../globals.js';
-import { Btn, Pill } from '../ui.jsx';
+import { Btn, Pill, ConfirmDialog } from '../ui.jsx';
 import { AdminPageWrap, MgmtModal, MgmtTable, FieldRow, inputStyle } from './shared.jsx';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -21,6 +21,7 @@ export default function ManageSuppliersScreen() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmDel, setConfirmDel] = useState({ open: false, item: null });
 
   async function load() {
     setLoading(true);
@@ -58,8 +59,12 @@ export default function ManageSuppliersScreen() {
     setModal(true);
   }
 
-  async function handleDelete(s) {
-    if (!confirm(`Delete supplier "${s.name}"?`)) return;
+  function handleDelete(s) {
+    setConfirmDel({ open: true, item: s });
+  }
+
+  async function doDelete(s) {
+    setConfirmDel({ open: false, item: null });
     try {
       await apiFetch(`${API_BASE}/suppliers/${s.id}`, { method: 'DELETE' });
       load();
@@ -118,6 +123,14 @@ export default function ManageSuppliersScreen() {
 
   return (
     <>
+      <ConfirmDialog
+        open={confirmDel.open}
+        title={`Delete "${confirmDel.item?.name}"?`}
+        body="This supplier and all associated data will be permanently removed."
+        confirm="Delete" tone="danger"
+        onConfirm={() => doDelete(confirmDel.item)}
+        onCancel={() => setConfirmDel({ open: false, item: null })}
+      />
       <AdminPageWrap
         title="Suppliers"
         subtitle={loading ? 'Loading…' : `${suppliers.length} supplier${suppliers.length !== 1 ? 's' : ''}`}

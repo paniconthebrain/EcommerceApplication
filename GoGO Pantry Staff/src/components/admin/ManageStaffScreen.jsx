@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { G, API_BASE, apiFetch } from '../../globals.js';
-import { Btn, Pill } from '../ui.jsx';
+import { Btn, Pill, ConfirmDialog } from '../ui.jsx';
 import { AdminPageWrap, MgmtModal, FieldRow, inputStyle, MgmtTable } from './shared.jsx';
 
 export default function ManageStaffScreen() {
@@ -11,6 +11,8 @@ export default function ManageStaffScreen() {
   const [form, setForm] = useState({ name: "", email: "", password: "", phone: "", shopId: "" });
   const [err, setErr] = useState("");
   const [resetInfo, setResetInfo] = useState(null);
+  const [confirmDel, setConfirmDel] = useState({ open: false, item: null });
+  const [confirmReset, setConfirmReset] = useState({ open: false, item: null });
 
   const load = async () => {
     setLoading(true);
@@ -34,16 +36,20 @@ export default function ManageStaffScreen() {
     else { const d = r ? await r.json() : {}; setErr(d.message || d.error || "Save failed"); }
   };
 
-  const del = async s => {
-    if (!confirm(`Delete staff member "${s.name}"?`)) return;
+  const del = (s) => { setConfirmDel({ open: true, item: s }); };
+
+  const doDel = async (s) => {
+    setConfirmDel({ open: false, item: null });
     const r = await apiFetch(`${API_BASE}/staff/${s.id}`, { method: "DELETE" });
-    if (r?.ok) load(); else alert("Delete failed");
+    if (r?.ok) load();
   };
 
-  const resetPw = async s => {
-    if (!confirm(`Reset password for "${s.name}"? A temporary password will be generated.`)) return;
+  const resetPw = (s) => { setConfirmReset({ open: true, item: s }); };
+
+  const doResetPw = async (s) => {
+    setConfirmReset({ open: false, item: null });
     const r = await apiFetch(`${API_BASE}/staff/${s.id}/reset-password`, { method: "POST" });
-    if (r?.ok) { const d = await r.json(); setResetInfo(d); } else alert("Reset failed");
+    if (r?.ok) { const d = await r.json(); setResetInfo(d); }
   };
 
   const unlock = async s => {
@@ -54,6 +60,23 @@ export default function ManageStaffScreen() {
   const shopName = id => G.SHOPS.find(s => s.id === id)?.name || id || "—";
 
   return (
+    <>
+    <ConfirmDialog
+      open={confirmDel.open}
+      title={`Delete "${confirmDel.item?.name}"?`}
+      body="This staff member will be permanently removed and lose access."
+      confirm="Delete" tone="danger"
+      onConfirm={() => doDel(confirmDel.item)}
+      onCancel={() => setConfirmDel({ open: false, item: null })}
+    />
+    <ConfirmDialog
+      open={confirmReset.open}
+      title={`Reset password for "${confirmReset.item?.name}"?`}
+      body="A new temporary password will be generated. The current password will stop working immediately."
+      confirm="Reset password" tone="warn"
+      onConfirm={() => doResetPw(confirmReset.item)}
+      onCancel={() => setConfirmReset({ open: false, item: null })}
+    />
     <AdminPageWrap title="Manage Staff" subtitle={`${staff.length} members`} action={<Btn size="sm" icon="plus" onClick={openCreate}>Add Staff</Btn>}>
       {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading…</div> : (
         <MgmtTable
@@ -100,7 +123,14 @@ export default function ManageStaffScreen() {
           <div>
             <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: 16, marginBottom: 20 }}>
               <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 4 }}>New temporary password</div>
-              <div className="mono" style={{ fontSize: 20, fontWeight: 800, color: "var(--text)" }}>{resetInfo.temporaryPassword}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div className="mono" style={{ fontSize: 20, fontWeight: 800, color: "var(--text)", flex: 1 }}>{resetInfo.temporaryPassword}</div>
+                <button onClick={() => navigator.clipboard?.writeText(resetInfo.temporaryPassword)}
+                  title="Copy to clipboard"
+                  style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--text-2)", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", whiteSpace: "nowrap" }}>
+                  Copy
+                </button>
+              </div>
               <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 6 }}>Share this securely with {resetInfo.email}</div>
             </div>
             <Btn full onClick={() => setResetInfo(null)}>Done</Btn>
@@ -108,5 +138,6 @@ export default function ManageStaffScreen() {
         )}
       </MgmtModal>
     </AdminPageWrap>
+    </>
   );
 }

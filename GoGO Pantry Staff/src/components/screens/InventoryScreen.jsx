@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { G, API_BASE, apiFetch } from '../../globals.js';
 import { PageHead, ProductSwatch, Pill, StockBar, Btn, card, sectionTitle, th, td, inputStyle } from '../ui.jsx';
 import { Icon } from '../icons.jsx';
@@ -11,8 +11,7 @@ function AdjustModal({ item, shopId, onClose, onSaved }) {
   const [form, setForm] = useState({
     action: 'set',
     stock: '',
-    par: isSetup ? '' : String(item.par ?? ''),
-    openingCostValue: '',
+    par: isSetup ? String(item.par ?? '') : String(item.par ?? ''),
     reason: '',
   });
   const [saving, setSaving] = useState(false);
@@ -28,7 +27,6 @@ function AdjustModal({ item, shopId, onClose, onSaved }) {
     const action = isSetup ? 'set' : form.action;
     const body = { action, stock: qty, reason: form.reason || null };
     if (form.par) body.par = parseInt(form.par);
-    if (isSetup && form.openingCostValue) body.openingCostValue = parseFloat(form.openingCostValue);
     try {
       const res = await apiFetch(`${API_BASE}/shops/${shopId}/inventory/${item.productId}`, {
         method: 'PATCH',
@@ -40,8 +38,11 @@ function AdjustModal({ item, shopId, onClose, onSaved }) {
     finally { setSaving(false); }
   }
 
+  const mouseDownOnBackdrop = useRef(false);
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100, display: 'grid', placeItems: 'center', padding: 20 }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 100, display: 'grid', placeItems: 'center', padding: 20 }}
+      onMouseDown={e => { mouseDownOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={() => { if (mouseDownOnBackdrop.current) onClose(); }}>
       <div style={{ background: 'var(--surface)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420, border: '1px solid var(--line)', boxShadow: 'var(--shadow-lg)' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>{isSetup ? 'Set up inventory' : 'Adjust stock'}</h2>
@@ -71,15 +72,10 @@ function AdjustModal({ item, shopId, onClose, onSaved }) {
             <input type="number" min="0" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} placeholder="0" required style={{ ...inputStyle }} />
           </label>
           <label style={{ display: 'block', marginBottom: 14 }}>
-            <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>Par level (reorder point){isSetup ? ' *' : ''}</span>
+            <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 2 }}>{isSetup ? 'Par level for this shop *' : 'Par level (reorder point)'}</span>
+            {isSetup && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-3)', marginBottom: 6 }}>Pre-filled from product default — adjust per shop if needed</span>}
             <input type="number" min="1" value={form.par} onChange={e => setForm(f => ({ ...f, par: e.target.value }))} placeholder={isSetup ? 'e.g. 10' : 'Leave blank to keep current'} required={isSetup} style={{ ...inputStyle }} />
           </label>
-          {isSetup && (
-            <label style={{ display: 'block', marginBottom: 14 }}>
-              <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>Cost per unit $ (optional)</span>
-              <input type="number" min="0" step="0.01" value={form.openingCostValue} onChange={e => setForm(f => ({ ...f, openingCostValue: e.target.value }))} placeholder="e.g. 2.50" style={{ ...inputStyle }} />
-            </label>
-          )}
           {!isSetup && (
             <label style={{ display: 'block', marginBottom: 14 }}>
               <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>Reason (optional)</span>
@@ -205,15 +201,15 @@ export default function InventoryScreen({ shopId }) {
             <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-3)' }}>No items match your filters.</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse' }}>
                 <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
                   <tr>
                     <th style={th}>Product</th>
-                    <th style={{ ...th, width: 160 }}>Stock</th>
-                    <th style={{ ...th, width: 60, textAlign: 'center' }}>Par</th>
-                    <th style={{ ...th, width: 110 }}>Status</th>
+                    <th style={{ ...th, width: 170 }}>Stock</th>
+                    <th style={{ ...th, width: 64, textAlign: 'center' }}>Par</th>
+                    <th style={{ ...th, width: 120 }}>Status</th>
                     <th style={{ ...th, width: 130 }}>Last received</th>
-                    <th style={{ ...th, width: 90, textAlign: 'right' }}></th>
+                    <th style={{ ...th, width: 110, textAlign: 'right' }}></th>
                   </tr>
                 </thead>
                 <tbody>
