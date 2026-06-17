@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { G, API_BASE } from './globals.js';
+import { G, API_BASE, initializeAppData } from './globals.js';
 import StaffLogin from './components/StaffLogin.jsx';
 import Shell, { AdminOnly } from './components/Shell.jsx';
 import DashboardScreen from './components/screens/DashboardScreen.jsx';
@@ -44,9 +44,22 @@ export default function StaffApp() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  const handleLogin = (loggedInUser) => {
+  // For admin users restored from session, correct shopId once real shops load
+  useEffect(() => {
+    if (!savedUser || savedUser.shopId) return;
+    initializeAppData().then(() => {
+      if (G.SHOPS.length > 0) setShopId(G.SHOPS[0].id);
+    });
+  }, []);
+
+  const handleLogin = async (loggedInUser) => {
     setUser(loggedInUser);
-    setShopId(loggedInUser.shopId || "msn");
+    if (!loggedInUser.shopId) {
+      await initializeAppData();
+      setShopId(G.SHOPS[0]?.id || 'msn');
+    } else {
+      setShopId(loggedInUser.shopId);
+    }
     navigate("dashboard");
   };
 

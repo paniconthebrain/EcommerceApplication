@@ -142,6 +142,19 @@ router.delete('/:id', authMiddleware, requireRole('admin'), async (req, res, nex
   }
 });
 
+// POST /api/staff/:id/unlock - Unlock a locked staff account (admin only)
+router.post('/:id/unlock', authMiddleware, requireRole('admin'), async (req, res, next) => {
+  try {
+    const staff = await User.findOne({ where: { id: req.params.id, userType: 'staff' } });
+    if (!staff) throw new ValidationError('Staff user not found');
+    await staff.update({ failedLoginAttempts: 0, lockedUntil: null });
+    console.log(`[AUDIT] ${new Date().toISOString()} | ACCOUNT UNLOCKED for ${staff.email} | by admin ${req.user.email}`);
+    res.json({ success: true, email: staff.email });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/staff/:id/reset-password - Reset staff password (admin only)
 router.post('/:id/reset-password', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
@@ -165,6 +178,7 @@ router.post('/:id/reset-password', authMiddleware, requireRole('admin'), async (
       success: true,
       message: `Password reset. Please deliver the new credentials to ${staff.email} via a secure channel.`,
       email: staff.email,
+      temporaryPassword: tempPassword,
     });
   } catch (error) {
     next(error);

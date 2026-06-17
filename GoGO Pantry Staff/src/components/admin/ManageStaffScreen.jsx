@@ -46,6 +46,11 @@ export default function ManageStaffScreen() {
     if (r?.ok) { const d = await r.json(); setResetInfo(d); } else alert("Reset failed");
   };
 
+  const unlock = async s => {
+    const r = await apiFetch(`${API_BASE}/staff/${s.id}/unlock`, { method: "POST" });
+    if (r?.ok) { load(); } else alert("Unlock failed");
+  };
+
   const shopName = id => G.SHOPS.find(s => s.id === id)?.name || id || "—";
 
   return (
@@ -57,10 +62,18 @@ export default function ManageStaffScreen() {
             <span style={{ fontWeight: 600 }}>{s.name}</span>,
             <span style={{ fontSize: 13, color: "var(--text-2)" }}>{s.email}</span>,
             shopName(s.shopId),
-            <Pill tone={s.status === "active" ? "ok" : "neutral"} size="sm">{s.status}</Pill>
+            s.lockedUntil && new Date(s.lockedUntil) > new Date()
+              ? <Pill tone="critical" size="sm">Locked</Pill>
+              : <Pill tone={s.status === "active" ? "ok" : "neutral"} size="sm">{s.status}</Pill>
           ]}))}
           onEdit={openEdit} onDelete={del}
-          extraAction={s => <Btn size="sm" variant="soft" onClick={() => resetPw(s)}>Reset PW</Btn>}
+          extraAction={s => (
+            <div style={{ display: "flex", gap: 6 }}>
+              {s.lockedUntil && new Date(s.lockedUntil) > new Date() &&
+                <Btn size="sm" variant="soft" onClick={() => unlock(s)}>Unlock</Btn>}
+              <Btn size="sm" variant="soft" onClick={() => resetPw(s)}>Reset PW</Btn>
+            </div>
+          )}
         />
       )}
       <MgmtModal open={modal} title={editing ? "Edit Staff" : "Add Staff"} onClose={() => setModal(false)}>

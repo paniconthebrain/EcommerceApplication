@@ -339,8 +339,10 @@ export default function PurchaseOrdersScreen({ shopId, setRoute, user }) {
   async function load() {
     setLoading(true);
     try {
+      const isAdmin = user?.userType === 'admin';
+      const poUrl = isAdmin ? `${API_BASE}/purchase-orders` : `${API_BASE}/purchase-orders?shopId=${shopId}`;
       const [posRes, supRes] = await Promise.all([
-        apiFetch(`${API_BASE}/purchase-orders?shopId=${shopId}`),
+        apiFetch(poUrl),
         apiFetch(`${API_BASE}/suppliers`),
       ]);
       if (posRes?.ok) setPos(await posRes.json());

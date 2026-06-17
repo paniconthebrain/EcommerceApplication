@@ -105,7 +105,7 @@ router.get('/shops/:shopId/inventory', authMiddleware, async (req, res, next) =>
 
     const products = await Product.findAll({
       where: { parentId: null }, // only top-level products, not variants
-      attributes: ['id', 'name', 'price', 'unit', 'tag', 'categoryId', 'supplierId'],
+      attributes: ['id', 'name', 'price', 'unit', 'tags', 'categoryId', 'supplierId'],
       include: [
         {
           model: Inventory,
