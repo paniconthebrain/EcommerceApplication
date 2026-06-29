@@ -1,19 +1,32 @@
-/**
- * In-memory JWT blacklist for logout invalidation.
- * Tokens are auto-evicted after 25h (longer than max JWT lifetime).
- * For multi-server deployments, replace the Set with a Redis client:
- *   await redis.set(token, '1', 'EX', 90000)
- *   await redis.exists(token)
- */
-const blacklist = new Set();
+const { TokenBlacklist } = require('../models');
+const { Op } = require('sequelize');
 
-function blacklistToken(token) {
-  blacklist.add(token);
-  setTimeout(() => blacklist.delete(token), 25 * 60 * 60 * 1000);
+// Periodically purge expired tokens (runs every hour)
+setInterval(async () => {
+  try {
+    await TokenBlacklist.destroy({ where: { expiresAt: { [Op.lt]: new Date() } } });
+  } catch { /* silent */ }
+}, 60 * 60 * 1000);
+
+async function blacklistToken(token, expiresInMs = 25 * 60 * 60 * 1000) {
+  try {
+    const expiresAt = new Date(Date.now() + expiresInMs);
+    await TokenBlacklist.upsert({ token, expiresAt });
+  } catch (err) {
+    console.error('Failed to blacklist token:', err.message);
+  }
 }
 
-function isBlacklisted(token) {
-  return blacklist.has(token);
+async function isBlacklisted(token) {
+  try {
+    const entry = await TokenBlacklist.findOne({
+      where: { token, expiresAt: { [Op.gt]: new Date() } },
+    });
+    return !!entry;
+  } catch (err) {
+    console.error('Blacklist check failed — denying to be safe:', err.message);
+    return true;
+  }
 }
 
 module.exports = { blacklistToken, isBlacklisted };

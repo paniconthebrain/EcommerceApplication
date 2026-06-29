@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { G, APP_CONFIG } from '../globals.js';
 import { IconC, getCategoryIcon } from './icons.jsx';
 import { BtnC } from './ui.jsx';
@@ -35,6 +35,7 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
   const [slide, setSlide] = useState(0);
   const [paused, setPaused] = useState(false);
   const total = HERO_SLIDES.length;
+  const touchStartX = useRef(null);
 
   useEffect(() => {
     if (paused) return;
@@ -45,18 +46,30 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
   const prev = () => { setPaused(true); setSlide(s => (s - 1 + total) % total); };
   const next = () => { setPaused(true); setSlide(s => (s + 1) % total); };
 
+  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); }
+    touchStartX.current = null;
+  };
+
   const s = HERO_SLIDES[slide];
 
   return (
     <div
-      style={{ position: "relative", overflow: "hidden", minHeight: "58vh", background: s.gradient, transition: "background 0.7s var(--ease)" }}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      style={{ background: s.gradient, transition: "background 0.7s var(--ease)" }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
       {/* Slide track */}
+      <div style={{ position: "relative", overflow: "hidden" }}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
       <div style={{ display: "flex", transform: `translateX(-${slide * 100}%)`, transition: "transform 0.65s cubic-bezier(0.4, 0, 0.2, 1)", willChange: "transform" }}>
         {HERO_SLIDES.map((sl, i) => (
-          <div key={i} className="hero-slide-inner" style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "72px 24px 88px", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
+          <div key={i} className="hero-slide-inner" style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "clamp(40px, 8vw, 72px) 20px 32px", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
             {/* Background texture dots */}
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
               {[["-8%","8%",72,0.1],["-5%","55%",48,0.07],["82%","6%",64,0.09],["90%","52%",52,0.08],["55%","82%",40,0.07],["38%","-6%",56,0.08]].map(([l, t, sz, op], di) => (
@@ -129,22 +142,25 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
         ))}
       </div>
 
-      {/* Arrow buttons */}
+      {/* Arrow buttons — hidden on mobile (swipe handles navigation) */}
       {[["prev", "left", prev], ["next", "right", next]].map(([dir, side, fn]) => (
-        <button key={dir} onClick={fn}
-          style={{ position: "absolute", [side]: 16, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 44, height: 44, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", transition: "all 0.2s" }}
+        <button key={dir} onClick={fn} className="hideOnMobile"
+          style={{ position: "absolute", [side]: 16, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 36, height: 36, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", transition: "all 0.2s" }}
           onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.28)"}
           onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.12)"}
         >
-          <IconC name="chevR" size={19} style={{ transform: dir === "prev" ? "rotate(180deg)" : "none" }} />
+          <IconC name="chevR" size={16} style={{ transform: dir === "prev" ? "rotate(180deg)" : "none" }} />
         </button>
       ))}
+      </div>{/* end overflow:hidden slide track wrapper */}
 
-      {/* Progress dots */}
-      <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6, zIndex: 10 }}>
+      {/* Progress dots — rendered outside overflow:hidden so they sit cleanly on the gradient */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "10px 0 14px" }}>
         {HERO_SLIDES.map((_, i) => (
           <button key={i} onClick={() => { setPaused(true); setSlide(i); }}
-            style={{ width: i === slide ? 28 : 8, height: 8, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.35)", border: "none", cursor: "pointer", transition: "all 0.32s var(--spring)", padding: 0 }} />
+            style={{ padding: "6px 4px", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <span style={{ display: "block", width: i === slide ? 14 : 4, height: 4, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.45)", transition: "all 0.32s var(--spring)" }} />
+          </button>
         ))}
       </div>
     </div>
@@ -186,7 +202,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
           title={search ? "Search Results" : "Featured Stores"}
           sub={`${filteredShops.length} store${filteredShops.length !== 1 ? "s" : ""} available near you`}
           action={
-            <div style={{ position: "relative", maxWidth: 220 }}>
+            <div className="hideOnMobile" style={{ position: "relative", maxWidth: 220 }}>
               <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }}><IconC name="search" size={15} /></span>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores…"
                 style={{ width: "100%", padding: "8px 12px 8px 33px", borderRadius: 999, border: "1.5px solid var(--line)", background: "var(--surface)", color: "var(--text)", fontSize: 13, fontFamily: "var(--font-sans)", outline: "none" }} />
