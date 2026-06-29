@@ -191,6 +191,7 @@ export default function CustomerApp() {
     localStorage.removeItem("customerAuth");
     setUser(null);
     setCartItems({});
+    // Do NOT wipe server cart on logout — preserve it for next login
     setShopId(null);
     navigate("home", null);
   };
@@ -203,26 +204,38 @@ export default function CustomerApp() {
 
   const cartCount = Object.values(cartItems).reduce((s, q) => s + q, 0);
 
+  // Guard: browse requires a shopId — redirect home if missing
+  if (page === "browse" && !shopId) {
+    navigate("home", null);
+  }
+
+  // Guard: confirmation requires orderData — redirect home if missing (e.g. page refresh)
+  if (page === "confirmation" && !orderData) {
+    navigate("home", null);
+  }
+
   const screens = {
     home: <CustomerHomepage onSelectShop={handleSelectShop} shopId={shopId} onGoToBrowse={(catId) => { setInitialCat(catId || null); setPage("browse"); }} />,
-    browse: shopId && <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={() => navigate("home", null)} initialCat={initialCat} savedItems={savedItems} onToggleSave={handleToggleSave} />,
+    browse: shopId ? <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={() => navigate("home", null)} initialCat={initialCat} savedItems={savedItems} onToggleSave={handleToggleSave} /> : null,
     cart: <CustomerCart shopId={shopId} cartItems={cartItems} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} onContinueShopping={() => navigate("browse")} />,
     checkout: <CustomerCheckout shopId={shopId} cartItems={cartItems} onConfirm={handleConfirm} onBack={() => setPage("cart")} />,
-    confirmation: orderData && <CustomerConfirmation orderData={orderData} onNewOrder={handleNewOrder} />,
+    confirmation: orderData ? <CustomerConfirmation orderData={orderData} onNewOrder={handleNewOrder} /> : null,
     about: <AboutUs />,
     privacy: <PrivacyPolicy />,
     careers: <CareersPage onBack={() => navigate("home")} />,
   };
 
+  const closeOverlay = () => { setShowAuth(false); setPendingCartId(null); };
+
   const authOverlay = showAuth && !user ? (
     <div
       style={{ position: 'fixed', inset: 0, zIndex: 999, display: 'grid', placeItems: 'center', padding: '20px', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', background: 'rgba(0,0,0,0.45)' }}
-      onClick={() => setShowAuth(false)}
+      onClick={closeOverlay}
     >
       <div style={{ width: '100%', maxWidth: '560px' }} onClick={e => e.stopPropagation()}>
-        {authPage === "login" && <CustomerLogin onLoginSuccess={handleLoginSuccess} onSignupClick={() => setAuthPage("signup")} onForgotClick={() => setAuthPage("forgot")} onClose={() => setShowAuth(false)} overlay />}
-        {authPage === "signup" && <CustomerSignup onSignupSuccess={handleSignupSuccess} onLoginClick={() => setAuthPage("login")} onClose={() => setShowAuth(false)} overlay />}
-        {authPage === "forgot" && <ForgotPassword onBack={() => setAuthPage("login")} overlay />}
+        {authPage === "login" && <CustomerLogin onLoginSuccess={handleLoginSuccess} onSignupClick={() => setAuthPage("signup")} onForgotClick={() => setAuthPage("forgot")} onClose={closeOverlay} overlay />}
+        {authPage === "signup" && <CustomerSignup onSignupSuccess={handleSignupSuccess} onLoginClick={() => setAuthPage("login")} onClose={closeOverlay} overlay />}
+        {authPage === "forgot" && <ForgotPassword onBack={() => setAuthPage("login")} onClose={closeOverlay} overlay />}
       </div>
     </div>
   ) : null;

@@ -197,7 +197,7 @@ export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, 
     setPage("home");
   };
 
-  const activeTab = page === "cart" ? "cart" : page === "home" ? "home" : "home";
+  const activeTab = page === "cart" ? "cart" : page === "home" ? "home" : null;
 
   return (
     <nav
@@ -268,9 +268,11 @@ export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, 
   );
 }
 
-export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLoginClick, onNavigate, shopId, onSelectShop, savedItems = new Set(), onToggleSave, onAddToCart, onUpdateCart, cartItems = {}, onNavigatePage }) {
+export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLoginClick, onNavigate, shopId, onSelectShop, savedItems = new Set(), onToggleSave, onAddToCart, onUpdateCart, cartItems = {} }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [shopSelectorOpen, setShopSelectorOpen] = useState(false);
+  const [nlEmail, setNlEmail] = useState('');
+  const [nlDone, setNlDone] = useState(false);
   const [storePopupShop, setStorePopupShop] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showWishlist, setShowWishlist] = useState(false);
@@ -422,14 +424,13 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
                   <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>{user?.email}</div>
                 </div>
                 {["My orders", "Account settings"].map(label => (
-                  <button
+                  <div
                     key={label}
-                    style={{ width: "100%", padding: "10px 16px", background: "transparent", border: "none", textAlign: "left", fontSize: 13, fontWeight: 500, color: "var(--text-2)", cursor: "pointer", fontFamily: "var(--font-sans)", transition: "background 0.12s" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", fontSize: 13, color: "var(--text-3)", cursor: "default" }}
                   >
-                    {label}
-                  </button>
+                    <span>{label}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, background: "var(--surface-2)", color: "var(--text-3)", padding: "2px 7px", borderRadius: 999 }}>Soon</span>
+                  </div>
                 ))}
                 <button
                   onClick={() => { setUserMenuOpen(false); onLogout(); }}
@@ -525,21 +526,34 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 20, padding: "32px 28px", backdropFilter: "blur(12px)" }}>
               <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4, letterSpacing: "-0.01em" }}>Get your first deal today</div>
               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 20 }}>No commitment — unsubscribe anytime.</div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#fff", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", minWidth: 0, transition: "border-color 0.15s" }}
-                  onFocus={e => e.target.style.borderColor = "oklch(0.55 0.17 152 / 0.7)"}
-                  onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.12)"}
-                />
-                <button style={{ padding: "13px 20px", borderRadius: 12, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)", whiteSpace: "nowrap", boxShadow: "0 4px 20px oklch(0.55 0.17 152 / 0.45)", transition: "all 0.15s" }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "var(--primary-hover)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.transform = "none"; }}>
-                  Subscribe →
-                </button>
-              </div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", marginTop: 14 }}>By subscribing you agree to our Privacy Policy.</div>
+              {nlDone ? (
+                <div style={{ padding: "16px", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", textAlign: "center", fontSize: 14, fontWeight: 700, color: "oklch(0.78 0.14 152)" }}>
+                  ✓ You're subscribed! Fresh deals coming your way.
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="email"
+                      value={nlEmail}
+                      onChange={e => setNlEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#fff", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", minWidth: 0, transition: "border-color 0.15s" }}
+                      onFocus={e => e.target.style.borderColor = "oklch(0.55 0.17 152 / 0.7)"}
+                      onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.12)"}
+                      onKeyDown={e => { if (e.key === 'Enter' && nlEmail.includes('@')) setNlDone(true); }}
+                    />
+                    <button
+                      onClick={() => { if (nlEmail.includes('@')) setNlDone(true); }}
+                      style={{ padding: "13px 20px", borderRadius: 12, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)", whiteSpace: "nowrap", boxShadow: "0 4px 20px oklch(0.55 0.17 152 / 0.45)", transition: "all 0.15s" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--primary-hover)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.transform = "none"; }}>
+                      Subscribe →
+                    </button>
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", marginTop: 14 }}>By subscribing you agree to our Privacy Policy.</div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -567,11 +581,9 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
                   { label: "Twitter",   letter: "𝕏",  color: "#fff" },
                   { label: "YouTube",   letter: "▶",  color: "#ff0000" },
                 ].map(({ label, letter, color }) => (
-                  <button key={label} title={label}
-                    style={{ width: 36, height: 36, borderRadius: 9, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", cursor: "pointer", fontSize: 12, fontWeight: 900, color: "#fff", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)", transition: "all 0.15s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = color + "22"; e.currentTarget.style.borderColor = color + "66"; e.currentTarget.style.color = color; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.transform = "none"; }}
-                  >{letter}</button>
+                  <div key={label} title={`${label} (coming soon)`}
+                    style={{ width: 36, height: 36, borderRadius: 9, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", cursor: "default", fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.3)", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)" }}
+                  >{letter}</div>
                 ))}
               </div>
             </div>
@@ -580,7 +592,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 18 }}>Shop</div>
               {["All Products", "Fresh Produce", "Dairy & Eggs", "Bakery", "Snacks", "Beverages"].map(l => (
-                <div key={l} style={{ fontSize: 13.5, color: "rgba(255,255,255,0.55)", marginBottom: 11, cursor: "pointer", transition: "color 0.15s", fontWeight: 500 }}
+                <div key={l} onClick={() => setPage("home")} style={{ fontSize: 13.5, color: "rgba(255,255,255,0.55)", marginBottom: 11, cursor: "pointer", transition: "color 0.15s", fontWeight: 500 }}
                   onMouseEnter={e => e.currentTarget.style.color = "#fff"}
                   onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.55)"}>{l}</div>
               ))}
@@ -598,9 +610,9 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
               ].map(({ label, page: pg }) => (
                 <div key={label}
                   onClick={() => pg && setPage(pg)}
-                  style={{ fontSize: 13.5, color: "rgba(255,255,255,0.55)", marginBottom: 11, cursor: pg ? "pointer" : "default", transition: "color 0.15s", fontWeight: 500 }}
+                  style={{ fontSize: 13.5, color: pg ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)", marginBottom: 11, cursor: pg ? "pointer" : "default", transition: "color 0.15s", fontWeight: 500 }}
                   onMouseEnter={e => { if (pg) e.currentTarget.style.color = "#fff"; }}
-                  onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.55)"}>{label}</div>
+                  onMouseLeave={e => e.currentTarget.style.color = pg ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.28)"}>{label}{!pg && <span style={{ fontSize: 10, marginLeft: 6, opacity: 0.5 }}>·</span>}</div>
               ))}
             </div>
 
@@ -608,9 +620,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 18 }}>Support</div>
               {["Help Center", "Track Order", "Returns", "Contact Us", "Accessibility"].map(l => (
-                <div key={l} style={{ fontSize: 13.5, color: "rgba(255,255,255,0.55)", marginBottom: 11, cursor: "pointer", transition: "color 0.15s", fontWeight: 500 }}
-                  onMouseEnter={e => e.currentTarget.style.color = "#fff"}
-                  onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.55)"}>{l}</div>
+                <div key={l} style={{ fontSize: 13.5, color: "rgba(255,255,255,0.28)", marginBottom: 11, cursor: "default", fontWeight: 500 }}>{l}</div>
               ))}
             </div>
 
@@ -655,9 +665,9 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
               ].map(({ label, page: pg }) => (
                 <span key={label}
                   onClick={() => pg && setPage(pg)}
-                  style={{ fontSize: 12, color: "rgba(255,255,255,0.32)", cursor: pg ? "pointer" : "default", fontWeight: 500, transition: "color 0.15s" }}
+                  style={{ fontSize: 12, color: pg ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.2)", cursor: pg ? "pointer" : "default", fontWeight: 500, transition: "color 0.15s" }}
                   onMouseEnter={e => { if (pg) e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}
-                  onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.32)"}>{label}</span>
+                  onMouseLeave={e => e.currentTarget.style.color = pg ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.2)"}>{label}</span>
               ))}
             </div>
           </div>

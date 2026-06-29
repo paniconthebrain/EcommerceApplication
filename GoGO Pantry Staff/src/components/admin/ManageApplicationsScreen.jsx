@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_BASE, apiFetch } from '../../globals.js';
-import { Btn, Pill } from '../ui.jsx';
+import { Btn, Pill, ConfirmDialog } from '../ui.jsx';
 import { AdminPageWrap, MgmtModal } from './shared.jsx';
 
 const STATUS_COLORS = {
@@ -18,6 +18,7 @@ export default function ManageApplicationsScreen() {
   const [detail, setDetail] = useState(null);
   const [resumeLoading, setResumeLoading] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -40,7 +41,12 @@ export default function ManageApplicationsScreen() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this application? This cannot be undone.')) return;
+    setDeleteTarget(id);
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteTarget;
+    setDeleteTarget(null);
     await apiFetch(`${API_BASE}/careers/applications/${id}`, { method: 'DELETE' });
     setApps(prev => prev.filter(a => a.id !== id));
     if (detail?.id === id) setDetail(null);
@@ -64,6 +70,16 @@ export default function ManageApplicationsScreen() {
 
   return (
     <>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete application?"
+        body="This will permanently remove the application and resume. This cannot be undone."
+        confirm="Delete"
+        cancel="Keep"
+        tone="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <AdminPageWrap
         title="Job Applications"
         subtitle={`${apps.length} total application${apps.length !== 1 ? 's' : ''}`}
