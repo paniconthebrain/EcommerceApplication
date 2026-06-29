@@ -83,8 +83,8 @@ router.post('/login', async (req, res, next) => {
 });
 
 // POST /api/auth/logout
-router.post('/logout', authMiddleware, (req, res) => {
-  blacklistToken(req.token);
+router.post('/logout', authMiddleware, async (req, res) => {
+  await blacklistToken(req.token);
   res.json({ success: true });
 });
 

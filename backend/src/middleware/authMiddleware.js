@@ -2,7 +2,7 @@ const { verifyToken } = require('../utils/jwt');
 const { isBlacklisted } = require('../utils/tokenBlacklist');
 const { AuthenticationError, AuthorizationError } = require('../utils/errors');
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -11,7 +11,7 @@ function authMiddleware(req, res, next) {
 
     const token = authHeader.substring(7);
 
-    if (isBlacklisted(token)) {
+    if (await isBlacklisted(token)) {
       throw new AuthenticationError('Token has been revoked — please log in again');
     }
 

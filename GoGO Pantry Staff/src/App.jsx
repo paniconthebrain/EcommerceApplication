@@ -13,8 +13,9 @@ import EmailSettingsScreen from './components/admin/EmailSettingsScreen.jsx';
 import InventoryScreen from './components/screens/InventoryScreen.jsx';
 import PurchaseOrdersScreen from './components/screens/PurchaseOrdersScreen.jsx';
 import ManageSuppliersScreen from './components/admin/ManageSuppliersScreen.jsx';
+import ManageApplicationsScreen from './components/admin/ManageApplicationsScreen.jsx';
 
-const STAFF_ROUTES = ["dashboard", "fulfill", "receive", "transfer", "inventory", "purchase-orders", "manage-shops", "manage-staff", "manage-categories", "manage-suppliers", "email-settings"];
+const STAFF_ROUTES = ["dashboard", "fulfill", "receive", "transfer", "inventory", "purchase-orders", "manage-shops", "manage-staff", "manage-categories", "manage-suppliers", "email-settings", "job-applications"];
 
 function staffPathToRoute(pathname) {
   const seg = pathname.replace(/^\//, "") || "dashboard";
@@ -92,6 +93,7 @@ export default function StaffApp() {
     "manage-categories": () => <AdminOnly user={user}><ManageCategoriesScreen /></AdminOnly>,
     "manage-suppliers":  () => <AdminOnly user={user}><ManageSuppliersScreen /></AdminOnly>,
     "email-settings":    () => <AdminOnly user={user}><EmailSettingsScreen /></AdminOnly>,
+    "job-applications":  () => <AdminOnly user={user}><ManageApplicationsScreen /></AdminOnly>,
     "inventory":         () => <InventoryScreen shopId={shopId} setRoute={navigate} />,
     "purchase-orders":   () => <PurchaseOrdersScreen shopId={shopId} setRoute={navigate} user={user} />,
   };

@@ -591,7 +591,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 18 }}>Company</div>
               {[
                 { label: "About Us", page: "about" },
-                { label: "Careers",  page: null },
+                { label: "Careers",  page: "careers" },
                 { label: "Press",    page: null },
                 { label: "Blog",     page: null },
                 { label: "Partners", page: null },

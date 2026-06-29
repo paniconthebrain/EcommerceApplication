@@ -23,6 +23,7 @@ const transferRoutes = require('./routes/transfers');
 const dashboardRoutes = require('./routes/dashboard');
 const deliverySlotsRoutes = require('./routes/deliverySlots');
 const emailRoutes = require('./routes/email');
+const careersRoutes = require('./routes/careers');
 
 const app = express();
 
@@ -112,6 +113,7 @@ app.use('/api/transfer', transferRoutes);
 app.use('/api', dashboardRoutes);
 app.use('/api/delivery-slots', deliverySlotsRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/careers', careersRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

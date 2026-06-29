@@ -28,6 +28,7 @@ const ADMIN_ITEMS = [
   { key: "manage-staff", icon: "users", label: "Staff" },
   { key: "manage-categories", icon: "folder", label: "Catalog" },
   { key: "email-settings", icon: "settings", label: "Email" },
+  { key: "job-applications", icon: "users", label: "Applications" },
 ];
 
 export function AdminOnly({ user, children }) {

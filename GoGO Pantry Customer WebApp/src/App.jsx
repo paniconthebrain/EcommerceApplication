@@ -8,6 +8,7 @@ import { CustomerCheckout, CustomerConfirmation } from './components/checkout.js
 import { CustomerShell } from './components/layout.jsx';
 import { AboutUs } from './components/about.jsx';
 import { PrivacyPolicy } from './components/privacy.jsx';
+import { CareersPage } from './components/careers.jsx';
 
 function pageToPath(page, shopId) {
   if (page === "browse" && shopId) return `/shop/${shopId}`;
@@ -16,6 +17,7 @@ function pageToPath(page, shopId) {
   if (page === "confirmation")     return "/confirmation";
   if (page === "about")            return "/about";
   if (page === "privacy")          return "/privacy";
+  if (page === "careers")          return "/careers";
   return "/";
 }
 
@@ -27,6 +29,7 @@ function pathToState(pathname) {
   if (pathname === "/reset-password") return { page: "reset-password", shopId: null };
   if (pathname === "/about")          return { page: "about",          shopId: null };
   if (pathname === "/privacy")        return { page: "privacy",        shopId: null };
+  if (pathname === "/careers")        return { page: "careers",        shopId: null };
   return { page: "home", shopId: null };
 }
 
@@ -198,15 +201,6 @@ export default function CustomerApp() {
     return <ResetPasswordPage onDone={() => { navigate("home"); setAuthPage("login"); }} />;
   }
 
-  if (showAuth && !user) {
-    if (authPage === "login")
-      return <CustomerLogin onLoginSuccess={handleLoginSuccess} onSignupClick={() => setAuthPage("signup")} onForgotClick={() => setAuthPage("forgot")} onClose={() => setShowAuth(false)} />;
-    if (authPage === "signup")
-      return <CustomerSignup onSignupSuccess={handleSignupSuccess} onLoginClick={() => setAuthPage("login")} onClose={() => setShowAuth(false)} />;
-    if (authPage === "forgot")
-      return <ForgotPassword onBack={() => setAuthPage("login")} />;
-  }
-
   const cartCount = Object.values(cartItems).reduce((s, q) => s + q, 0);
 
   const screens = {
@@ -217,24 +211,41 @@ export default function CustomerApp() {
     confirmation: orderData && <CustomerConfirmation orderData={orderData} onNewOrder={handleNewOrder} />,
     about: <AboutUs />,
     privacy: <PrivacyPolicy />,
+    careers: <CareersPage onBack={() => navigate("home")} />,
   };
 
+  const authOverlay = showAuth && !user ? (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 999, display: 'grid', placeItems: 'center', padding: '20px', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', background: 'rgba(0,0,0,0.45)' }}
+      onClick={() => setShowAuth(false)}
+    >
+      <div style={{ width: '100%', maxWidth: '560px' }} onClick={e => e.stopPropagation()}>
+        {authPage === "login" && <CustomerLogin onLoginSuccess={handleLoginSuccess} onSignupClick={() => setAuthPage("signup")} onForgotClick={() => setAuthPage("forgot")} onClose={() => setShowAuth(false)} overlay />}
+        {authPage === "signup" && <CustomerSignup onSignupSuccess={handleSignupSuccess} onLoginClick={() => setAuthPage("login")} onClose={() => setShowAuth(false)} overlay />}
+        {authPage === "forgot" && <ForgotPassword onBack={() => setAuthPage("login")} overlay />}
+      </div>
+    </div>
+  ) : null;
+
   return (
-    <CustomerShell
-      page={page}
-      setPage={setPage}
-      cartCount={cartCount}
-      user={user}
-      onLogout={handleLogout}
-      onLoginClick={() => { setAuthPage("login"); setShowAuth(true); }}
-      onNavigate={screens[page]}
-      shopId={shopId}
-      onSelectShop={handleSelectShop}
-      savedItems={savedItems}
-      onToggleSave={handleToggleSave}
-      onAddToCart={handleAddToCart}
-      onUpdateCart={handleUpdateCart}
-      cartItems={cartItems}
-    />
+    <>
+      <CustomerShell
+        page={page}
+        setPage={setPage}
+        cartCount={cartCount}
+        user={user}
+        onLogout={handleLogout}
+        onLoginClick={() => { setAuthPage("login"); setShowAuth(true); }}
+        onNavigate={screens[page]}
+        shopId={shopId}
+        onSelectShop={handleSelectShop}
+        savedItems={savedItems}
+        onToggleSave={handleToggleSave}
+        onAddToCart={handleAddToCart}
+        onUpdateCart={handleUpdateCart}
+        cartItems={cartItems}
+      />
+      {authOverlay}
+    </>
   );
 }

@@ -6,28 +6,29 @@ import { IconC } from './icons.jsx';
 /* ── Shared inline style tweaks for compact auth ── */
 const cardCompact = {
   ...authCardStyle,
-  padding: '32px 32px',
+  maxWidth: '520px',
+  padding: '48px 52px',
 };
 
 const cardWide = {
   ...authCardStyle,
-  maxWidth: '500px',
-  padding: '28px 32px',
+  maxWidth: '620px',
+  padding: '44px 52px',
 };
 
 const headingCompact = {
   ...authHeadingStyle,
-  fontSize: 22,
-  margin: '0 0 4px',
+  fontSize: 24,
+  margin: '0 0 8px',
 };
 
 const subtitleCompact = {
   ...authSubtitleStyle,
-  margin: '0 0 18px',
-  fontSize: 13,
+  margin: '0 0 24px',
+  fontSize: 14,
 };
 
-const fieldCompact = { marginBottom: 12 };
+const fieldCompact = { marginBottom: 16 };
 
 const row2 = {}; // responsive class auth-row2 handles this
 
@@ -36,12 +37,12 @@ const linkBtn = {
   fontWeight: 700, cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
 };
 
-const inputSm = { ...authInputStyle, padding: '10px 12px', fontSize: 14 };
+const inputSm = { ...authInputStyle, padding: '12px 14px', fontSize: 14 };
 
 /* ══════════════════════════════════════════════════════════
    LOGIN
 ══════════════════════════════════════════════════════════ */
-export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick, onClose }) {
+export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick, onClose, overlay }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,10 +72,14 @@ export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick, on
     }
   };
 
-  return (
-    <div style={authContainerStyle}>
-      <div style={cardCompact} className="auth-card-responsive">
-        {onClose && (
+  const inner = (
+    <div style={{ ...cardCompact, position: 'relative' }} className="auth-card-responsive">
+        {onClose && overlay && (
+          <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: 'var(--text-3)', padding: '4px 8px', borderRadius: 8 }}>
+            ×
+          </button>
+        )}
+        {onClose && !overlay && (
           <button onClick={onClose} style={{ ...linkBtn, color: 'var(--text-2)', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
             ← Back
           </button>
@@ -110,14 +115,15 @@ export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick, on
           <button onClick={onSignupClick} style={linkBtn}>Create one</button>
         </p>
       </div>
-    </div>
   );
+  if (overlay) return inner;
+  return <div style={authContainerStyle}>{inner}</div>;
 }
 
 /* ══════════════════════════════════════════════════════════
    SIGNUP — compact 2-column layout, real API
 ══════════════════════════════════════════════════════════ */
-export function CustomerSignup({ onSignupSuccess, onLoginClick, onClose }) {
+export function CustomerSignup({ onSignupSuccess, onLoginClick, onClose, overlay }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -162,10 +168,14 @@ export function CustomerSignup({ onSignupSuccess, onLoginClick, onClose }) {
     }
   };
 
-  return (
-    <div style={authContainerStyle}>
-      <div style={cardWide} className="auth-card-responsive">
-        {onClose && (
+  const inner = (
+      <div style={{ ...cardWide, position: 'relative' }} className="auth-card-responsive">
+        {onClose && overlay && (
+          <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: 'var(--text-3)', padding: '4px 8px', borderRadius: 8 }}>
+            ×
+          </button>
+        )}
+        {onClose && !overlay && (
           <button onClick={onClose} style={{ ...linkBtn, color: 'var(--text-2)', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
             ← Back
           </button>
@@ -228,14 +238,15 @@ export function CustomerSignup({ onSignupSuccess, onLoginClick, onClose }) {
           <button onClick={onLoginClick} style={linkBtn}>Sign in</button>
         </p>
       </div>
-    </div>
   );
+  if (overlay) return inner;
+  return <div style={authContainerStyle}>{inner}</div>;
 }
 
 /* ══════════════════════════════════════════════════════════
    FORGOT PASSWORD
 ══════════════════════════════════════════════════════════ */
-export function ForgotPassword({ onBack }) {
+export function ForgotPassword({ onBack, overlay }) {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -254,42 +265,47 @@ export function ForgotPassword({ onBack }) {
   };
 
   if (sent) {
-    return (
-      <div style={authContainerStyle}>
-        <div style={cardCompact}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ width: 64, height: 64, borderRadius: 999, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
-              <IconC name="mail" size={30} style={{ color: 'var(--text-2)' }} />
-            </div>
-            <h1 style={headingCompact}>Check your email</h1>
-            <p style={{ ...subtitleCompact, margin: '4px 0 20px' }}>If {email} has an account, we've sent a reset link.</p>
-            <BtnC full onClick={onBack}>Back to login</BtnC>
+    const sentInner = (
+      <div style={cardCompact}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 999, background: 'var(--surface-2)', display: 'grid', placeItems: 'center', margin: '0 auto 16px' }}>
+            <IconC name="mail" size={30} style={{ color: 'var(--text-2)' }} />
           </div>
+          <h1 style={headingCompact}>Check your email</h1>
+          <p style={{ ...subtitleCompact, margin: '4px 0 20px' }}>If {email} has an account, we've sent a reset link.</p>
+          <BtnC full onClick={onBack}>Back to login</BtnC>
         </div>
       </div>
     );
+    if (overlay) return sentInner;
+    return <div style={authContainerStyle}>{sentInner}</div>;
   }
 
-  return (
-    <div style={authContainerStyle}>
-      <div style={cardCompact}>
-        <button onClick={onBack} style={{ ...linkBtn, color: 'var(--text-2)', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-          ← Back
+  const formInner = (
+    <div style={{ ...cardCompact, position: 'relative' }}>
+      {overlay && (
+        <button onClick={onBack} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: 'var(--text-3)', padding: '4px 8px', borderRadius: 8 }}>
+          ×
         </button>
-        <h1 style={headingCompact}>Reset password</h1>
-        <p style={subtitleCompact}>Enter your email to receive a reset link</p>
-        <form onSubmit={handleSubmit}>
-          <AuthField label="Email address">
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com" style={authInputStyle} required />
-          </AuthField>
-          <BtnC full type="submit" loading={loading}>
-            {loading ? 'Sending…' : 'Send reset link'}
-          </BtnC>
-        </form>
-      </div>
+      )}
+      <button onClick={onBack} style={{ ...linkBtn, color: 'var(--text-2)', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+        ← Back
+      </button>
+      <h1 style={headingCompact}>Reset password</h1>
+      <p style={subtitleCompact}>Enter your email to receive a reset link</p>
+      <form onSubmit={handleSubmit}>
+        <AuthField label="Email address">
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="you@example.com" style={authInputStyle} required />
+        </AuthField>
+        <BtnC full type="submit" loading={loading}>
+          {loading ? 'Sending…' : 'Send reset link'}
+        </BtnC>
+      </form>
     </div>
   );
+  if (overlay) return formInner;
+  return <div style={authContainerStyle}>{formInner}</div>;
 }
 
 /* ══════════════════════════════════════════════════════════
