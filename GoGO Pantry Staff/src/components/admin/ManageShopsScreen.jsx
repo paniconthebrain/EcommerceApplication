@@ -38,7 +38,7 @@ export default function ManageShopsScreen() {
     setEditing(s.id);
     setForm({ id: s.id, name: s.name, city: s.city, code: s.code, hours: s.hours || "", allowStaffPO: !!s.allowStaffPO, pickupTime: s.pickupTime || "" });
     setImageFile(null); setImagePreview(null);
-    setCurrentImage(s.image ? `${STATIC_BASE}${s.image}` : null);
+    setCurrentImage(s.image || null);
     setErr(""); setModal(true);
   };
 
@@ -112,7 +112,7 @@ export default function ManageShopsScreen() {
           cols={["Image", "Name", "Code", "City", "Hours", "Pickup Time", "Staff POs"]}
           rows={shops.map(s => ({ id: s.id, raw: s, cells: [
             s.image
-              ? <img src={`${STATIC_BASE}${s.image}`} alt={s.name} style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />
+              ? <img src={s.image} alt={s.name} style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 8, border: "1px solid var(--line)" }} />
               : <div style={{ width: 40, height: 40, borderRadius: 8, background: "var(--surface-2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>&#x1F3EA;</div>,
             s.name,
             <span className="mono" style={{ fontSize: 12 }}>{s.code}</span>,

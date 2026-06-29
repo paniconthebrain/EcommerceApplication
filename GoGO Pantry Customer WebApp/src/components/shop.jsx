@@ -15,7 +15,7 @@ export function StorePopup({ shop, isOpen, onClose, onSelectShop }) {
   if (!isOpen || !shop) return null;
 
   const hue = typeof shop.tint === "number" ? shop.tint : 152;
-  const imageUrl = shop.image ? `http://localhost:3000${shop.image}` : null;
+  const imageUrl = shop.image || null;
   const itemCount = G.PRODUCTS.filter(p => G.shopStock(p.id, shop.id) > 0).length;
 
   const stats = [
@@ -297,7 +297,7 @@ export function ShopSelector({ isOpen, onClose, onSelectShop, currentShopId }) {
 
 export function ShopCard({ shop, onSelect }) {
   const hue = typeof shop.tint === "number" ? shop.tint : 152;
-  const imageUrl = shop.image ? `http://localhost:3000${shop.image}` : null;
+  const imageUrl = shop.image || null;
   const itemCount = G.PRODUCTS.filter(p => G.shopStock(p.id, shop.id) > 0).length;
   const pickupLabel = shop.pickupTime || null;
 
