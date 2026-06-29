@@ -1,3 +1,4 @@
+require('pg'); // explicit import so Vercel's bundler includes it
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
