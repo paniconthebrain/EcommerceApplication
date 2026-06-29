@@ -1,26 +1,14 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const { Shop } = require('../models');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 const { AuthenticationError, ValidationError } = require('../utils/errors');
 
 const router = express.Router();
 
-const uploadsDir = path.join(__dirname, '../../uploads/shops');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `shop-${req.params.id}-${Date.now()}${ext}`);
-  },
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) return cb(new Error('Only image files are allowed'));
     cb(null, true);
@@ -137,19 +125,12 @@ router.post('/:id/image', authMiddleware, requireRole('admin'), upload.single('i
     if (!shop) throw new ValidationError('Shop not found');
     if (!req.file) throw new ValidationError('No image file provided');
 
-    // Delete old image file if it exists
-    if (shop.image) {
-      const oldPath = path.join(__dirname, '../../', shop.image.replace(/^\//, ''));
-      fs.unlink(oldPath, () => {});
-    }
-
-    const imageUrl = `/uploads/shops/${req.file.filename}`;
-    shop.image = imageUrl;
+    const base64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    shop.image = base64;
     await shop.save();
 
-    res.json({ image: imageUrl });
+    res.json({ image: base64 });
   } catch (error) {
-    if (req.file) fs.unlink(req.file.path, () => {});
     next(error);
   }
 });
@@ -161,8 +142,6 @@ router.delete('/:id/image', authMiddleware, requireRole('admin'), async (req, re
     if (!shop) throw new ValidationError('Shop not found');
 
     if (shop.image) {
-      const oldPath = path.join(__dirname, '../../', shop.image.replace(/^\//, ''));
-      fs.unlink(oldPath, () => {});
       shop.image = null;
       await shop.save();
     }
@@ -182,10 +161,6 @@ router.delete('/:id', authMiddleware, requireRole('admin'), async (req, res, nex
       throw new ValidationError('Shop not found');
     }
 
-    if (shop.image) {
-      const oldPath = path.join(__dirname, '../../', shop.image.replace(/^\//, ''));
-      fs.unlink(oldPath, () => {});
-    }
     await shop.destroy();
 
     res.json({ success: true, message: 'Shop deleted successfully' });
