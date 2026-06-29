@@ -38,9 +38,21 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// CORS — support comma-separated list of allowed origins
-const rawOrigin = process.env.CORS_ORIGIN || 'http://localhost:3001,http://localhost:3002';
-const allowedOrigins = rawOrigin === '*' ? '*' : rawOrigin.split(',').map(o => o.trim());
+// CORS
+const hardcodedOrigins = [
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'https://gogopantry.com',
+  'https://www.gogopantry.com',
+  'https://staff.gogopantry.com',
+  'https://customerappproject.vercel.app',
+];
+const rawOrigin = process.env.CORS_ORIGIN;
+const allowedOrigins = rawOrigin === '*'
+  ? '*'
+  : rawOrigin
+    ? [...new Set([...hardcodedOrigins, ...rawOrigin.split(',').map(o => o.trim())])]
+    : hardcodedOrigins;
 app.use(cors({
   origin: allowedOrigins === '*' ? true : (origin, cb) => {
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
