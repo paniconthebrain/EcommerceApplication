@@ -41,7 +41,7 @@ const inputSm = { ...authInputStyle, padding: '10px 12px', fontSize: 14 };
 /* ══════════════════════════════════════════════════════════
    LOGIN
 ══════════════════════════════════════════════════════════ */
-export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick }) {
+export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick, onClose }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,6 +74,11 @@ export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick }) 
   return (
     <div style={authContainerStyle}>
       <div style={cardCompact} className="auth-card-responsive">
+        {onClose && (
+          <button onClick={onClose} style={{ ...linkBtn, color: 'var(--text-2)', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+            ← Back
+          </button>
+        )}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
           <LogoCustomer size={30} />
         </div>
@@ -90,13 +95,12 @@ export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick }) 
           <AuthField label="Password" style={fieldCompact}>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)}
               placeholder="••••••••" style={authInputStyle} autoComplete="current-password" />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+              <button type="button" onClick={onForgotClick} style={linkBtn}>Forgot password?</button>
+            </div>
           </AuthField>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 18, marginTop: -4 }}>
-            <button type="button" onClick={onForgotClick} style={linkBtn}>Forgot password?</button>
-          </div>
-
-          <BtnC full type="submit" loading={loading} style={{ marginBottom: 14 }}>
+          <BtnC full type="submit" loading={loading} style={{ marginBottom: 14, marginTop: 8 }}>
             {loading ? 'Signing in…' : 'Sign in'}
           </BtnC>
         </form>
@@ -113,7 +117,7 @@ export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick }) 
 /* ══════════════════════════════════════════════════════════
    SIGNUP — compact 2-column layout, real API
 ══════════════════════════════════════════════════════════ */
-export function CustomerSignup({ onSignupSuccess, onLoginClick }) {
+export function CustomerSignup({ onSignupSuccess, onLoginClick, onClose }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -161,6 +165,11 @@ export function CustomerSignup({ onSignupSuccess, onLoginClick }) {
   return (
     <div style={authContainerStyle}>
       <div style={cardWide} className="auth-card-responsive">
+        {onClose && (
+          <button onClick={onClose} style={{ ...linkBtn, color: 'var(--text-2)', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+            ← Back
+          </button>
+        )}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
           <LogoCustomer size={28} />
         </div>

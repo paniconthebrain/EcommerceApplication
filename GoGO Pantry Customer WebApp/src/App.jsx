@@ -6,12 +6,16 @@ import { CustomerHomepage } from './components/home.jsx';
 import { CustomerCart } from './components/cart.jsx';
 import { CustomerCheckout, CustomerConfirmation } from './components/checkout.jsx';
 import { CustomerShell } from './components/layout.jsx';
+import { AboutUs } from './components/about.jsx';
+import { PrivacyPolicy } from './components/privacy.jsx';
 
 function pageToPath(page, shopId) {
   if (page === "browse" && shopId) return `/shop/${shopId}`;
   if (page === "cart")             return "/cart";
   if (page === "checkout")         return "/checkout";
   if (page === "confirmation")     return "/confirmation";
+  if (page === "about")            return "/about";
+  if (page === "privacy")          return "/privacy";
   return "/";
 }
 
@@ -21,6 +25,8 @@ function pathToState(pathname) {
   if (pathname === "/checkout")       return { page: "checkout",       shopId: null };
   if (pathname === "/confirmation")   return { page: "confirmation",   shopId: null };
   if (pathname === "/reset-password") return { page: "reset-password", shopId: null };
+  if (pathname === "/about")          return { page: "about",          shopId: null };
+  if (pathname === "/privacy")        return { page: "privacy",        shopId: null };
   return { page: "home", shopId: null };
 }
 
@@ -194,9 +200,9 @@ export default function CustomerApp() {
 
   if (showAuth && !user) {
     if (authPage === "login")
-      return <CustomerLogin onLoginSuccess={handleLoginSuccess} onSignupClick={() => setAuthPage("signup")} onForgotClick={() => setAuthPage("forgot")} />;
+      return <CustomerLogin onLoginSuccess={handleLoginSuccess} onSignupClick={() => setAuthPage("signup")} onForgotClick={() => setAuthPage("forgot")} onClose={() => setShowAuth(false)} />;
     if (authPage === "signup")
-      return <CustomerSignup onSignupSuccess={handleSignupSuccess} onLoginClick={() => setAuthPage("login")} />;
+      return <CustomerSignup onSignupSuccess={handleSignupSuccess} onLoginClick={() => setAuthPage("login")} onClose={() => setShowAuth(false)} />;
     if (authPage === "forgot")
       return <ForgotPassword onBack={() => setAuthPage("login")} />;
   }
@@ -209,6 +215,8 @@ export default function CustomerApp() {
     cart: <CustomerCart shopId={shopId} cartItems={cartItems} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} onContinueShopping={() => navigate("browse")} />,
     checkout: <CustomerCheckout shopId={shopId} cartItems={cartItems} onConfirm={handleConfirm} onBack={() => setPage("cart")} />,
     confirmation: orderData && <CustomerConfirmation orderData={orderData} onNewOrder={handleNewOrder} />,
+    about: <AboutUs />,
+    privacy: <PrivacyPolicy />,
   };
 
   return (

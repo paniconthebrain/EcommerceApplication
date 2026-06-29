@@ -268,7 +268,7 @@ export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, 
   );
 }
 
-export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLoginClick, onNavigate, shopId, onSelectShop, savedItems = new Set(), onToggleSave, onAddToCart, onUpdateCart, cartItems = {} }) {
+export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLoginClick, onNavigate, shopId, onSelectShop, savedItems = new Set(), onToggleSave, onAddToCart, onUpdateCart, cartItems = {}, onNavigatePage }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [shopSelectorOpen, setShopSelectorOpen] = useState(false);
   const [storePopupShop, setStorePopupShop] = useState(null);
@@ -589,10 +589,18 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             {/* Company col */}
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 18 }}>Company</div>
-              {["About Us", "Careers", "Press", "Blog", "Partners"].map(l => (
-                <div key={l} style={{ fontSize: 13.5, color: "rgba(255,255,255,0.55)", marginBottom: 11, cursor: "pointer", transition: "color 0.15s", fontWeight: 500 }}
-                  onMouseEnter={e => e.currentTarget.style.color = "#fff"}
-                  onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.55)"}>{l}</div>
+              {[
+                { label: "About Us", page: "about" },
+                { label: "Careers",  page: null },
+                { label: "Press",    page: null },
+                { label: "Blog",     page: null },
+                { label: "Partners", page: null },
+              ].map(({ label, page: pg }) => (
+                <div key={label}
+                  onClick={() => pg && setPage(pg)}
+                  style={{ fontSize: 13.5, color: "rgba(255,255,255,0.55)", marginBottom: 11, cursor: pg ? "pointer" : "default", transition: "color 0.15s", fontWeight: 500 }}
+                  onMouseEnter={e => { if (pg) e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.55)"}>{label}</div>
               ))}
             </div>
 
@@ -640,10 +648,16 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
               </div>
             </div>
             <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-              {["Privacy Policy", "Terms of Service", "Cookie Settings"].map(l => (
-                <span key={l} style={{ fontSize: 12, color: "rgba(255,255,255,0.32)", cursor: "pointer", fontWeight: 500, transition: "color 0.15s" }}
-                  onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.7)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.32)"}>{l}</span>
+              {[
+                { label: "Privacy Policy",   page: "privacy" },
+                { label: "Terms of Service", page: null },
+                { label: "Cookie Settings",  page: null },
+              ].map(({ label, page: pg }) => (
+                <span key={label}
+                  onClick={() => pg && setPage(pg)}
+                  style={{ fontSize: 12, color: "rgba(255,255,255,0.32)", cursor: pg ? "pointer" : "default", fontWeight: 500, transition: "color 0.15s" }}
+                  onMouseEnter={e => { if (pg) e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}
+                  onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.32)"}>{label}</span>
               ))}
             </div>
           </div>
