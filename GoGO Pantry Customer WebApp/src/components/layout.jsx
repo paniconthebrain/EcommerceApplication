@@ -497,7 +497,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
 
         {/* Newsletter band */}
         <div style={{ background: "linear-gradient(135deg, oklch(0.22 0.08 152) 0%, oklch(0.18 0.05 170) 100%)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto", padding: "52px 32px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center" }} className="footer-newsletter">
+          <div className="footer-newsletter" style={{ maxWidth: 1200, margin: "0 auto", padding: "52px 32px" }}>
             {/* Left */}
             <div>
               <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "oklch(0.55 0.17 152 / 0.25)", border: "1px solid oklch(0.55 0.17 152 / 0.4)", borderRadius: 999, padding: "5px 14px", marginBottom: 18 }}>
@@ -545,8 +545,8 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
         </div>
 
         {/* Main links grid */}
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "52px 32px 40px" }}>
-          <div className="footer-links" style={{ display: "grid", gap: 40 }}>
+        <div className="footer-links-wrap" style={{ maxWidth: 1200, margin: "0 auto", padding: "52px 32px 40px" }}>
+          <div className="footer-links">
 
             {/* Brand col */}
             <div>
@@ -629,7 +629,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
         </div>
 
         {/* Bottom bar */}
-        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "18px 32px" }}>
+        <div className="footer-bottom-bar" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "18px 32px" }}>
           <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
               <span style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", fontWeight: 500 }}>© 2026 GoGoPantry Pty Ltd. All rights reserved.</span>

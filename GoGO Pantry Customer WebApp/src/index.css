@@ -385,6 +385,9 @@ body.theme-dark .app-header {
 /* ===== FOOTER / LAYOUT ===== */
 .footer-newsletter { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
 .footer-links { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr 1.3fr; gap: 32px; }
+/* Use minmax(0,…) so fr columns can shrink past their min-content */
+.footer-links > * { min-width: 0; overflow: hidden; }
+.footer-newsletter > * { min-width: 0; }
 .header-nav { display: flex; align-items: center; gap: 2px; margin-left: 8px; }
 @media (max-width: 640px) { .header-nav { display: none !important; } }
 
@@ -394,12 +397,19 @@ body.theme-dark .app-header {
 @media (max-width: 640px) { .mobile-bottom-nav { display: flex; } }
 @media (max-width: 640px) { .app-main { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } }
 @media (max-width: 768px) { .sidebar-desktop { display: none !important; } }
-@media (max-width: 1024px) { .footer-links { grid-template-columns: 1fr 1fr 1fr; } }
+@media (max-width: 1024px) { .footer-links { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 768px) {
   .footer-newsletter { grid-template-columns: 1fr; gap: 24px; }
-  .footer-links { grid-template-columns: 1fr 1fr; gap: 24px; }
+  .footer-links { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 }
-@media (max-width: 480px) { .footer-links { grid-template-columns: 1fr 1fr; gap: 20px; } }
+@media (max-width: 640px) {
+  .footer-newsletter { padding: 36px 20px !important; }
+  .footer-links-wrap { padding: 36px 20px 28px !important; }
+  .footer-bottom-bar { padding: 16px 20px !important; }
+}
+@media (max-width: 480px) {
+  .footer-links { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+}
 @media (max-width: 640px) { .cart-grid { grid-template-columns: 1fr !important; } }
 @media (max-width: 900px) {
   .sidebar-desktop { display: none; }
@@ -411,8 +421,6 @@ body.theme-dark .app-header {
   .mobile-filter-btn { display: none !important; }
   .mobile-filter-modal { display: none !important; }
 }
-@media (max-width: 640px) { [style*="gridTemplateColumns"] { grid-template-columns: repeat(auto-fill, minmax(145px, 1fr)) !important; } }
-@media (min-width: 641px) and (max-width: 900px) { [style*="gridTemplateColumns"] { grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)) !important; } }
 @media (hover: none) and (pointer: coarse) {
   button, a, input, select, textarea { min-height: 44px; min-width: 44px; }
   .prod-add-btn { opacity: 1; transform: scale(1) translateY(0); }
