@@ -58,16 +58,18 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
 
   return (
     <div
-      style={{ position: "relative", overflow: "hidden", minHeight: "58vh", background: s.gradient, transition: "background 0.7s var(--ease)" }}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      style={{ background: s.gradient, transition: "background 0.7s var(--ease)" }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
       {/* Slide track */}
+      <div style={{ position: "relative", overflow: "hidden" }}
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+      >
       <div style={{ display: "flex", transform: `translateX(-${slide * 100}%)`, transition: "transform 0.65s cubic-bezier(0.4, 0, 0.2, 1)", willChange: "transform" }}>
         {HERO_SLIDES.map((sl, i) => (
-          <div key={i} className="hero-slide-inner" style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "clamp(40px, 8vw, 72px) 20px clamp(52px, 10vw, 88px)", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
+          <div key={i} className="hero-slide-inner" style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "clamp(40px, 8vw, 72px) 20px 32px", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
             {/* Background texture dots */}
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
               {[["-8%","8%",72,0.1],["-5%","55%",48,0.07],["82%","6%",64,0.09],["90%","52%",52,0.08],["55%","82%",40,0.07],["38%","-6%",56,0.08]].map(([l, t, sz, op], di) => (
@@ -150,12 +152,13 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
           <IconC name="chevR" size={16} style={{ transform: dir === "prev" ? "rotate(180deg)" : "none" }} />
         </button>
       ))}
+      </div>{/* end overflow:hidden slide track wrapper */}
 
-      {/* Progress dots */}
-      <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", zIndex: 10 }}>
+      {/* Progress dots — rendered outside overflow:hidden so they sit cleanly on the gradient */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "10px 0 14px" }}>
         {HERO_SLIDES.map((_, i) => (
           <button key={i} onClick={() => { setPaused(true); setSlide(i); }}
-            style={{ padding: "6px 3px", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            style={{ padding: "6px 4px", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
             <span style={{ display: "block", width: i === slide ? 14 : 4, height: 4, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.45)", transition: "all 0.32s var(--spring)" }} />
           </button>
         ))}
