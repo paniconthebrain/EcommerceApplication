@@ -104,48 +104,34 @@ app.use('/api/email', emailRoutes);
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-// Initialize database and start server
 const PORT = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === 'production';
 
-async function startServer() {
-  try {
-    // Test database connection
-    await sequelize.authenticate();
-    console.log('✓ Database connection established');
-
-    // Sync models — alter only in development to avoid schema corruption in production
-    const env = process.env.NODE_ENV;
-    if (!env) console.warn('WARNING: NODE_ENV is not set — defaulting to development mode');
-    const isProduction = env === 'production';
-    const syncOptions = isProduction ? {} : { alter: true };
-    if (!isProduction) console.warn('DB sync: alter:true is active — never use in production');
-    await sequelize.sync(syncOptions);
-    console.log('✓ Database synced');
-
-    // Fix department_id NOT NULL constraint for categories
-    await sequelize.query('ALTER TABLE "categories" ALTER COLUMN "department_id" DROP NOT NULL').catch(() => {});
-    console.log('✓ Fixed categories.department_id constraint');
-
-    // Start listening and keep server alive
-    const server = app.listen(PORT, () => {
-      console.log(`✓ Server running on port ${PORT}`);
-      console.log(`✓ Health check: http://localhost:${PORT}/health`);
-      console.log(`✓ API ready at: http://localhost:${PORT}/api`);
-    });
-
-    // Keep the server alive
-    server.on('close', () => {
-      console.log('Server closed');
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
+async function initDb() {
+  await sequelize.authenticate();
+  console.log('✓ Database connection established');
+  await sequelize.sync(isProduction ? {} : { alter: true });
+  console.log('✓ Database synced');
+  // Fix department_id NOT NULL constraint — safe to re-run, ignored if already dropped
+  await sequelize.query('ALTER TABLE "categories" ALTER COLUMN "department_id" DROP NOT NULL').catch(() => {});
 }
 
-startServer().catch(err => {
-  console.error('Startup error:', err);
-  process.exit(1);
-});
+// require.main === module is true when run directly (local dev), false when imported by Vercel
+if (require.main === module) {
+  initDb()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`✓ Server running on port ${PORT}`);
+        console.log(`✓ Health check: http://localhost:${PORT}/health`);
+      });
+    })
+    .catch(err => {
+      console.error('Failed to start server:', err);
+      process.exit(1);
+    });
+} else {
+  // Serverless (Vercel) — init DB in background, Sequelize pool handles reconnection
+  initDb().catch(err => console.error('DB init error:', err));
+}
 
 module.exports = app;
