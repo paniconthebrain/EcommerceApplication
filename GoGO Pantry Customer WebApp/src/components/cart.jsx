@@ -49,18 +49,23 @@ export function CustomerCart({ shopId, cartItems, onUpdateCart, onCheckout, onCo
               </div>
               <div>
                 {cartProducts.map((p, i) => (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderTop: i ? "1px solid var(--line)" : "none" }}>
-                    <div style={{ width: 70, height: 70, borderRadius: 11, background: `oklch(0.92 0.07 ${G.catOf(p.cat)?.hue || 152})`, display: "grid", placeItems: "center", flexShrink: 0, color: `oklch(0.6 0.08 ${G.catOf(p.cat)?.hue || 152})` }}><IconC name="cart" size={32} stroke={1.5} /></div>
+                  <div key={p.id} className="cart-item-row" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderTop: i ? "1px solid var(--line)" : "none" }}>
+                    <div className="cart-item-img" style={{ width: 64, height: 64, borderRadius: 11, background: `oklch(0.92 0.07 ${G.catOf(p.cat)?.hue || 152})`, flexShrink: 0, overflow: "hidden", display: "grid", placeItems: "center", color: `oklch(0.6 0.08 ${G.catOf(p.cat)?.hue || 152})` }}>
+                      {p.image
+                        ? <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <IconC name="cart" size={28} stroke={1.5} />
+                      }
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text)", marginBottom: 2 }}>{p.name}</div>
+                      <div style={{ fontWeight: 600, fontSize: 14, color: "var(--text)", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
                       <div style={{ fontSize: 12, color: "var(--text-2)" }}>{p.unit} · {G.money(p.price)}</div>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <button onClick={() => onUpdateCart(p.id, Math.max(0, p.qty - 1))} style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid var(--line)", background: "transparent", color: "var(--text-2)", cursor: "pointer", fontFamily: "var(--font-sans)" }}>−</button>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", minWidth: 24, textAlign: "center" }}>{p.qty}</span>
-                      <button onClick={() => onUpdateCart(p.id, p.qty + 1)} style={{ width: 28, height: 28, borderRadius: 7, border: "1px solid var(--line)", background: "transparent", color: "var(--text-2)", cursor: "pointer", fontFamily: "var(--font-sans)" }}>+</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <button onClick={() => onUpdateCart(p.id, Math.max(0, p.qty - 1))} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid var(--line)", background: "transparent", color: "var(--text-2)", cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 16, display: "grid", placeItems: "center" }}>−</button>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", minWidth: 22, textAlign: "center" }}>{p.qty}</span>
+                      <button onClick={() => onUpdateCart(p.id, p.qty + 1)} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid var(--line)", background: "transparent", color: "var(--text-2)", cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 16, display: "grid", placeItems: "center" }}>+</button>
                     </div>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", minWidth: 60, textAlign: "right" }}>{G.money(p.subtotal)}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", minWidth: 56, textAlign: "right", flexShrink: 0 }}>{G.money(p.subtotal)}</span>
                   </div>
                 ))}
               </div>

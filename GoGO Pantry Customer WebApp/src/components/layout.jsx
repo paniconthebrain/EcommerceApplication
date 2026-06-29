@@ -182,22 +182,22 @@ function WishlistPanel({ savedItems, onClose, onAddToCart, cartItems, onUpdateCa
   );
 }
 
-export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector }) {
+export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, onOpenSearch, onOpenWishlist, savedCount = 0 }) {
   const tabs = [
-    { id: "home",    label: "Home",    icon: "home" },
-    { id: "stores",  label: "Stores",  icon: "pin" },
-    { id: "cart",    label: "Cart",    icon: "cart" },
-    { id: "account", label: "Account", icon: "user" },
+    { id: "home",   label: "Home",   icon: "home" },
+    { id: "search", label: "Search", icon: "search" },
+    { id: "cart",   label: "Cart",   icon: "cart" },
+    { id: "saved",  label: "Saved",  icon: "heart" },
   ];
 
   const handleTab = (id) => {
-    if (id === "stores") { onOpenShopSelector(); return; }
-    if (id === "account") return;
+    if (id === "search") { onOpenSearch?.(); return; }
+    if (id === "saved") { onOpenWishlist?.(); return; }
     if (id === "cart") { setPage("cart"); return; }
     setPage("home");
   };
 
-  const activeTab = page === "cart" ? "cart" : page === "home" ? "home" : page === "browse" ? "stores" : "home";
+  const activeTab = page === "cart" ? "cart" : page === "home" ? "home" : "home";
 
   return (
     <nav
@@ -242,6 +242,14 @@ export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector }
                   borderRadius: 999, display: "grid", placeItems: "center",
                   boxShadow: "0 2px 6px oklch(0.55 0.17 152 / 0.4)",
                 }}>{cartCount > 9 ? "9+" : cartCount}</span>
+              )}
+              {tab.id === "saved" && savedCount > 0 && (
+                <span style={{
+                  position: "absolute", top: -6, right: -8,
+                  background: "var(--red-500)", color: "#fff",
+                  fontSize: 9, fontWeight: 800, width: 17, height: 17,
+                  borderRadius: 999, display: "grid", placeItems: "center",
+                }}>{savedCount > 9 ? "9+" : savedCount}</span>
               )}
             </div>
             <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500, letterSpacing: "0.01em" }}>{tab.label}</span>
@@ -318,6 +326,26 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             {currentShopName || "Select store"}
           </span>
           <IconC name="chevD" size={12} stroke={2.5} />
+        </button>
+
+        {/* Mobile store pill — shows only on mobile */}
+        <button
+          onClick={() => { if (G.SHOPS.length === 1) { setStorePopupShop(G.SHOPS[0]); } else { setShopSelectorOpen(true); } }}
+          className="showOnMobile"
+          style={{
+            display: "flex", alignItems: "center", gap: 5, padding: "6px 10px",
+            borderRadius: 999, border: "1.5px solid var(--line)",
+            background: currentShopName ? "var(--primary-soft)" : "var(--surface-2)",
+            color: currentShopName ? "var(--green-700)" : "var(--text-3)",
+            fontSize: 12, fontWeight: 700, cursor: "pointer",
+            fontFamily: "var(--font-sans)", transition: "all 0.16s var(--ease)",
+            maxWidth: 120, overflow: "hidden",
+          }}
+        >
+          <IconC name="pin" size={12} stroke={2.5} />
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {currentShopName || "Store"}
+          </span>
         </button>
 
         <div style={{ flex: 1 }} />
@@ -459,6 +487,9 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
         setPage={setPage}
         cartCount={cartCount}
         onOpenShopSelector={() => setShopSelectorOpen(true)}
+        onOpenSearch={() => setShowSearch(true)}
+        onOpenWishlist={() => setShowWishlist(true)}
+        savedCount={savedItems.size}
       />
 
       {/* ── Footer ── */}

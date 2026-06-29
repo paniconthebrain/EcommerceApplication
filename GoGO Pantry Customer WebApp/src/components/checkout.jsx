@@ -5,18 +5,18 @@ import { BtnC, ConfirmDialog } from './ui.jsx';
 
 export function ProgressIndicator({ currentStep, steps = ["Cart", "Checkout", "Confirm"] }) {
   return (
-    <div style={{ padding: "20px 16px", background: "var(--surface)", borderBottom: "1px solid var(--line)" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", gap: 16, justifyContent: "center" }}>
+    <div style={{ padding: "14px 16px", background: "var(--surface)", borderBottom: "1px solid var(--line)" }}>
+      <div className="progress-inner" style={{ maxWidth: 1200, margin: "0 auto" }}>
         {steps.map((step, index) => (
-          <div key={index} style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 999, background: index <= currentStep ? "var(--primary)" : "var(--surface-2)", color: index <= currentStep ? "var(--primary-ink)" : "var(--text-3)", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 14, transition: "all 0.3s var(--ease)", border: `2px solid ${index <= currentStep ? "var(--primary)" : "var(--line)"}` }}>
-              {index < currentStep ? <IconC name="check" size={20} /> : <span>{index + 1}</span>}
+          <div key={index} className="progress-step-item">
+            <div className="progress-step-circle" style={{ width: 40, height: 40, borderRadius: 999, background: index <= currentStep ? "var(--primary)" : "var(--surface-2)", color: index <= currentStep ? "var(--primary-ink)" : "var(--text-3)", display: "grid", placeItems: "center", fontWeight: 800, fontSize: 14, transition: "all 0.3s var(--ease)", border: `2px solid ${index <= currentStep ? "var(--primary)" : "var(--line)"}`, flexShrink: 0 }}>
+              {index < currentStep ? <IconC name="check" size={18} /> : <span>{index + 1}</span>}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: index <= currentStep ? "var(--text)" : "var(--text-2)" }}>{step}</div>
+            <div className="progress-step-label" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: index <= currentStep ? "var(--text)" : "var(--text-2)", whiteSpace: "nowrap" }}>{step}</div>
             </div>
             {index < steps.length - 1 && (
-              <div style={{ flex: 1, height: 2, background: index < currentStep ? "var(--primary)" : "var(--line)", margin: "0 8px", minWidth: 40, transition: "all 0.3s var(--ease)" }} />
+              <div className="progress-connector" style={{ flex: 1, height: 2, background: index < currentStep ? "var(--primary)" : "var(--line)", margin: "0 8px", minWidth: 32, transition: "all 0.3s var(--ease)" }} />
             )}
           </div>
         ))}
@@ -275,7 +275,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
         )}
 
         {step === 2 && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 28, alignItems: "start" }}>
+          <div className="checkout-cols">
             <div>
               <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
                 {[["all","clock","All times"],["morning","sun","Morning"],["afternoon","sun","Afternoon"],["evening","moon","Evening"]].map(([v, ic, l]) => (
@@ -349,12 +349,12 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
               </div>
             </div>
 
-            <div style={{ position: "sticky", top: 20 }}>{renderSummary(false)}</div>
+            <div className="checkout-sticky checkout-summary-first" style={{ position: "sticky", top: 80 }}>{renderSummary(false)}</div>
           </div>
         )}
 
         {step === 3 && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 28, alignItems: "start" }}>
+          <div className="checkout-cols">
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ background: "linear-gradient(135deg, var(--green-100) 0%, var(--blue-100) 100%)", border: "1px solid var(--green-300)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12 }}>
                 <IconC name="leaf" size={24} style={{ color: "var(--green-600)", flexShrink: 0 }} />
@@ -403,7 +403,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
               </div>
             </div>
 
-            <div style={{ position: "sticky", top: 20 }}>{renderSummary(true)}</div>
+            <div className="checkout-sticky checkout-summary-first" style={{ position: "sticky", top: 80 }}>{renderSummary(true)}</div>
           </div>
         )}
       </div>
@@ -448,7 +448,7 @@ export function CustomerConfirmation({ orderData, onNewOrder }) {
         </div>
 
         <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, padding: 20, marginBottom: 24 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid var(--line)" }}>
+          <div className="confirm-detail-grid" style={{ marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid var(--line)" }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 4 }}>Order number</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{order.id}</div>
@@ -458,7 +458,7 @@ export function CustomerConfirmation({ orderData, onNewOrder }) {
               <div style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>${order.total?.toFixed(2)}</div>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          <div className="confirm-detail-grid">
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 4 }}>Delivery method</div>
               <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", display: "flex", alignItems: "center", gap: 8 }}>

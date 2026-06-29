@@ -230,10 +230,10 @@ export function ProductDetailModal({ product, inCart, onClose, onAdd, onUpdateCa
   };
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(6px)" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: 24, width: "100%", maxWidth: 540, maxHeight: "92vh", overflowY: "auto", boxShadow: "var(--shadow-xl)", animation: "scaleIn 0.2s var(--spring)" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "0", backdropFilter: "blur(6px)" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 600, maxHeight: "94vh", overflowY: "auto", boxShadow: "var(--shadow-xl)", animation: "slideInUp 0.25s var(--spring)" }}>
         {/* Image */}
-        <div style={{ position: "relative", background: `linear-gradient(135deg, hsl(${hue},50%,90%) 0%, hsl(${hue},55%,85%) 100%)`, height: 260, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "24px 24px 0 0", flexShrink: 0, overflow: "hidden" }}>
+        <div style={{ position: "relative", background: `linear-gradient(135deg, hsl(${hue},50%,90%) 0%, hsl(${hue},55%,85%) 100%)`, height: 220, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "24px 24px 0 0", flexShrink: 0, overflow: "hidden" }}>
           {product.image
             ? <img src={product.image} alt={product.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
             : <div style={{ color: `hsl(${hue},45%,62%)` }}><IconC name="cart" size={80} stroke={1.2} /></div>
@@ -401,7 +401,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
       </div>
 
       {/* ── Category pills ── */}
-      <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", position: "sticky", top: 62, zIndex: 30, padding: "10px 16px", display: "flex", gap: 8, overflowX: "auto" }}>
+      <div className="cat-strip" style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", position: "sticky", top: 62, zIndex: 30, padding: "10px 16px", display: "flex", gap: 8, overflowX: "auto" }}>
         <button
           className={`cat-pill${cat === "all" ? " active" : ""}`}
           onClick={() => { setCat("all"); setSearch(""); }}
@@ -478,7 +478,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
               <p style={{ fontSize: 13, margin: 0 }}>Try adjusting your filters or search</p>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(178px, 1fr))", gap: 14 }}>
+            <div className="prod-browse-grid">
               {products.map(p => {
                 const inCart = cartItems[p.id] || 0;
                 const ss = G.stockState(p.stock);

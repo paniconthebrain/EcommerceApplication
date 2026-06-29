@@ -56,7 +56,7 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
       {/* Slide track */}
       <div style={{ display: "flex", transform: `translateX(-${slide * 100}%)`, transition: "transform 0.65s cubic-bezier(0.4, 0, 0.2, 1)", willChange: "transform" }}>
         {HERO_SLIDES.map((sl, i) => (
-          <div key={i} style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "72px 24px 88px", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
+          <div key={i} className="hero-slide-inner" style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "72px 24px 88px", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
             {/* Background texture dots */}
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
               {[["-8%","8%",72,0.1],["-5%","55%",48,0.07],["82%","6%",64,0.09],["90%","52%",52,0.08],["55%","82%",40,0.07],["38%","-6%",56,0.08]].map(([l, t, sz, op], di) => (
@@ -196,7 +196,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
         {filteredShops.length === 0 ? (
           <EmptyState icon="search" title="No stores found" sub="Try a different search term" />
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 320px))", gap: 20, maxWidth: filteredShops.length === 1 ? 360 : filteredShops.length === 2 ? 720 : "100%" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(270px, 100%), 320px))", gap: 20, maxWidth: filteredShops.length === 1 ? 360 : filteredShops.length === 2 ? 720 : "100%" }}>
             {filteredShops.map(shop => <ShopCard key={shop.id} shop={shop} onSelect={() => onSelectShop(shop.id)} />)}
           </div>
         )}
@@ -219,7 +219,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
 
       {/* ── Promo Banner ── */}
       <div style={{ margin: "0 24px 0", maxWidth: 1400, marginLeft: "auto", marginRight: "auto" }}>
-        <div style={{ background: "linear-gradient(135deg, oklch(0.42 0.18 255) 0%, oklch(0.35 0.16 255) 100%)", borderRadius: 24, color: "#fff", padding: "44px 40px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap", margin: "48px 24px", position: "relative", overflow: "hidden" }}>
+        <div className="promo-banner-body" style={{ background: "linear-gradient(135deg, oklch(0.42 0.18 255) 0%, oklch(0.35 0.16 255) 100%)", borderRadius: 24, color: "#fff", padding: "40px 36px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap", margin: "48px 24px", position: "relative", overflow: "hidden" }}>
           {/* bg decoration */}
           <div style={{ position: "absolute", right: -20, top: -20, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,0.06)", pointerEvents: "none" }} />
           <div style={{ position: "absolute", right: 60, bottom: -40, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />

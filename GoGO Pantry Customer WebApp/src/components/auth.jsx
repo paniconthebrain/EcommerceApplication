@@ -6,13 +6,13 @@ import { IconC } from './icons.jsx';
 /* ── Shared inline style tweaks for compact auth ── */
 const cardCompact = {
   ...authCardStyle,
-  padding: '32px 36px',
+  padding: '32px 32px',
 };
 
 const cardWide = {
   ...authCardStyle,
   maxWidth: '500px',
-  padding: '28px 36px',
+  padding: '28px 32px',
 };
 
 const headingCompact = {
@@ -29,7 +29,7 @@ const subtitleCompact = {
 
 const fieldCompact = { marginBottom: 12 };
 
-const row2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' };
+const row2 = {}; // responsive class auth-row2 handles this
 
 const linkBtn = {
   background: 'none', border: 'none', color: 'var(--primary)',
@@ -73,7 +73,7 @@ export function CustomerLogin({ onLoginSuccess, onSignupClick, onForgotClick }) 
 
   return (
     <div style={authContainerStyle}>
-      <div style={cardCompact}>
+      <div style={cardCompact} className="auth-card-responsive">
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
           <LogoCustomer size={30} />
         </div>
@@ -160,7 +160,7 @@ export function CustomerSignup({ onSignupSuccess, onLoginClick }) {
 
   return (
     <div style={authContainerStyle}>
-      <div style={cardWide}>
+      <div style={cardWide} className="auth-card-responsive">
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
           <LogoCustomer size={28} />
         </div>
@@ -171,7 +171,7 @@ export function CustomerSignup({ onSignupSuccess, onLoginClick }) {
 
         <form onSubmit={handleSubmit}>
           {/* Row 1: Name + Phone */}
-          <div style={row2}>
+          <div className="auth-row2" style={{ marginBottom: 0 }}>
             <label style={{ display: 'block', marginBottom: 12 }}>
               <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 5 }}>Full name *</span>
               <input type="text" value={form.name} onChange={set('name')}
@@ -192,7 +192,7 @@ export function CustomerSignup({ onSignupSuccess, onLoginClick }) {
           </label>
 
           {/* Row 3: Password + Confirm */}
-          <div style={row2}>
+          <div className="auth-row2">
             <label style={{ display: 'block', marginBottom: 12 }}>
               <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 5 }}>Password *</span>
               <input type="password" value={form.password} onChange={set('password')}
