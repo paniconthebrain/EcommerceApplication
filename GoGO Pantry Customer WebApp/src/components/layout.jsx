@@ -660,14 +660,14 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
               {[
                 { label: "Privacy Policy",   page: "privacy" },
-                { label: "Terms of Service", page: null },
-                { label: "Cookie Settings",  page: null },
+                { label: "Terms of Service", page: "terms" },
+                { label: "Cookie Settings",  page: "cookies" },
               ].map(({ label, page: pg }) => (
                 <span key={label}
                   onClick={() => pg && setPage(pg)}
-                  style={{ fontSize: 12, color: pg ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.2)", cursor: pg ? "pointer" : "default", fontWeight: 500, transition: "color 0.15s" }}
-                  onMouseEnter={e => { if (pg) e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}
-                  onMouseLeave={e => e.currentTarget.style.color = pg ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.2)"}>{label}</span>
+                  style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", cursor: "pointer", fontWeight: 500, transition: "color 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}
+                  onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}>{label}</span>
               ))}
             </div>
           </div>

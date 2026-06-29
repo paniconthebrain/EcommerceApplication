@@ -8,6 +8,8 @@ import { CustomerCheckout, CustomerConfirmation } from './components/checkout.js
 import { CustomerShell } from './components/layout.jsx';
 import { AboutUs } from './components/about.jsx';
 import { PrivacyPolicy } from './components/privacy.jsx';
+import { TermsOfService } from './components/terms.jsx';
+import { CookieSettings } from './components/cookies.jsx';
 import { CareersPage } from './components/careers.jsx';
 
 function pageToPath(page, shopId) {
@@ -17,6 +19,8 @@ function pageToPath(page, shopId) {
   if (page === "confirmation")     return "/confirmation";
   if (page === "about")            return "/about";
   if (page === "privacy")          return "/privacy";
+  if (page === "terms")            return "/terms";
+  if (page === "cookies")          return "/cookies";
   if (page === "careers")          return "/careers";
   return "/";
 }
@@ -29,6 +33,8 @@ function pathToState(pathname) {
   if (pathname === "/reset-password") return { page: "reset-password", shopId: null };
   if (pathname === "/about")          return { page: "about",          shopId: null };
   if (pathname === "/privacy")        return { page: "privacy",        shopId: null };
+  if (pathname === "/terms")          return { page: "terms",          shopId: null };
+  if (pathname === "/cookies")        return { page: "cookies",        shopId: null };
   if (pathname === "/careers")        return { page: "careers",        shopId: null };
   return { page: "home", shopId: null };
 }
@@ -205,14 +211,8 @@ export default function CustomerApp() {
   const cartCount = Object.values(cartItems).reduce((s, q) => s + q, 0);
 
   // Guard: browse requires a shopId — redirect home if missing
-  if (page === "browse" && !shopId) {
-    navigate("home", null);
-  }
-
-  // Guard: confirmation requires orderData — redirect home if missing (e.g. page refresh)
-  if (page === "confirmation" && !orderData) {
-    navigate("home", null);
-  }
+  if (page === "browse" && !shopId) navigate("home", null);
+  if (page === "confirmation" && !orderData) navigate("home", null);
 
   const screens = {
     home: <CustomerHomepage onSelectShop={handleSelectShop} shopId={shopId} onGoToBrowse={(catId) => { setInitialCat(catId || null); setPage("browse"); }} />,
@@ -222,6 +222,8 @@ export default function CustomerApp() {
     confirmation: orderData ? <CustomerConfirmation orderData={orderData} onNewOrder={handleNewOrder} /> : null,
     about: <AboutUs />,
     privacy: <PrivacyPolicy />,
+    terms: <TermsOfService />,
+    cookies: <CookieSettings />,
     careers: <CareersPage onBack={() => navigate("home")} />,
   };
 
