@@ -152,10 +152,12 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
       ))}
 
       {/* Progress dots */}
-      <div style={{ position: "absolute", bottom: 14, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4, zIndex: 10 }}>
+      <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", zIndex: 10 }}>
         {HERO_SLIDES.map((_, i) => (
           <button key={i} onClick={() => { setPaused(true); setSlide(i); }}
-            style={{ width: i === slide ? 14 : 5, height: 5, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.4)", border: "none", cursor: "pointer", transition: "all 0.32s var(--spring)", padding: 0 }} />
+            style={{ padding: "6px 3px", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
+            <span style={{ display: "block", width: i === slide ? 14 : 4, height: 4, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.45)", transition: "all 0.32s var(--spring)" }} />
+          </button>
         ))}
       </div>
     </div>
