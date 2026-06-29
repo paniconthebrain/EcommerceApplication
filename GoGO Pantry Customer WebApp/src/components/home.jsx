@@ -152,10 +152,10 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
       ))}
 
       {/* Progress dots */}
-      <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 5, zIndex: 10 }}>
+      <div style={{ position: "absolute", bottom: 14, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4, zIndex: 10 }}>
         {HERO_SLIDES.map((_, i) => (
           <button key={i} onClick={() => { setPaused(true); setSlide(i); }}
-            style={{ width: i === slide ? 20 : 6, height: 6, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.35)", border: "none", cursor: "pointer", transition: "all 0.32s var(--spring)", padding: 0 }} />
+            style={{ width: i === slide ? 14 : 5, height: 5, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.4)", border: "none", cursor: "pointer", transition: "all 0.32s var(--spring)", padding: 0 }} />
         ))}
       </div>
     </div>
@@ -197,7 +197,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
           title={search ? "Search Results" : "Featured Stores"}
           sub={`${filteredShops.length} store${filteredShops.length !== 1 ? "s" : ""} available near you`}
           action={
-            <div style={{ position: "relative", maxWidth: 220 }}>
+            <div className="hideOnMobile" style={{ position: "relative", maxWidth: 220 }}>
               <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }}><IconC name="search" size={15} /></span>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores…"
                 style={{ width: "100%", padding: "8px 12px 8px 33px", borderRadius: 999, border: "1.5px solid var(--line)", background: "var(--surface)", color: "var(--text)", fontSize: 13, fontFamily: "var(--font-sans)", outline: "none" }} />

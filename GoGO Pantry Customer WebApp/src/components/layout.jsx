@@ -227,7 +227,7 @@ export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, 
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
               justifyContent: "center", gap: 3, padding: "10px 0 8px",
               border: "none", background: "transparent",
-              color: isActive ? "var(--primary)" : "var(--text-3)",
+              color: tab.id === "saved" ? "#e8436a" : isActive ? "var(--primary)" : "var(--text-3)",
               cursor: "pointer", fontFamily: "var(--font-sans)",
               transition: "color 0.15s", position: "relative",
             }}
