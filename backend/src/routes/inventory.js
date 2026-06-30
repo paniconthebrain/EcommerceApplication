@@ -176,6 +176,13 @@ router.patch('/shops/:shopId/inventory/:productId', authMiddleware, async (req, 
       throw new ValidationError('Stock is required when action is "set"');
     }
 
+    // Validate shop and product exist before any write
+    const shop = await Shop.findByPk(shopId);
+    if (!shop) throw new NotFoundError(`Shop "${shopId}" not found`);
+
+    const productRecord = await Product.findByPk(productId);
+    if (!productRecord) throw new NotFoundError(`Product "${productId}" not found`);
+
     let inventory = await Inventory.findOne({
       where: { shopId, productId },
       include: [{ model: Product, attributes: ['id', 'name'] }],
