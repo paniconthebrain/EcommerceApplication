@@ -124,10 +124,20 @@ const isProduction = process.env.NODE_ENV === 'production';
 async function initDb() {
   await sequelize.authenticate();
   console.log('✓ Database connection established');
-  await sequelize.sync({ alter: true });
+  await sequelize.sync(isProduction ? {} : { alter: true });
   console.log('✓ Database synced');
   // Fix department_id NOT NULL constraint — safe to re-run, ignored if already dropped
   await sequelize.query('ALTER TABLE "categories" ALTER COLUMN "department_id" DROP NOT NULL').catch(() => {});
+  // Add product detail columns — IF NOT EXISTS makes these safe to re-run on every cold start
+  const addCol = (col, type) =>
+    sequelize.query(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "${col}" ${type}`).catch(() => {});
+  await addCol('barcode', 'VARCHAR(50)');
+  await addCol('ingredients', 'TEXT');
+  await addCol('nutrition_facts', 'JSONB');
+  await addCol('allergens', 'JSON');
+  await addCol('country_of_origin', 'VARCHAR(100)');
+  await addCol('storage_instructions', 'VARCHAR(500)');
+  console.log('✓ Product detail columns ensured');
 }
 
 // require.main === module is true when run directly (local dev), false when imported by Vercel
