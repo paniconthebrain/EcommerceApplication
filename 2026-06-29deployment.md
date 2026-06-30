@@ -222,3 +222,97 @@ Domain `gogopantry.com` is registered on Bluehost. DNS was configured to point t
 - Removed `Co-Authored-By: Claude` lines from all commits on both `main` and `dev` using `git filter-branch --msg-filter`
 - Force pushed both branches to GitHub
 - Going forward: no Co-Authored-By lines will be added to commits
+
+---
+
+## Session 3 (2026-06-30) — Auth Overlay, Careers, Security Hardening & UAT Fixes
+
+### Auth Modal → Transparent Overlay
+**`GoGO Pantry Customer WebApp/src/App.jsx`**
+- Removed the early-return pattern that replaced the whole page with the auth screen
+- Login/Signup/ForgotPassword now render as a `position: fixed` blurred overlay (`backdropFilter: blur(8px)`, `rgba(0,0,0,0.45)`) on top of the current page
+- Clicking the backdrop closes the overlay; card click stops propagation
+- `closeOverlay()` helper clears both `showAuth` and `pendingCartId` on dismiss
+
+**`GoGO Pantry Customer WebApp/src/components/auth.jsx`**
+- Added `overlay` prop to `CustomerLogin`, `CustomerSignup`, `ForgotPassword`
+- When `overlay=true`: renders card only (no full-page container wrapper)
+- When `overlay=true` + `onClose`: shows `×` button (absolute top-right)
+- When `overlay=false` + `onClose`: shows `← Back` text button
+- Card sizes: compact `maxWidth 520px / padding 48px 52px`, wide `maxWidth 620px / padding 44px 52px`
+- "Forgot password?" moved below password field
+
+### Careers Feature
+**New files:**
+- `GoGO Pantry Customer WebApp/src/components/careers.jsx` — Public job application form: name, email, phone, position dropdown (8 roles), cover letter, PDF upload zone (5 MB limit, PDF-only client-side check). Success screen on submit.
+- `GoGO Pantry Staff/src/components/admin/ManageApplicationsScreen.jsx` — Admin-only view: filter tabs (all/new/reviewed/rejected with counts), table of applicants, detail modal with cover letter, Download PDF button, status update (new/reviewed/rejected)
+- `backend/src/models/JobApplication.js` — Sequelize model: id (UUID PK), name, email, phone, position, coverLetter, resumeBase64 (TEXT), resumeFilename, status ENUM(new/reviewed/rejected). Table: `job_applications`
+- `backend/src/routes/careers.js` — Public `POST /apply` with multer memoryStorage, MIME check, magic byte check (`%PDF`), filename sanitisation, position enum validation, 7-day duplicate-email check. Admin-only GET/PATCH/DELETE all behind `authMiddleware + requireRole('admin')`
+
+**Wired into:**
+- `backend/src/index.js` — `app.use('/api/careers', careersRoutes)`
+- `backend/src/models/index.js` — exports `JobApplication`
+- `GoGO Pantry Customer WebApp/src/App.jsx` — `/careers` route
+- `GoGO Pantry Customer WebApp/src/components/layout.jsx` — Footer "Careers" link navigates to page
+- `GoGO Pantry Staff/src/components/Shell.jsx` — "Applications" item in ADMIN_ITEMS sidebar
+- `GoGO Pantry Staff/src/App.jsx` — `"job-applications"` screen mapped to `ManageApplicationsScreen` wrapped in `AdminOnly`
+
+### Security Hardening
+**DB-backed token blacklist** (replaced unreliable in-memory Set):
+- `backend/src/models/TokenBlacklist.js` — Sequelize model: token (TEXT PK), expiresAt (DATE). Table: `token_blacklist`, no timestamps
+- `backend/src/utils/tokenBlacklist.js` — Fully async. `blacklistToken()` uses `upsert`. `isBlacklisted()` queries DB with `Op.gt: new Date()`. Fail-safe: returns `true` on DB error (deny by default). Hourly cleanup of expired rows via `setInterval`
+- `backend/src/middleware/authMiddleware.js` — Made async, `await isBlacklisted(token)`
+- `backend/src/middleware/customerAuthMiddleware.js` — Made async, `await isBlacklisted(token)`
+- `backend/src/routes/auth.js` — logout handler made async, `await blacklistToken(req.token)`
+- `backend/src/routes/customerAuth.js` — logout handler made async, `await blacklistToken(req.token)`
+
+**PDF upload security:**
+- Magic byte check: `req.file.buffer.slice(0, 4).toString('ascii') !== '%PDF'` — rejects non-PDFs even if MIME type is spoofed
+- Filename sanitisation: strips non-safe chars, collapses `..`, truncates to 100 chars
+
+### UAT Fixes (2026-06-30)
+Full UAT was run and the following bugs were fixed:
+
+**Broken features fixed:**
+- Newsletter subscribe button now functional (UI confirmation state, Enter key support)
+- User menu "My orders" / "Account settings" show "Soon" badge instead of silently doing nothing
+- Social media footer: real SVG icons, real links (Facebook/Instagram/TikTok), open in new tab — previously decorative divs
+- Footer bottom bar: Terms of Service and Cookie Settings now navigate to real pages
+- Confirmation page on refresh: redirects home instead of blank screen
+- Browse page without shopId: redirects home instead of blank screen
+
+**Data/logic bugs fixed:**
+- Logout no longer calls `syncCartToServer({})` — server cart is preserved for next login
+- Closing auth overlay now clears `pendingCartId`
+- Tax rate corrected 8% → 10% GST; label reads "GST (10%)" throughout checkout
+- `onNavigatePage` dead prop removed from `CustomerShell` signature
+
+**Backend validation:**
+- Careers `POST /apply`: position validated against known enum (`VALID_POSITIONS` array)
+- Careers `POST /apply`: duplicate email rejected within 7 days
+
+**Staff app:**
+- Delete application replaced `window.confirm()` with app's `ConfirmDialog` component
+
+**Mobile UX:**
+- Bottom nav active tab fixed — was always "Home"; now correctly tracks cart vs home vs nothing
+
+### New Pages Added
+- `GoGO Pantry Customer WebApp/src/components/terms.jsx` — Terms of Service: 11 sections (acceptance, services, orders & payment, pickup policy, user accounts, IP, liability, prohibited conduct, governing law, amendments, contact)
+- `GoGO Pantry Customer WebApp/src/components/cookies.jsx` — Cookie Settings: interactive toggles for Necessary / Preference / Analytics / Marketing. Sticky save bar with "Accept all" and "Save preferences". Persists to `localStorage`. Toggles have animated slide, "Always on" badge for Necessary.
+
+Both pages wired into `pageToPath`, `pathToState`, and `screens` map in `App.jsx`. Footer bottom bar links now navigate to them.
+
+### Social Icons (Footer)
+- Replaced placeholder letter buttons with real SVG brand icons
+- Facebook → `https://www.facebook.com/gogopantryusa/`
+- Instagram → `https://www.instagram.com/gogo.pantry/`
+- TikTok → `https://www.tiktok.com/@gogo.pantry`
+- X (Twitter) and YouTube removed
+- All open `target="_blank" rel="noopener noreferrer"` with brand-color hover glow
+
+### Current Branch State
+- All work on `dev` branch
+- 6 commits ahead of `origin/dev` (not yet pushed to remote)
+- Both frontends rebuilt with `npm run build` after every change
+- Next step before going live: merge `dev` → `main` and redeploy all three Vercel projects
