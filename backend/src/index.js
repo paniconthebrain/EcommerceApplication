@@ -124,7 +124,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 async function initDb() {
   await sequelize.authenticate();
   console.log('✓ Database connection established');
-  await sequelize.sync(isProduction ? {} : { alter: true });
+  await sequelize.sync({ alter: true });
   console.log('✓ Database synced');
   // Fix department_id NOT NULL constraint — safe to re-run, ignored if already dropped
   await sequelize.query('ALTER TABLE "categories" ALTER COLUMN "department_id" DROP NOT NULL').catch(() => {});
