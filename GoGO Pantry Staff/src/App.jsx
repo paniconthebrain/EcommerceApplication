@@ -87,8 +87,20 @@ export default function StaffApp() {
 
   if (!user) return <StaffLogin onLogin={handleLogin} />;
   if (shopLoading || !shopId) return (
-    <div style={{ height: "100vh", display: "grid", placeItems: "center", background: "var(--surface)", color: "var(--text-3)", fontFamily: "var(--font-sans)", fontSize: 14 }}>
-      Loading…
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, background: "var(--bg)", fontFamily: "var(--font-sans)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--primary)", display: "grid", placeItems: "center" }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        </div>
+        <span style={{ fontSize: 20, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.01em" }}>GoGoPantry</span>
+      </div>
+      <div style={{ display: "flex", gap: 7 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--primary)", animation: `gp-pulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+        ))}
+      </div>
+      <style>{`@keyframes gp-pulse { 0%,100%{opacity:.25;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }`}</style>
+      <span style={{ fontSize: 13, color: "var(--text-3)", fontWeight: 500 }}>Loading your workspace…</span>
     </div>
   );
 

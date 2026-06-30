@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { G, API_BASE, apiFetch } from '../../globals.js';
 import { Btn, Pill, ProductSwatch, ConfirmDialog } from '../ui.jsx';
-import { AdminPageWrap, MgmtModal, MgmtTable, FieldRow, inputStyle } from './shared.jsx';
+import { AdminPageWrap, MgmtTable, FieldRow, inputStyle } from './shared.jsx';
+import { Icon } from '../icons.jsx';
 
 const ALLERGEN_OPTIONS = ['gluten', 'dairy', 'nuts', 'soy', 'eggs', 'fish', 'shellfish', 'sesame'];
 const STATUS_OPTIONS   = ['draft', 'active', 'archived'];
@@ -23,6 +24,8 @@ const EMPTY_FORM = {
   nutritionFacts: { servingSize: '', calories: '', fat: '', protein: '', carbs: '', sugar: '', sodium: '', fiber: '' },
   attributes: [],
 };
+
+const noScroll = { onWheel: e => e.currentTarget.blur() };
 
 function GalleryEditor({ images, onChange }) {
   const fileRef = useRef(null);
@@ -86,7 +89,7 @@ function AttributeEditor({ attrs, onChange }) {
 
 function SectionHead({ label }) {
   return (
-    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '18px 0 10px', paddingBottom: 6, borderBottom: '1px solid var(--line)' }}>
+    <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', margin: '24px 0 12px', paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
       {label}
     </div>
   );
@@ -97,7 +100,7 @@ export default function ManageProductsScreen() {
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading]     = useState(true);
-  const [modal, setModal]         = useState(false);
+  const [view, setView]           = useState('list'); // 'list' | 'form'
   const [editing, setEditing]     = useState(null);
   const [form, setForm]           = useState(EMPTY_FORM);
   const [err, setErr]             = useState('');
@@ -170,7 +173,7 @@ export default function ManageProductsScreen() {
     setForm(EMPTY_FORM);
     setHeroFile(null);
     setErr('');
-    setModal(true);
+    setView('form');
   }
 
   function openEdit(p) {
@@ -178,7 +181,7 @@ export default function ManageProductsScreen() {
     setForm(formFromProduct(p));
     setHeroFile(null);
     setErr('');
-    setModal(true);
+    setView('form');
   }
 
   function handleDelete(p) { setConfirmDel({ open: true, item: p }); }
@@ -266,7 +269,7 @@ export default function ManageProductsScreen() {
         setErr(d?.error || 'Failed to save product');
         return;
       }
-      setModal(false);
+      setView('list');
       load();
     } catch { setErr('Network error — please try again'); }
     finally { setSaving(false); }
@@ -305,6 +308,211 @@ export default function ManageProductsScreen() {
     };
   });
 
+  // ── Product form (inline page) ──
+  if (view === 'form') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {/* Sticky header */}
+        <div style={{ padding: '20px 34px 0', borderBottom: '1px solid var(--line)', background: 'var(--surface)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 18 }}>
+            <button
+              type="button"
+              onClick={() => setView('list')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+            >
+              <Icon name="chevR" size={14} style={{ transform: 'rotate(180deg)' }} /> Back to products
+            </button>
+            <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', margin: 0 }}>
+              {editing ? 'Edit product' : 'Add product'}
+            </h1>
+          </div>
+        </div>
+
+        {/* Scrollable form body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '28px 34px 60px' }}>
+          <form onSubmit={handleSubmit} style={{ maxWidth: 820 }}>
+
+            <SectionHead label="Basic info" />
+            <FieldRow label="Product name *">
+              <input required value={form.name} onChange={e => set('name', e.target.value)} style={inputStyle} placeholder="e.g. Organic Whole Milk" />
+            </FieldRow>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <FieldRow label="Brand">
+                <input value={form.brand} onChange={e => set('brand', e.target.value)} style={inputStyle} placeholder="e.g. Organic Valley" />
+              </FieldRow>
+              <FieldRow label="Unit *">
+                <input required value={form.unit} onChange={e => set('unit', e.target.value)} style={inputStyle} placeholder="each, kg, oz…" />
+              </FieldRow>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <FieldRow label="Category *">
+                <select required value={form.categoryId} onChange={e => set('categoryId', e.target.value)} style={inputStyle}>
+                  <option value="">Select category</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </FieldRow>
+              <FieldRow label="Supplier *">
+                <select required value={form.supplierId} onChange={e => set('supplierId', e.target.value)} style={inputStyle}>
+                  <option value="">Select supplier</option>
+                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </FieldRow>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <FieldRow label="Product type">
+                <select value={form.productType} onChange={e => set('productType', e.target.value)} style={inputStyle}>
+                  {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </FieldRow>
+              <FieldRow label="Status">
+                <select value={form.status} onChange={e => set('status', e.target.value)} style={inputStyle}>
+                  {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                </select>
+              </FieldRow>
+            </div>
+
+            <SectionHead label="Pricing & stock" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14 }}>
+              <FieldRow label="Price ($) *">
+                <input required type="number" min="0" step="0.01" value={form.price} onChange={e => set('price', e.target.value)} style={inputStyle} placeholder="0.00" {...noScroll} />
+              </FieldRow>
+              <FieldRow label="Sale price ($)">
+                <input type="number" min="0" step="0.01" value={form.salePrice} onChange={e => set('salePrice', e.target.value)} style={inputStyle} placeholder="—" {...noScroll} />
+              </FieldRow>
+              <FieldRow label="Cost price ($)">
+                <input type="number" min="0" step="0.01" value={form.costPrice} onChange={e => set('costPrice', e.target.value)} style={inputStyle} placeholder="—" {...noScroll} />
+              </FieldRow>
+              <FieldRow label="Par (reorder)">
+                <input type="number" min="0" value={form.par} onChange={e => set('par', e.target.value)} style={inputStyle} placeholder="10" {...noScroll} />
+              </FieldRow>
+            </div>
+
+            <SectionHead label="Media" />
+            <FieldRow label="Featured image">
+              <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                {(heroFile || form.featuredImage) && (
+                  <div style={{ width: 100, height: 100, borderRadius: 12, overflow: 'hidden', border: '1.5px solid var(--line)', flexShrink: 0 }}>
+                    <img src={heroFile || form.featuredImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <input ref={heroRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleHeroFile} />
+                  <button type="button" onClick={() => heroRef.current?.click()}
+                    style={{ padding: '9px 16px', borderRadius: 9, border: '1.5px solid var(--line)', background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                    {form.featuredImage ? 'Replace image' : 'Upload image'}
+                  </button>
+                  {form.featuredImage && (
+                    <button type="button" onClick={() => { setHeroFile(null); set('featuredImage', ''); }}
+                      style={{ marginLeft: 8, padding: '9px 12px', borderRadius: 9, border: 'none', background: 'none', color: 'var(--red-500)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            </FieldRow>
+            <FieldRow label="Gallery images">
+              <GalleryEditor images={form.galleryImages} onChange={imgs => set('galleryImages', imgs)} />
+            </FieldRow>
+
+            <SectionHead label="Description" />
+            <FieldRow label="Short description">
+              <textarea rows={2} value={form.shortDescription} onChange={e => set('shortDescription', e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Brief summary shown on product cards…" />
+            </FieldRow>
+            <FieldRow label="Full description">
+              <textarea rows={4} value={form.description} onChange={e => set('description', e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Full product description shown on the detail page…" />
+            </FieldRow>
+
+            <SectionHead label="Product details" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <FieldRow label="Size">
+                <input value={form.size} onChange={e => set('size', e.target.value)} style={inputStyle} placeholder="e.g. 32oz, 500ml" />
+              </FieldRow>
+              <FieldRow label="Weight">
+                <input value={form.weight} onChange={e => set('weight', e.target.value)} style={inputStyle} placeholder="e.g. 1.5 lbs" />
+              </FieldRow>
+              <FieldRow label="Barcode (UPC/EAN)">
+                <input value={form.barcode} onChange={e => set('barcode', e.target.value)} style={inputStyle} placeholder="e.g. 012345678901" />
+              </FieldRow>
+              <FieldRow label="Country of origin">
+                <input value={form.countryOfOrigin} onChange={e => set('countryOfOrigin', e.target.value)} style={inputStyle} placeholder="e.g. USA" />
+              </FieldRow>
+            </div>
+            <FieldRow label="Storage instructions">
+              <input value={form.storageInstructions} onChange={e => set('storageInstructions', e.target.value)} style={inputStyle} placeholder="e.g. Keep refrigerated below 4°C" />
+            </FieldRow>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text)', cursor: 'pointer', fontWeight: 600 }}>
+                <input type="checkbox" checked={form.isRestricted18Plus} onChange={e => set('isRestricted18Plus', e.target.checked)} style={{ accentColor: 'var(--primary)', width: 16, height: 16 }} />
+                Age-restricted (18+)
+              </label>
+            </div>
+            <FieldRow label="Custom attributes">
+              <AttributeEditor attrs={form.attributes} onChange={a => set('attributes', a)} />
+            </FieldRow>
+
+            <SectionHead label="Ingredients & nutrition" />
+            <FieldRow label="Ingredients">
+              <textarea rows={3} value={form.ingredients} onChange={e => set('ingredients', e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Full ingredient list…" />
+            </FieldRow>
+            <FieldRow label="Allergens">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 2 }}>
+                {ALLERGEN_OPTIONS.map(a => (
+                  <button key={a} type="button" onClick={() => toggleAllergen(a)}
+                    style={{ padding: '5px 13px', borderRadius: 7, border: '1.5px solid', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)', transition: 'all 0.12s',
+                      borderColor: form.allergens.includes(a) ? 'var(--amber-500)' : 'var(--line)',
+                      background: form.allergens.includes(a) ? 'var(--amber-100)' : 'transparent',
+                      color: form.allergens.includes(a) ? '#92400e' : 'var(--text-2)' }}>
+                    {a.charAt(0).toUpperCase() + a.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </FieldRow>
+
+            <FieldRow label="Nutrition facts" helper="Leave blank if not applicable (e.g. non-food items)">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, background: 'var(--surface-2)', borderRadius: 12, padding: 16, border: '1px solid var(--line)' }}>
+                <FieldRow label="Serving size">
+                  <input value={form.nutritionFacts.servingSize} onChange={e => setNf('servingSize', e.target.value)} style={inputStyle} placeholder="1 cup (240ml)" />
+                </FieldRow>
+                <FieldRow label="Calories">
+                  <input type="number" min="0" value={form.nutritionFacts.calories} onChange={e => setNf('calories', e.target.value)} style={inputStyle} placeholder="—" {...noScroll} />
+                </FieldRow>
+                <FieldRow label="Fat (g)">
+                  <input type="number" min="0" step="0.1" value={form.nutritionFacts.fat} onChange={e => setNf('fat', e.target.value)} style={inputStyle} placeholder="—" {...noScroll} />
+                </FieldRow>
+                <FieldRow label="Protein (g)">
+                  <input type="number" min="0" step="0.1" value={form.nutritionFacts.protein} onChange={e => setNf('protein', e.target.value)} style={inputStyle} placeholder="—" {...noScroll} />
+                </FieldRow>
+                <FieldRow label="Carbs (g)">
+                  <input type="number" min="0" step="0.1" value={form.nutritionFacts.carbs} onChange={e => setNf('carbs', e.target.value)} style={inputStyle} placeholder="—" {...noScroll} />
+                </FieldRow>
+                <FieldRow label="Sugars (g)">
+                  <input type="number" min="0" step="0.1" value={form.nutritionFacts.sugar} onChange={e => setNf('sugar', e.target.value)} style={inputStyle} placeholder="—" {...noScroll} />
+                </FieldRow>
+                <FieldRow label="Sodium (mg)">
+                  <input type="number" min="0" value={form.nutritionFacts.sodium} onChange={e => setNf('sodium', e.target.value)} style={inputStyle} placeholder="—" {...noScroll} />
+                </FieldRow>
+                <FieldRow label="Fiber (g)">
+                  <input type="number" min="0" step="0.1" value={form.nutritionFacts.fiber} onChange={e => setNf('fiber', e.target.value)} style={inputStyle} placeholder="—" {...noScroll} />
+                </FieldRow>
+              </div>
+            </FieldRow>
+
+            {err && <div style={{ color: 'var(--red-500)', fontSize: 13, fontWeight: 600, margin: '12px 0' }}>{err}</div>}
+
+            {/* Sticky action bar at bottom */}
+            <div style={{ display: 'flex', gap: 10, paddingTop: 24, borderTop: '1px solid var(--line)', marginTop: 8 }}>
+              <Btn variant="ghost" onClick={() => setView('list')}>Cancel</Btn>
+              <Btn type="submit" style={{ opacity: saving ? 0.7 : 1 }}>
+                {saving ? 'Saving…' : editing ? 'Save changes' : 'Add product'}
+              </Btn>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Product list ──
   return (
     <>
       <ConfirmDialog
@@ -321,7 +529,6 @@ export default function ManageProductsScreen() {
         subtitle={loading ? 'Loading…' : `${products.length} product${products.length !== 1 ? 's' : ''}`}
         action={<Btn size="sm" icon="plus" onClick={openCreate}>Add product</Btn>}
       >
-        {/* Search bar */}
         <div style={{ marginBottom: 16 }}>
           <input
             value={search}
@@ -338,186 +545,6 @@ export default function ManageProductsScreen() {
           onDelete={handleDelete}
         />
       </AdminPageWrap>
-
-      {/* ── Product edit/create modal ── */}
-      <MgmtModal
-        open={modal}
-        title={editing ? 'Edit product' : 'Add product'}
-        onClose={() => setModal(false)}
-        maxWidth={600}
-      >
-        <form onSubmit={handleSubmit}>
-
-          <SectionHead label="Basic info" />
-          <FieldRow label="Product name *">
-            <input required value={form.name} onChange={e => set('name', e.target.value)} style={inputStyle} placeholder="e.g. Organic Whole Milk" />
-          </FieldRow>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <FieldRow label="Brand">
-              <input value={form.brand} onChange={e => set('brand', e.target.value)} style={inputStyle} placeholder="e.g. Organic Valley" />
-            </FieldRow>
-            <FieldRow label="Unit *">
-              <input required value={form.unit} onChange={e => set('unit', e.target.value)} style={inputStyle} placeholder="each, kg, oz…" />
-            </FieldRow>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <FieldRow label="Category *">
-              <select required value={form.categoryId} onChange={e => set('categoryId', e.target.value)} style={inputStyle}>
-                <option value="">Select category</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </FieldRow>
-            <FieldRow label="Supplier *">
-              <select required value={form.supplierId} onChange={e => set('supplierId', e.target.value)} style={inputStyle}>
-                <option value="">Select supplier</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </FieldRow>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <FieldRow label="Product type">
-              <select value={form.productType} onChange={e => set('productType', e.target.value)} style={inputStyle}>
-                {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-            </FieldRow>
-            <FieldRow label="Status">
-              <select value={form.status} onChange={e => set('status', e.target.value)} style={inputStyle}>
-                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-              </select>
-            </FieldRow>
-          </div>
-
-          <SectionHead label="Pricing & stock" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
-            <FieldRow label="Price ($) *">
-              <input required type="number" min="0" step="0.01" value={form.price} onChange={e => set('price', e.target.value)} style={inputStyle} placeholder="0.00" />
-            </FieldRow>
-            <FieldRow label="Sale price ($)">
-              <input type="number" min="0" step="0.01" value={form.salePrice} onChange={e => set('salePrice', e.target.value)} style={inputStyle} placeholder="—" />
-            </FieldRow>
-            <FieldRow label="Cost price ($)">
-              <input type="number" min="0" step="0.01" value={form.costPrice} onChange={e => set('costPrice', e.target.value)} style={inputStyle} placeholder="—" />
-            </FieldRow>
-            <FieldRow label="Par (reorder)">
-              <input type="number" min="0" value={form.par} onChange={e => set('par', e.target.value)} style={inputStyle} placeholder="10" />
-            </FieldRow>
-          </div>
-
-          <SectionHead label="Media" />
-          <FieldRow label="Featured image">
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              {(heroFile || form.featuredImage) && (
-                <div style={{ width: 72, height: 72, borderRadius: 10, overflow: 'hidden', border: '1.5px solid var(--line)', flexShrink: 0 }}>
-                  <img src={heroFile || form.featuredImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              )}
-              <div style={{ flex: 1 }}>
-                <input ref={heroRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleHeroFile} />
-                <button type="button" onClick={() => heroRef.current?.click()}
-                  style={{ padding: '8px 14px', borderRadius: 9, border: '1.5px solid var(--line)', background: 'var(--surface-2)', color: 'var(--text-2)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
-                  {form.featuredImage ? 'Replace image' : 'Upload image'}
-                </button>
-                {form.featuredImage && (
-                  <button type="button" onClick={() => { setHeroFile(null); set('featuredImage', ''); }}
-                    style={{ marginLeft: 8, padding: '8px 12px', borderRadius: 9, border: 'none', background: 'none', color: 'var(--red-500)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-          </FieldRow>
-          <FieldRow label="Gallery images">
-            <GalleryEditor images={form.galleryImages} onChange={imgs => set('galleryImages', imgs)} />
-          </FieldRow>
-
-          <SectionHead label="Description" />
-          <FieldRow label="Full description">
-            <textarea rows={4} value={form.description} onChange={e => set('description', e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Product description shown on the detail page…" />
-          </FieldRow>
-
-          <SectionHead label="Product details" />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <FieldRow label="Size">
-              <input value={form.size} onChange={e => set('size', e.target.value)} style={inputStyle} placeholder="e.g. 32oz, 500ml" />
-            </FieldRow>
-            <FieldRow label="Weight">
-              <input value={form.weight} onChange={e => set('weight', e.target.value)} style={inputStyle} placeholder="e.g. 1.5 lbs" />
-            </FieldRow>
-            <FieldRow label="Barcode (UPC/EAN)">
-              <input value={form.barcode} onChange={e => set('barcode', e.target.value)} style={inputStyle} placeholder="e.g. 012345678901" />
-            </FieldRow>
-            <FieldRow label="Country of origin">
-              <input value={form.countryOfOrigin} onChange={e => set('countryOfOrigin', e.target.value)} style={inputStyle} placeholder="e.g. USA" />
-            </FieldRow>
-          </div>
-          <FieldRow label="Storage instructions">
-            <input value={form.storageInstructions} onChange={e => set('storageInstructions', e.target.value)} style={inputStyle} placeholder="e.g. Keep refrigerated below 4°C" />
-          </FieldRow>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text)', cursor: 'pointer', fontWeight: 600 }}>
-              <input type="checkbox" checked={form.isRestricted18Plus} onChange={e => set('isRestricted18Plus', e.target.checked)} style={{ accentColor: 'var(--primary)' }} />
-              Age-restricted (18+)
-            </label>
-          </div>
-          <FieldRow label="Custom attributes">
-            <AttributeEditor attrs={form.attributes} onChange={a => set('attributes', a)} />
-          </FieldRow>
-
-          <SectionHead label="Ingredients & nutrition" />
-          <FieldRow label="Ingredients">
-            <textarea rows={3} value={form.ingredients} onChange={e => set('ingredients', e.target.value)} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Full ingredient list…" />
-          </FieldRow>
-          <FieldRow label="Allergens">
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 2 }}>
-              {ALLERGEN_OPTIONS.map(a => (
-                <button key={a} type="button" onClick={() => toggleAllergen(a)}
-                  style={{ padding: '5px 11px', borderRadius: 7, border: '1.5px solid', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)', transition: 'all 0.12s',
-                    borderColor: form.allergens.includes(a) ? 'var(--amber-500)' : 'var(--line)',
-                    background: form.allergens.includes(a) ? 'var(--amber-100)' : 'transparent',
-                    color: form.allergens.includes(a) ? '#92400e' : 'var(--text-2)' }}>
-                  {a.charAt(0).toUpperCase() + a.slice(1)}
-                </button>
-              ))}
-            </div>
-          </FieldRow>
-          <FieldRow label="Nutrition facts" helper="Leave blank if not applicable (e.g. non-food items)">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <FieldRow label="Serving size">
-                <input value={form.nutritionFacts.servingSize} onChange={e => setNf('servingSize', e.target.value)} style={inputStyle} placeholder="e.g. 1 cup (240ml)" />
-              </FieldRow>
-              <FieldRow label="Calories">
-                <input type="number" min="0" value={form.nutritionFacts.calories} onChange={e => setNf('calories', e.target.value)} style={inputStyle} placeholder="—" />
-              </FieldRow>
-              <FieldRow label="Fat (g)">
-                <input type="number" min="0" step="0.1" value={form.nutritionFacts.fat} onChange={e => setNf('fat', e.target.value)} style={inputStyle} placeholder="—" />
-              </FieldRow>
-              <FieldRow label="Protein (g)">
-                <input type="number" min="0" step="0.1" value={form.nutritionFacts.protein} onChange={e => setNf('protein', e.target.value)} style={inputStyle} placeholder="—" />
-              </FieldRow>
-              <FieldRow label="Carbs (g)">
-                <input type="number" min="0" step="0.1" value={form.nutritionFacts.carbs} onChange={e => setNf('carbs', e.target.value)} style={inputStyle} placeholder="—" />
-              </FieldRow>
-              <FieldRow label="Sugars (g)">
-                <input type="number" min="0" step="0.1" value={form.nutritionFacts.sugar} onChange={e => setNf('sugar', e.target.value)} style={inputStyle} placeholder="—" />
-              </FieldRow>
-              <FieldRow label="Sodium (mg)">
-                <input type="number" min="0" value={form.nutritionFacts.sodium} onChange={e => setNf('sodium', e.target.value)} style={inputStyle} placeholder="—" />
-              </FieldRow>
-              <FieldRow label="Fiber (g)">
-                <input type="number" min="0" step="0.1" value={form.nutritionFacts.fiber} onChange={e => setNf('fiber', e.target.value)} style={inputStyle} placeholder="—" />
-              </FieldRow>
-            </div>
-          </FieldRow>
-
-          {err && <div style={{ color: 'var(--red-500)', fontSize: 13, fontWeight: 600, marginBottom: 12 }}>{err}</div>}
-          <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-            <Btn variant="ghost" full onClick={() => setModal(false)}>Cancel</Btn>
-            <Btn type="submit" full style={{ opacity: saving ? 0.7 : 1 }}>
-              {saving ? 'Saving…' : editing ? 'Save changes' : 'Add product'}
-            </Btn>
-          </div>
-        </form>
-      </MgmtModal>
     </>
   );
 }

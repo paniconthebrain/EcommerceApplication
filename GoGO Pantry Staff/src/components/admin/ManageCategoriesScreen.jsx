@@ -448,14 +448,13 @@ export default function ManageCategoriesScreen() {
   const tabs = [
     { id: "departments", label: "Departments" },
     { id: "categories", label: "Categories" },
-    { id: "products", label: "Products" },
   ];
 
   return (
     <>
-      <PageHead title="Manage Categories" subtitle="Departments · Categories · Products" />
+      <PageHead title="Manage Categories" subtitle="Departments · Categories" />
       <div style={{ flex: 1, padding: "22px 34px 48px", overflowY: "auto" }}>
-        <div style={{ display: "flex", gap: 4, padding: "4px 6px", background: "var(--surface-2)", borderRadius: 12, marginBottom: 20 }}>
+        <div style={{ display: "flex", gap: 4, padding: "4px 6px", background: "var(--surface-2)", borderRadius: 12, marginBottom: 20, maxWidth: 320 }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "9px 12px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 13.5, transition: "all .15s var(--ease)", background: tab === t.id ? "var(--surface)" : "transparent", color: tab === t.id ? "var(--text)" : "var(--text-2)", boxShadow: tab === t.id ? "var(--shadow-sm)" : "none" }}>
               {t.label}
@@ -464,7 +463,6 @@ export default function ManageCategoriesScreen() {
         </div>
         {tab === "departments" && <DepartmentsTab />}
         {tab === "categories" && <CategoriesTab />}
-        {tab === "products" && <ProductsTab />}
       </div>
     </>
   );
