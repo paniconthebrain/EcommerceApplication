@@ -458,7 +458,7 @@ export function ProductDetailModal({ product, inCart, onClose, onAdd, onUpdateCa
   );
 }
 
-export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, onChangeShop, initialCat, savedItems, onToggleSave }) {
+export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, onChangeShop, initialCat, savedItems, onToggleSave, onSelectProduct }) {
   const [cat, setCat] = useState(initialCat || "all");
   const [sort, setSort] = useState("popularity");
   const [search, setSearch] = useState("");
@@ -466,7 +466,6 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
   const [showInStockOnly, setShowInStockOnly] = useState(false);
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
   const [dataVersion, setDataVersion] = useState(() => G.PRODUCTS?.length > 0 ? 1 : 0);
 
   useEffect(() => {
@@ -637,7 +636,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
                     onAdd={() => onAddToCart(p.id)}
                     onAddQty={() => onAddToCart(p.id)}
                     onRemoveQty={() => onUpdateCart && onUpdateCart(p.id, Math.max(0, inCart - 1))}
-                    onClick={() => setSelectedProduct(p)}
+                    onClick={() => onSelectProduct && onSelectProduct(p.id)}
                     isSaved={savedItems?.has(p.id)}
                     onToggleSave={onToggleSave}
                   />
@@ -647,17 +646,6 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
           )}
         </div>
       </div>
-
-      {/* Product detail modal */}
-      {selectedProduct && (
-        <ProductDetailModal
-          product={selectedProduct}
-          inCart={cartItems[selectedProduct.id] || 0}
-          onClose={() => setSelectedProduct(null)}
-          onAdd={() => onAddToCart(selectedProduct.id)}
-          onUpdateCart={onUpdateCart}
-        />
-      )}
 
       {/* Mobile filters sheet */}
       {showFiltersModal && (
