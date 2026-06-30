@@ -11,8 +11,10 @@ import { PrivacyPolicy } from './components/privacy.jsx';
 import { TermsOfService } from './components/terms.jsx';
 import { CookieSettings } from './components/cookies.jsx';
 import { CareersPage } from './components/careers.jsx';
+import { ProductDetailPage } from './components/productDetail.jsx';
 
-function pageToPath(page, shopId) {
+function pageToPath(page, shopId, productId) {
+  if (page === "product" && shopId && productId) return `/shop/${shopId}/product/${productId}`;
   if (page === "browse" && shopId) return `/shop/${shopId}`;
   if (page === "cart")             return "/cart";
   if (page === "checkout")         return "/checkout";
@@ -26,6 +28,9 @@ function pageToPath(page, shopId) {
 }
 
 function pathToState(pathname) {
+  // /shop/:shopId/product/:productId
+  const productMatch = pathname.match(/^\/shop\/([^/]+)\/product\/([^/]+)$/);
+  if (productMatch) return { page: "product", shopId: productMatch[1], productId: productMatch[2] };
   if (pathname.startsWith("/shop/"))  return { page: "browse",        shopId: pathname.slice(6) };
   if (pathname === "/cart")           return { page: "cart",           shopId: null };
   if (pathname === "/checkout")       return { page: "checkout",       shopId: null };
@@ -53,6 +58,7 @@ export default function CustomerApp() {
   const initState = pathToState(window.location.pathname);
   const [page, setPageState] = useState(initState.page);
   const [shopId, setShopId] = useState(() => initState.shopId || localStorage.getItem("shopId") || null);
+  const [productId, setProductId] = useState(initState.productId || null);
   const [cartItems, setCartItems] = useState({});
   const [orderData, setOrderData] = useState(null);
   const [initialCat, setInitialCat] = useState(null);
@@ -71,13 +77,15 @@ export default function CustomerApp() {
     }, 600);
   };
 
-  const navigate = (newPage, newShopId) => {
+  const navigate = (newPage, newShopId, newProductId) => {
     const sid = newShopId !== undefined ? newShopId : shopId;
-    const path = pageToPath(newPage, sid);
-    window.history.pushState({ page: newPage, shopId: sid }, "", path);
+    const pid = newProductId !== undefined ? newProductId : null;
+    const path = pageToPath(newPage, sid, pid);
+    window.history.pushState({ page: newPage, shopId: sid, productId: pid }, "", path);
     window.scrollTo(0, 0);
     setPageState(newPage);
     if (newShopId !== undefined) setShopId(newShopId);
+    if (newProductId !== undefined) setProductId(newProductId);
   };
 
   useEffect(() => {
@@ -98,6 +106,7 @@ export default function CustomerApp() {
       window.scrollTo(0, 0);
       setPageState(s.page || "home");
       if (s.shopId !== undefined) setShopId(s.shopId);
+      if (s.productId !== undefined) setProductId(s.productId);
     };
     window.addEventListener("popstate", onPop);
     window.history.replaceState(
@@ -214,9 +223,13 @@ export default function CustomerApp() {
   if (page === "browse" && !shopId) navigate("home", null);
   if (page === "confirmation" && !orderData) navigate("home", null);
 
+  const handleSelectProduct = (pid) => navigate("product", shopId, pid);
+  const handleBackToBrowse = () => navigate("browse", shopId);
+
   const screens = {
     home: <CustomerHomepage onSelectShop={handleSelectShop} shopId={shopId} onGoToBrowse={(catId) => { setInitialCat(catId || null); setPage("browse"); }} />,
-    browse: shopId ? <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={() => navigate("home", null)} initialCat={initialCat} savedItems={savedItems} onToggleSave={handleToggleSave} /> : null,
+    browse: shopId ? <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={() => navigate("home", null)} initialCat={initialCat} savedItems={savedItems} onToggleSave={handleToggleSave} onSelectProduct={handleSelectProduct} /> : null,
+    product: (shopId && productId) ? <ProductDetailPage shopId={shopId} productId={productId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onBack={handleBackToBrowse} savedItems={savedItems} onToggleSave={handleToggleSave} onRequireAuth={() => { setAuthPage("login"); setShowAuth(true); }} user={user} /> : null,
     cart: <CustomerCart shopId={shopId} cartItems={cartItems} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} onContinueShopping={() => navigate("browse")} />,
     checkout: <CustomerCheckout shopId={shopId} cartItems={cartItems} onConfirm={handleConfirm} onBack={() => setPage("cart")} />,
     confirmation: orderData ? <CustomerConfirmation orderData={orderData} onNewOrder={handleNewOrder} /> : null,

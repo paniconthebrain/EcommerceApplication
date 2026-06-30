@@ -132,6 +132,33 @@ const Product = sequelize.define('Product', {
     allowNull: true,
     defaultValue: 'draft',
   },
+  barcode: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+  },
+  ingredients: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  nutritionFacts: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    field: 'nutrition_facts',
+  },
+  allergens: {
+    type: DataTypes.JSON,
+    allowNull: true,
+  },
+  countryOfOrigin: {
+    type: DataTypes.STRING(100),
+    allowNull: true,
+    field: 'country_of_origin',
+  },
+  storageInstructions: {
+    type: DataTypes.STRING(500),
+    allowNull: true,
+    field: 'storage_instructions',
+  },
 }, {
   tableName: 'products',
   timestamps: true,

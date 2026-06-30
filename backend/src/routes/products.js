@@ -38,7 +38,8 @@ router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) =>
       supplierId, tags, attributes, isRestricted18Plus, slug, subheading,
       description, shortDescription, productType, salePrice, metaTitle,
       metaDescription, metaKeywords, visibility, featuredImage, galleryImages,
-      status, parentId,
+      status, parentId, barcode, ingredients, nutritionFacts, allergens,
+      countryOfOrigin, storageInstructions,
     } = req.body;
 
     const type = productType || 'simple';
@@ -74,6 +75,12 @@ router.post('/', authMiddleware, requireRole('admin'), async (req, res, next) =>
       galleryImages: Array.isArray(galleryImages) ? galleryImages : [],
       status: status || 'draft',
       parentId: parentId || null,
+      barcode: barcode || null,
+      ingredients: ingredients || null,
+      nutritionFacts: nutritionFacts && typeof nutritionFacts === 'object' ? nutritionFacts : null,
+      allergens: Array.isArray(allergens) ? allergens : [],
+      countryOfOrigin: countryOfOrigin || null,
+      storageInstructions: storageInstructions || null,
     });
 
     res.status(201).json(product);
@@ -258,7 +265,8 @@ router.put('/:productId', authMiddleware, requireRole('admin'), async (req, res,
       'supplierId', 'tags', 'attributes', 'isRestricted18Plus', 'slug', 'subheading',
       'description', 'shortDescription', 'productType', 'salePrice', 'metaTitle',
       'metaDescription', 'metaKeywords', 'visibility', 'featuredImage', 'galleryImages',
-      'status', 'parentId',
+      'status', 'parentId', 'barcode', 'ingredients', 'nutritionFacts', 'allergens',
+      'countryOfOrigin', 'storageInstructions',
     ];
 
     const updates = {};
@@ -268,8 +276,10 @@ router.put('/:productId', authMiddleware, requireRole('admin'), async (req, res,
         updates[f] = req.body[f] !== '' && req.body[f] != null ? parseFloat(req.body[f]) : null;
       } else if (f === 'par') {
         updates[f] = req.body[f] !== '' && req.body[f] != null ? parseInt(req.body[f]) : 0;
-      } else if (['tags', 'attributes', 'galleryImages'].includes(f)) {
+      } else if (['tags', 'attributes', 'galleryImages', 'allergens'].includes(f)) {
         updates[f] = Array.isArray(req.body[f]) ? req.body[f] : [];
+      } else if (f === 'nutritionFacts') {
+        updates[f] = req.body[f] && typeof req.body[f] === 'object' ? req.body[f] : null;
       } else {
         updates[f] = req.body[f];
       }
