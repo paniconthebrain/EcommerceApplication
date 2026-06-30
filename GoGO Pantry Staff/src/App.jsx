@@ -26,7 +26,8 @@ function staffPathToRoute(pathname) {
 export default function StaffApp() {
   const savedUser = G.currentUser;
   const [user, setUser] = useState(savedUser);
-  const [shopId, setShopId] = useState(savedUser ? (savedUser.shopId || "msn") : null);
+  const [shopId, setShopId] = useState(savedUser?.shopId || null);
+  const [shopLoading, setShopLoading] = useState(!!(savedUser && !savedUser.shopId));
   const [route, setRoute] = useState(() => (savedUser && shopId) ? staffPathToRoute(window.location.pathname) : "dashboard");
 
   const navigate = (newRoute) => {
@@ -46,11 +47,12 @@ export default function StaffApp() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // For admin users restored from session, correct shopId once real shops load
+  // For admin users restored from session, load shops and set shopId
   useEffect(() => {
     if (!savedUser || savedUser.shopId) return;
     initializeAppData().then(() => {
       if (G.SHOPS.length > 0) setShopId(G.SHOPS[0].id);
+      setShopLoading(false);
     });
   }, []);
 
@@ -58,10 +60,11 @@ export default function StaffApp() {
     setUser(loggedInUser);
     if (!loggedInUser.shopId) {
       await initializeAppData();
-      setShopId(G.SHOPS[0]?.id || 'msn');
+      setShopId(G.SHOPS[0]?.id || null);
     } else {
       setShopId(loggedInUser.shopId);
     }
+    setShopLoading(false);
     navigate("dashboard");
   };
 
@@ -82,7 +85,12 @@ export default function StaffApp() {
     setShopId(null);
   };
 
-  if (!shopId || !user) return <StaffLogin onLogin={handleLogin} />;
+  if (!user) return <StaffLogin onLogin={handleLogin} />;
+  if (shopLoading || !shopId) return (
+    <div style={{ height: "100vh", display: "grid", placeItems: "center", background: "var(--surface)", color: "var(--text-3)", fontFamily: "var(--font-sans)", fontSize: 14 }}>
+      Loading…
+    </div>
+  );
 
   const screenMap = {
     dashboard:           () => <DashboardScreen shopId={shopId} setRoute={navigate} />,
