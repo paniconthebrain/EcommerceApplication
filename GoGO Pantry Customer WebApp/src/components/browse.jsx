@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { G } from '../globals.js';
 import { IconC } from './icons.jsx';
 import { BtnC } from './ui.jsx';
@@ -210,37 +210,102 @@ export function ProductCardEnhanced({ product, inCart, disabled, stockState, onA
   );
 }
 
-export function ProductDetailModal({ product, inCart, onClose, onAdd, onUpdateCart }) {
+const SUB_PREFS = [
+  { value: "none",    label: "No substitutions",   desc: "Cancel item if unavailable" },
+  { value: "similar", label: "Allow similar brand", desc: "Same product, different brand if needed" },
+  { value: "any",     label: "Allow any substitute",desc: "Shopper picks best available option" },
+];
+
+export function ProductDetailModal({ product, inCart, onClose, onAdd, onUpdateCart, onNotify }) {
   const [qty, setQty] = useState(inCart > 0 ? inCart : 1);
+  const [subPref, setSubPref] = useState("none");
+  const [toast, setToast] = useState(null);
+  const [notified, setNotified] = useState(false);
+  const toastTimerRef = useRef(null);
+
   const cat = G.catOf(product.cat);
   const hue = cat?.hue || 152;
   const stock = product.stock || 0;
   const stockState = G.stockState(stock, product.par || 10);
-  const stockLabel = stockState === "out" ? "Out of stock" : stockState === "low" ? "Low stock" : "In stock";
-  const stockColor = stockState === "out" ? "var(--red-500)" : stockState === "low" ? "var(--amber-500)" : "var(--green-600)";
   const price = parseFloat(product.price) || 0;
   const tagStyle = product.tag ? TAG_STYLES[product.tag] : null;
 
   useEffect(() => { if (inCart > 0) setQty(inCart); }, [inCart]);
 
-  const handleAdd = () => {
-    if (inCart > 0) { onUpdateCart(product.id, qty); }
-    else { for (let i = 0; i < qty; i++) onAdd(); }
-    onClose();
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
+  const showToast = (msg, withUndo = false) => {
+    clearTimeout(toastTimerRef.current);
+    setToast({ msg, withUndo });
+    toastTimerRef.current = setTimeout(() => setToast(null), 8000);
   };
 
+  const handleAdd = () => {
+    if (inCart > 0) {
+      onUpdateCart(product.id, qty);
+      showToast(`Cart updated — ${qty} × ${product.name}`, false);
+    } else {
+      for (let i = 0; i < qty; i++) onAdd();
+      showToast(`Added to cart — ${qty} × ${product.name}`, true);
+    }
+  };
+
+  const handleUndo = () => {
+    onUpdateCart(product.id, 0);
+    clearTimeout(toastTimerRef.current);
+    setToast(null);
+  };
+
+  const handleNotify = () => {
+    setNotified(true);
+    onNotify?.(product.id);
+    showToast("We'll email you when this is back in stock", false);
+  };
+
+  const stockColors = {
+    out:  { bg: "var(--red-100)",   color: "var(--red-500)",   dot: "var(--red-500)" },
+    low:  { bg: "var(--amber-100)", color: "var(--amber-600)", dot: "var(--amber-500)" },
+    ok:   { bg: "var(--green-100)", color: "var(--green-600)", dot: "var(--green-500)" },
+  };
+  const sc = stockColors[stockState] || stockColors.ok;
+
+  const stockMicrocopy = stockState === "out"
+    ? "Out of stock — we'll let you know when it's back."
+    : stockState === "low"
+      ? `Only ${stock} left — add now to avoid missing out.`
+      : null;
+
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center", padding: "0", backdropFilter: "blur(6px)" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface)", borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 600, maxHeight: "94vh", overflowY: "auto", boxShadow: "var(--shadow-xl)", animation: "slideInUp 0.25s var(--spring)" }}>
-        {/* Image */}
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={product.name}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 200, display: "flex", alignItems: "flex-end", justifyContent: "center", backdropFilter: "blur(6px)" }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: "var(--surface)", borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 600, maxHeight: "94vh", overflowY: "auto", boxShadow: "var(--shadow-xl)", animation: "slideInUp 0.25s var(--spring)", display: "flex", flexDirection: "column" }}
+      >
+        {/* Hero image */}
         <div style={{ position: "relative", background: `linear-gradient(135deg, hsl(${hue},50%,90%) 0%, hsl(${hue},55%,85%) 100%)`, height: 220, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "24px 24px 0 0", flexShrink: 0, overflow: "hidden" }}>
           {product.image
             ? <img src={product.image} alt={product.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
             : <div style={{ color: `hsl(${hue},45%,62%)` }}><IconC name="cart" size={80} stroke={1.2} /></div>
           }
-          <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 999, background: "rgba(0,0,0,0.28)", border: "none", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", backdropFilter: "blur(4px)", transition: "background 0.15s" }}
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: 999, background: "rgba(0,0,0,0.28)", border: "none", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", backdropFilter: "blur(4px)", transition: "background 0.15s" }}
             onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.45)"}
-            onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0.28)"}>
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0.28)"}
+          >
             <IconC name="x" size={18} />
           </button>
           {tagStyle && (
@@ -250,63 +315,143 @@ export function ProductDetailModal({ product, inCart, onClose, onAdd, onUpdateCa
           )}
         </div>
 
-        <div style={{ padding: "24px 26px 30px" }}>
+        {/* Undo toast */}
+        {toast && (
+          <div
+            role="status"
+            aria-live="assertive"
+            aria-atomic="true"
+            style={{ margin: "12px 26px 0", padding: "10px 14px", background: "var(--text)", color: "#fff", borderRadius: 12, display: "flex", alignItems: "center", gap: 10, fontSize: 13, flexShrink: 0 }}
+          >
+            <span style={{ flex: 1 }}>{toast.msg}</span>
+            {toast.withUndo && (
+              <button
+                onClick={handleUndo}
+                style={{ background: "none", border: "none", color: "#6ee7b7", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)", padding: 0, flexShrink: 0 }}
+              >
+                Undo
+              </button>
+            )}
+          </div>
+        )}
+
+        <div style={{ padding: "20px 26px 32px", display: "flex", flexDirection: "column", gap: 0 }}>
           {/* Category chip */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `hsl(${hue},60%,93%)`, color: `hsl(${hue},55%,34%)`, padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 12 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `hsl(${hue},60%,93%)`, color: `hsl(${hue},55%,34%)`, padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 10, alignSelf: "flex-start" }}>
             <div style={{ width: 7, height: 7, borderRadius: 999, background: `hsl(${hue},60%,42%)` }} />
             {cat?.name}
           </div>
 
           <h2 style={{ fontSize: 22, fontWeight: 900, color: "var(--text)", margin: "0 0 4px", lineHeight: 1.2, letterSpacing: "-0.02em" }}>{product.name}</h2>
-          {product.brand && <p style={{ fontSize: 13, color: "var(--text-3)", margin: "0 0 14px" }}>{product.brand}</p>}
+          {product.brand && <p style={{ fontSize: 13, color: "var(--text-3)", margin: "0 0 12px" }}>{product.brand}</p>}
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
+          {/* Price + stock badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
             <span style={{ fontSize: 30, fontWeight: 900, color: "var(--text)", letterSpacing: "-0.03em" }}>${price.toFixed(2)}</span>
             <span style={{ fontSize: 13, color: "var(--text-3)" }}>per {product.unit}</span>
-            {product.size && <span style={{ fontSize: 12, background: "var(--surface-2)", padding: "3px 9px", borderRadius: 7, color: "var(--text-2)", fontWeight: 600 }}>{product.size}</span>}
+            <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600, color: sc.color, background: sc.bg, padding: "4px 10px", borderRadius: 999 }}>
+              <div style={{ width: 6, height: 6, borderRadius: 999, background: sc.dot }} />
+              {stockState === "out" ? "Out of stock" : stockState === "low" ? `Only ${stock} left` : "In stock"}
+            </div>
           </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: stockColor, background: stockState === "ok" ? "var(--green-100)" : stockState === "low" ? "var(--amber-100)" : "var(--red-100)", padding: "4px 10px", borderRadius: 999 }}>
-              <div style={{ width: 6, height: 6, borderRadius: 999, background: stockColor }} />
-              {stockLabel}
+          {/* Low/out microcopy */}
+          {stockMicrocopy && (
+            <div style={{ marginBottom: 14, padding: "9px 13px", background: stockState === "out" ? "var(--red-100)" : "var(--amber-100)", borderRadius: 10, fontSize: 13, color: stockState === "out" ? "#991b1b" : "#92400e", fontWeight: 600, border: `1px solid ${stockState === "out" ? "#fecaca" : "#fde68a"}` }}>
+              {stockMicrocopy}
             </div>
-            {product.weight && <span style={{ fontSize: 12, color: "var(--text-3)", alignSelf: "center" }}>· {product.weight}</span>}
-          </div>
+          )}
 
           {product.description && (
-            <p style={{ fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.65, marginBottom: 22, padding: "13px 15px", background: "var(--surface-2)", borderRadius: 12, border: "1px solid var(--line)" }}>
+            <p style={{ fontSize: 13.5, color: "var(--text-2)", lineHeight: 1.65, marginBottom: 20, padding: "13px 15px", background: "var(--surface-2)", borderRadius: 12, border: "1px solid var(--line)" }}>
               {product.description}
             </p>
           )}
 
-          <div style={{ height: 1, background: "var(--line)", marginBottom: 22 }} />
+          <div style={{ height: 1, background: "var(--line)", marginBottom: 20 }} />
 
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            {/* Qty stepper */}
-            <div style={{ display: "flex", alignItems: "center", gap: 0, background: "var(--surface-2)", borderRadius: 14, overflow: "hidden", border: "1.5px solid var(--line)", flexShrink: 0 }}>
-              <button onClick={() => setQty(q => Math.max(1, q - 1))} disabled={stockState === "out"}
-                style={{ width: 40, height: 44, border: "none", background: "transparent", color: "var(--text)", fontWeight: 700, fontSize: 19, cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)", transition: "background 0.12s" }}
-                onMouseEnter={e => e.currentTarget.style.background = "var(--line)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>−</button>
-              <span style={{ minWidth: 34, textAlign: "center", fontWeight: 900, fontSize: 17, color: "var(--text)", letterSpacing: "-0.02em" }}>{qty}</span>
-              <button onClick={() => setQty(q => q + 1)} disabled={stockState === "out"}
-                style={{ width: 40, height: 44, border: "none", background: "transparent", color: "var(--text)", fontWeight: 700, fontSize: 19, cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)", transition: "background 0.12s" }}
-                onMouseEnter={e => e.currentTarget.style.background = "var(--line)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>+</button>
+          {stockState === "out" ? (
+            /* Out of stock: Notify Me */
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button
+                onClick={handleNotify}
+                disabled={notified}
+                style={{ width: "100%", height: 50, borderRadius: 14, border: `2px solid ${notified ? "var(--green-500)" : "var(--primary)"}`, background: notified ? "var(--green-100)" : "transparent", color: notified ? "#166534" : "var(--primary)", fontWeight: 800, fontSize: 15, cursor: notified ? "default" : "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all 0.18s" }}
+              >
+                <IconC name="bell" size={18} />
+                {notified ? "You'll be notified when it's back" : "Notify me when available"}
+              </button>
+              <p style={{ fontSize: 12, color: "var(--text-3)", textAlign: "center", margin: 0 }}>
+                In the meantime, try a similar item below
+              </p>
             </div>
+          ) : (
+            <>
+              {/* Qty stepper + Add button */}
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20 }}>
+                <div
+                  role="group"
+                  aria-label="Quantity"
+                  style={{ display: "flex", alignItems: "center", background: "var(--surface-2)", borderRadius: 14, overflow: "hidden", border: "1.5px solid var(--line)", flexShrink: 0 }}
+                >
+                  <button
+                    onClick={() => setQty(q => Math.max(1, q - 1))}
+                    aria-label="Decrease quantity"
+                    style={{ width: 44, height: 48, border: "none", background: "transparent", color: "var(--text)", fontWeight: 700, fontSize: 20, cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)", transition: "background 0.12s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--line)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  >−</button>
+                  <span aria-label={`Quantity: ${qty}`} style={{ minWidth: 36, textAlign: "center", fontWeight: 900, fontSize: 17, color: "var(--text)", letterSpacing: "-0.02em" }}>{qty}</span>
+                  <button
+                    onClick={() => setQty(q => q + 1)}
+                    aria-label="Increase quantity"
+                    style={{ width: 44, height: 48, border: "none", background: "transparent", color: "var(--text)", fontWeight: 700, fontSize: 20, cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)", transition: "background 0.12s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--line)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  >+</button>
+                </div>
+                <button
+                  onClick={handleAdd}
+                  style={{ flex: 1, height: 50, borderRadius: 14, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "all 0.18s var(--spring)", boxShadow: "var(--shadow-primary)", letterSpacing: "-0.01em" }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "var(--shadow-primary-lg)"; e.currentTarget.style.background = "var(--primary-hover)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "var(--shadow-primary)"; e.currentTarget.style.background = "var(--primary)"; }}
+                >
+                  {inCart > 0 ? `Update Cart (${qty}) · $${(price * qty).toFixed(2)}` : `Add ${qty} to Cart · $${(price * qty).toFixed(2)}`}
+                </button>
+              </div>
 
-            {/* Add to cart */}
-            <button
-              onClick={handleAdd}
-              disabled={stockState === "out"}
-              style={{ flex: 1, height: 50, borderRadius: 14, border: "none", background: stockState === "out" ? "var(--surface-2)" : "var(--primary)", color: stockState === "out" ? "var(--text-3)" : "#fff", fontWeight: 800, fontSize: 15, cursor: stockState === "out" ? "not-allowed" : "pointer", fontFamily: "var(--font-sans)", transition: "all 0.18s var(--spring)", boxShadow: stockState === "out" ? "none" : "var(--shadow-primary)", letterSpacing: "-0.01em" }}
-              onMouseEnter={e => { if (stockState !== "out") { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "var(--shadow-primary-lg)"; e.currentTarget.style.background = "var(--primary-hover)"; }}}
-              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = stockState === "out" ? "none" : "var(--shadow-primary)"; e.currentTarget.style.background = stockState === "out" ? "var(--surface-2)" : "var(--primary)"; }}
-            >
-              {stockState === "out" ? "Out of Stock" : inCart > 0 ? `Update Cart (${qty})` : `Add ${qty} to Cart · $${(price * qty).toFixed(2)}`}
-            </button>
-          </div>
+              {/* Substitution preference */}
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                  Substitution preference
+                </div>
+                <div role="radiogroup" aria-label="Substitution preference" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {SUB_PREFS.map(opt => {
+                    const active = subPref === opt.value;
+                    return (
+                      <label
+                        key={opt.value}
+                        style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 13px", borderRadius: 12, border: `1.5px solid ${active ? "var(--primary)" : "var(--line)"}`, background: active ? `hsl(${hue},60%,96%)` : "var(--surface)", cursor: "pointer", transition: "border-color 0.15s, background 0.15s" }}
+                      >
+                        <input
+                          type="radio"
+                          name={`subpref-${product.id}`}
+                          value={opt.value}
+                          checked={active}
+                          onChange={() => setSubPref(opt.value)}
+                          style={{ accentColor: "var(--primary)", marginTop: 3, flexShrink: 0 }}
+                        />
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{opt.label}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 1 }}>{opt.desc}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
