@@ -1,7 +1,8 @@
 const express = require('express');
-const { User } = require('../models');
+const { User, Shop } = require('../models');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
-const { ValidationError } = require('../utils/errors');
+const { ValidationError, NotFoundError, AppError } = require('../utils/errors');
+const { sendEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -98,6 +99,11 @@ router.put('/:id', authMiddleware, requireRole('admin'), async (req, res, next) 
       throw new ValidationError('Staff user not found');
     }
 
+    if (shopId) {
+      const shop = await Shop.findByPk(shopId);
+      if (!shop) throw new NotFoundError(`Shop "${shopId}" not found`);
+    }
+
     // Update fields
     if (name) staff.name = name;
     if (phone !== undefined) staff.phone = phone || null;
@@ -172,13 +178,32 @@ router.post('/:id/reset-password', authMiddleware, requireRole('admin'), async (
     staff.password = tempPassword;
     await staff.save();
 
-    // Log to server console only (replace with email service in production)
-    console.log(`[AUDIT] ${new Date().toISOString()} | TEMP PASSWORD for ${staff.email} | by admin ${req.user.email} | temp: ${tempPassword}`);
+    // The temp password is deliberately NOT logged or returned in the response —
+    // it goes only to the staff member's own email, never through server logs
+    // or anything an admin's screen/monitoring tooling would capture.
+    console.log(`[AUDIT] ${new Date().toISOString()} | TEMP PASSWORD ISSUED for ${staff.email} | by admin ${req.user.email}`);
+
+    try {
+      await sendEmail({
+        to: staff.email,
+        subject: 'Your GoGoPantry password has been reset',
+        body: `<p>Hi ${staff.name || staff.email},</p>` +
+          `<p>An administrator reset your GoGoPantry staff account password. Your temporary password is:</p>` +
+          `<p style="font-size:18px;font-weight:700;letter-spacing:1px;">${tempPassword}</p>` +
+          `<p>Please log in and change it as soon as possible.</p>`,
+      });
+    } catch (emailErr) {
+      console.error(`Failed to email temp password to ${staff.email}:`, emailErr.message);
+      throw new AppError(
+        `Password was reset, but the notification email to ${staff.email} failed to send. Check email configuration, then reset again once fixed.`,
+        502
+      );
+    }
+
     res.json({
       success: true,
-      message: `Password reset. Please deliver the new credentials to ${staff.email} via a secure channel.`,
+      message: `Password reset. New credentials have been emailed to ${staff.email}.`,
       email: staff.email,
-      temporaryPassword: tempPassword,
     });
   } catch (error) {
     next(error);

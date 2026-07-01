@@ -5,42 +5,17 @@ export const G = {
   api: API_BASE,
   token: sessionStorage.getItem("staff_token") || null,
   currentUser: JSON.parse(sessionStorage.getItem("staff_user") || "null"),
-  SHOPS: [
-    { id: "msn", name: "Main Store North", code: "MSN", tint: 152, location: "123 Main St", hours: "6am - 11pm", distance: 0 },
-    { id: "dst", name: "Downtown Store", code: "DST", tint: 245, location: "456 Oak Ave", hours: "7am - 10pm", distance: 2.1 },
-    { id: "wst", name: "West Side Shop", code: "WST", tint: 45, location: "789 Park Blvd", hours: "6am - 11pm", distance: 4.5 },
-    { id: "est", name: "East Village Market", code: "EST", tint: 25, location: "321 River Rd", hours: "8am - 9pm", distance: 3.2 },
-  ],
-  CATEGORIES: [
-    { id: "produce", name: "Produce", hue: 152 },
-    { id: "dairy", name: "Dairy & Eggs", hue: 45 },
-    { id: "meat", name: "Meat & Seafood", hue: 25 },
-    { id: "pantry", name: "Pantry", hue: 220 },
-    { id: "frozen", name: "Frozen Foods", hue: 245 },
-    { id: "beverages", name: "Beverages", hue: 300 },
-  ],
-  PRODUCTS: [
-    { id: "p1", name: "Fresh Tomatoes", cat: "produce", price: 3.99, unit: "lb", par: 40, supplier: "fresh-farms", supplier_code: "FF" },
-    { id: "p2", name: "Organic Lettuce", cat: "produce", price: 2.49, unit: "head", par: 30, supplier: "fresh-farms", supplier_code: "FF" },
-    { id: "p3", name: "Free Range Eggs", cat: "dairy", price: 5.99, unit: "dozen", par: 25, supplier: "happy-hens", supplier_code: "HH" },
-    { id: "p4", name: "Greek Yogurt", cat: "dairy", price: 4.99, unit: "32oz", par: 20, supplier: "dairy-supreme", supplier_code: "DS" },
-    { id: "p5", name: "Salmon Fillets", cat: "meat", price: 12.99, unit: "lb", par: 15, supplier: "sea-harvest", supplier_code: "SH" },
-    { id: "p6", name: "Grass Fed Beef", cat: "meat", price: 8.99, unit: "lb", par: 20, supplier: "ranch-natural", supplier_code: "RN" },
-    { id: "p7", name: "Whole Grain Bread", cat: "pantry", price: 3.49, unit: "loaf", par: 35, supplier: "baker-artisan", supplier_code: "BA" },
-    { id: "p8", name: "Almond Butter", cat: "pantry", price: 7.99, unit: "16oz", par: 18, supplier: "nuts-world", supplier_code: "NW" },
-  ],
-  ORDERS: [
-    { id: "ORD-001", customer: "Sarah Chen", initials: "SC", items: 5, total: 42.50, status: "new", type: "Pickup", slot: "Today · 2:00 PM", address: "123 Main St", placed: "2:14 PM", picker: null },
-    { id: "ORD-002", customer: "John Miller", initials: "JM", items: 8, total: 67.25, status: "picking", type: "Delivery", slot: "Today · 3:30 PM", address: "456 Oak Ave", placed: "1:45 PM", picker: "Alex" },
-    { id: "ORD-003", customer: "Emma Rodriguez", initials: "ER", items: 3, total: 24.99, status: "ready", type: "Pickup", slot: "Today · 4:00 PM", address: "789 Park Blvd", placed: "1:20 PM", picker: null },
-    { id: "ORD-004", customer: "James Wilson", initials: "JW", items: 6, total: 51.75, status: "new", type: "Delivery", slot: "Today · 5:00 PM", address: "321 River Rd", placed: "2:00 PM", picker: null },
-    { id: "ORD-005", customer: "Lisa Thompson", initials: "LT", items: 4, total: 38.50, status: "completed", type: "Pickup", slot: "Earlier today", address: "123 Main St", placed: "12:30 PM", picker: null },
-  ],
-  DELIVERIES: [
-    { id: "PO-2206", supplier: "FF", status: "arrived", items: 12, eta: "Today 1:00 PM" },
-    { id: "PO-2207", supplier: "HH", status: "in-transit", items: 8, eta: "Today 3:30 PM" },
-    { id: "PO-2208", supplier: "DS", status: "scheduled", items: 10, eta: "Tomorrow 9:00 AM" },
-  ],
+  // These start empty and are populated exclusively from the backend in
+  // initializeAppData(). They must NEVER contain placeholder/mock shop data —
+  // a shopId like "msn" that doesn't exist in the database caused real
+  // production 404s and FK violations when it leaked into real requests.
+  SHOPS: [],
+  CATEGORIES: [],
+  PRODUCTS: [],
+  // Set to true when the last initializeAppData() call failed to reach the
+  // backend, so callers can show a real error instead of silently proceeding
+  // with stale/empty data.
+  dataLoadError: false,
   money: (n) => "$" + (parseFloat(n) || 0).toFixed(2),
   shopStock: (pid, sid) => 15 + ((pid.charCodeAt(1) + sid.charCodeAt(1)) % 35),
   stockState: (stock, par) => stock === 0 ? "out" : stock < par * 0.3 ? "critical" : stock < par * 0.6 ? "low" : "ok",
@@ -104,37 +79,53 @@ export async function initializeAppData() {
   try {
     const headers = authHeaders();
     const shopsRes = await fetch(`${API_BASE}/shops`, { headers });
-    if (shopsRes.ok) {
-      const data = await shopsRes.json();
-      if (Array.isArray(data) && data.length > 0) {
-        G.SHOPS = data.map(s => ({
-          id: s.id, name: s.name, code: s.code || s.id.toUpperCase(),
-          tint: parseInt(s.tint) || 152, location: s.city || s.location || "",
-          hours: s.hours || "", distance: 0,
-        }));
-      }
-    }
+    if (!shopsRes.ok) throw new Error(`Failed to load shops (${shopsRes.status})`);
+    const shopsData = await shopsRes.json();
+    if (!Array.isArray(shopsData)) throw new Error('Unexpected shops response');
+    // Always reflect the real backend state, including a real empty list —
+    // never leave a previous/placeholder shop list in place on success.
+    G.SHOPS = shopsData.map(s => ({
+      id: s.id, name: s.name, code: s.code || s.id.toUpperCase(),
+      tint: parseInt(s.tint) || 152, location: s.city || s.location || "",
+      hours: s.hours || "", distance: 0,
+    }));
+
     const catsRes = await fetch(`${API_BASE}/categories`, { headers });
     if (catsRes.ok) {
       const data = await catsRes.json();
-      if (Array.isArray(data) && data.length > 0) {
-        G.CATEGORIES = data.map(c => ({ id: c.id, name: c.name, hue: c.hue || 152 }));
-      }
+      G.CATEGORIES = Array.isArray(data) ? data.map(c => ({ id: c.id, name: c.name, hue: c.hue || 152 })) : [];
     }
     const productsRes = await fetch(`${API_BASE}/products`, { headers });
     if (productsRes.ok) {
       const data = await productsRes.json();
-      if (Array.isArray(data) && data.length > 0) {
-        G.PRODUCTS = data.map(p => ({
-          ...p,
-          cat: p.cat || p.category_id || p.categoryId || "pantry",
-          supplier_code: p.supplier_code || (p.supplier_id || p.supplierId || "").toUpperCase().slice(0, 2),
-        }));
-      }
+      G.PRODUCTS = Array.isArray(data) ? data.map(p => ({
+        ...p,
+        cat: p.cat || p.category_id || p.categoryId || "pantry",
+        supplier_code: p.supplier_code || (p.supplier_id || p.supplierId || "").toUpperCase().slice(0, 2),
+      })) : [];
     }
-  } catch {
-    console.log("Using mock data for staff app");
+
+    G.dataLoadError = false;
+    return true;
+  } catch (err) {
+    // Do NOT fall back to placeholder data here — a stale/fake shop id
+    // leaking into a real API call is exactly what caused the production
+    // "Shop not found" incidents. Surface the failure instead.
+    G.dataLoadError = true;
+    G.SHOPS = [];
+    window.dispatchEvent(new CustomEvent("staffDataError"));
+    return false;
   }
 }
 
 initializeAppData();
+
+// Re-validates that `shopId` still refers to a real shop (it may have been
+// deleted/renamed in another tab/session). Returns a valid shopId to use, or
+// null if none exist. Always re-fetches so admins recover automatically
+// instead of being stuck polling a dead shop id forever.
+export async function resolveValidShopId(currentShopId) {
+  await initializeAppData();
+  if (currentShopId && G.SHOPS.some(s => s.id === currentShopId)) return currentShopId;
+  return G.SHOPS[0]?.id || null;
+}

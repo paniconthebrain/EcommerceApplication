@@ -10,13 +10,8 @@ const {
   Category,
 } = require('../models');
 const { authMiddleware } = require('../middleware/authMiddleware');
-const { NotFoundError, AuthorizationError } = require('../utils/errors');
-
-function assertShopAccess(req, shopId) {
-  if (req.user.userType !== 'admin' && req.user.shopId !== shopId) {
-    throw new AuthorizationError('Staff can only access their own shop data');
-  }
-}
+const { NotFoundError } = require('../utils/errors');
+const { assertShopAccess } = require('../middleware/shopAccess');
 
 const router = express.Router();
 

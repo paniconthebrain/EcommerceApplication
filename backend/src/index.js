@@ -2,10 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 const { sequelize } = require('./models');
 const errorHandler = require('./middleware/errorHandler');
+const { authLimiter } = require('./middleware/rateLimiters');
+const { runMigrations } = require('./migrator');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -28,17 +29,14 @@ const newsletterRoutes = require('./routes/newsletter');
 
 const app = express();
 
+// Vercel (and most PaaS) puts the app behind a proxy that sets X-Forwarded-For.
+// Trusting exactly one hop lets express-rate-limit (and req.ip generally)
+// identify the real client IP instead of the proxy's, without blindly trusting
+// an arbitrary forwarded chain a client could otherwise spoof.
+app.set('trust proxy', 1);
+
 // Security headers — applied before all other middleware
 app.use(helmet());
-
-// Rate limiting for auth endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
-  message: { error: 'Too many login attempts, please try again later' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 // CORS
 const hardcodedOrigins = [
@@ -48,7 +46,13 @@ const hardcodedOrigins = [
   'https://www.gogopantry.com',
   'https://staff.gogopantry.com',
   'https://customerappproject.vercel.app',
+  'https://gogopantrystaff.vercel.app',
 ];
+// Vercel preview deployments get a unique hash per push (e.g.
+// https://customerappproject-git-dev-paniconthebrain.vercel.app or
+// https://gogopantrystaff-1s6a9ffef-paniconthebrain.vercel.app) — these can't be
+// hardcoded in advance, so match any preview/branch URL for our own Vercel projects.
+const previewOriginPattern = /^https:\/\/(customerappproject|gogopantrystaff|gogopantry)(-[a-z0-9]+)*-paniconthebrain\.vercel\.app$/;
 const rawOrigin = process.env.CORS_ORIGIN;
 const allowedOrigins = rawOrigin === '*'
   ? '*'
@@ -57,7 +61,9 @@ const allowedOrigins = rawOrigin === '*'
     : hardcodedOrigins;
 app.use(cors({
   origin: allowedOrigins === '*' ? true : (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    if (!origin || allowedOrigins.includes(origin) || previewOriginPattern.test(origin)) {
+      return cb(null, true);
+    }
     cb(new Error(`CORS: origin ${origin} not allowed`));
   },
   credentials: true,
@@ -121,25 +127,18 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-const isProduction = process.env.NODE_ENV === 'production';
 
 async function initDb() {
   await sequelize.authenticate();
   console.log('✓ Database connection established');
-  await sequelize.sync(isProduction ? {} : { alter: true });
-  console.log('✓ Database synced');
-  // Fix department_id NOT NULL constraint — safe to re-run, ignored if already dropped
-  await sequelize.query('ALTER TABLE "categories" ALTER COLUMN "department_id" DROP NOT NULL').catch(() => {});
-  // Add product detail columns — IF NOT EXISTS makes these safe to re-run on every cold start
-  const addCol = (col, type) =>
-    sequelize.query(`ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "${col}" ${type}`).catch(() => {});
-  await addCol('barcode', 'VARCHAR(50)');
-  await addCol('ingredients', 'TEXT');
-  await addCol('nutrition_facts', 'JSONB');
-  await addCol('allergens', 'JSON');
-  await addCol('country_of_origin', 'VARCHAR(100)');
-  await addCol('storage_instructions', 'VARCHAR(500)');
-  console.log('✓ Product detail columns ensured');
+  // Schema changes now go through migrations/*.js (see src/migrator.js) instead
+  // of sequelize.sync({ alter: true }) or hand-appended ALTER statements here.
+  // Each migration runs exactly once per environment, tracked in SequelizeMeta —
+  // this is what fixed the class of bug where a model gained a column that
+  // never actually reached the production table (e.g. the Product.barcode
+  // incident), since sync() without `alter` silently does nothing for existing tables.
+  await runMigrations();
+  console.log('✓ Migrations up to date');
 }
 
 // require.main === module is true when run directly (local dev), false when imported by Vercel

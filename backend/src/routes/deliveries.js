@@ -2,18 +2,13 @@ const express = require('express');
 const { PurchaseOrder, Supplier, Shop, Inventory, Product } = require('../models');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { NotFoundError, ValidationError, AuthorizationError } = require('../utils/errors');
+const { assertShopAccess } = require('../middleware/shopAccess');
 const { sequelize } = require('../models');
 
 const router = express.Router();
 
 // Valid status progression
 const VALID_STATUSES = ['draft', 'ordered', 'in_transit', 'arrived', 'received'];
-
-function assertShopAccess(req, shopId) {
-  if (req.user.userType !== 'admin' && req.user.shopId !== shopId) {
-    throw new AuthorizationError('Staff can only access their own shop data');
-  }
-}
 
 // POST /api/purchase-orders — create a new purchase order
 router.post('/', authMiddleware, async (req, res, next) => {
@@ -73,6 +68,9 @@ router.get('/', authMiddleware, async (req, res, next) => {
     if (shopId) {
       assertShopAccess(req, shopId);
       where.shopId = shopId;
+    } else if (req.user.userType !== 'admin') {
+      // Staff with no shopId filter are scoped to their own shop, not every shop.
+      where.shopId = req.user.shopId;
     }
     if (status) {
       // Support comma-separated status filter e.g. ?status=arrived,in_transit
@@ -191,6 +189,7 @@ router.post('/:poId/receive', authMiddleware, async (req, res, next) => {
       let inventory = await Inventory.findOne({
         where: { shopId: po.shopId, productId: item.productId },
         transaction,
+        lock: 'UPDATE',
       });
 
       if (inventory) {

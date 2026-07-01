@@ -3,6 +3,8 @@ const { Order, Customer, Shop, Product, Inventory } = require('../models');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const customerAuthMiddleware = require('../middleware/customerAuthMiddleware');
 const { NotFoundError, ValidationError, AuthenticationError } = require('../utils/errors');
+const { assertShopAccess } = require('../middleware/shopAccess');
+const { orderLimiter, trackLimiter } = require('../middleware/rateLimiters');
 const { sequelize } = require('../models');
 const { Op } = require('sequelize');
 
@@ -59,6 +61,48 @@ router.get('/', authMiddleware, async (req, res, next) => {
   }
 });
 
+// GET /api/customers/:customerId/orders - Get customer's order history (authenticated)
+// NOTE: this must be registered before GET /:orderId — Express matches routes in
+// registration order, and /:orderId would otherwise swallow /customers/<id> requests
+// (treating "customers" as an orderId) since both are single-segment path patterns.
+router.get('/customers/:customerId', customerAuthMiddleware, async (req, res, next) => {
+  try {
+    const { customerId } = req.params;
+    const { limit = 20, offset = 0 } = req.query;
+
+    // Verify customer is accessing their own orders
+    if (req.customer.id !== customerId) {
+      throw new AuthenticationError('Unauthorized: can only view your own orders');
+    }
+
+    const where = { customerId };
+
+    const orders = await Order.findAll({
+      where,
+      include: [
+        {
+          model: Shop,
+          attributes: ['id', 'name', 'code', 'city'],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+
+    const total = await Order.count({ where });
+
+    res.json({
+      data: orders,
+      total,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // GET /api/orders/:orderId
 router.get('/:orderId', authMiddleware, async (req, res, next) => {
   try {
@@ -80,6 +124,7 @@ router.get('/:orderId', authMiddleware, async (req, res, next) => {
     if (!order) {
       throw new NotFoundError('Order not found');
     }
+    assertShopAccess(req, order.shopId);
 
     res.json(order);
   } catch (error) {
@@ -88,7 +133,7 @@ router.get('/:orderId', authMiddleware, async (req, res, next) => {
 });
 
 // POST /api/orders
-router.post('/', customerAuthMiddleware, async (req, res, next) => {
+router.post('/', orderLimiter, customerAuthMiddleware, async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
     const {
@@ -258,6 +303,7 @@ router.patch('/:orderId/status', authMiddleware, async (req, res, next) => {
     if (!order) {
       throw new NotFoundError('Order not found');
     }
+    assertShopAccess(req, order.shopId);
 
     const fulfillment = order.fulfillment;
     const timeline = fulfillment.timeline || [];
@@ -287,47 +333,9 @@ router.patch('/:orderId/status', authMiddleware, async (req, res, next) => {
   }
 });
 
-// GET /api/customers/:customerId/orders - Get customer's order history (authenticated)
-router.get('/customers/:customerId', customerAuthMiddleware, async (req, res, next) => {
-  try {
-    const { customerId } = req.params;
-    const { limit = 20, offset = 0 } = req.query;
-
-    // Verify customer is accessing their own orders
-    if (req.customer.id !== customerId) {
-      throw new AuthenticationError('Unauthorized: can only view your own orders');
-    }
-
-    const where = { customerId };
-
-    const orders = await Order.findAll({
-      where,
-      include: [
-        {
-          model: Shop,
-          attributes: ['id', 'name', 'code', 'city'],
-        },
-      ],
-      order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-    });
-
-    const total = await Order.count({ where });
-
-    res.json({
-      data: orders,
-      total,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-    });
-  } catch (error) {
-    next(error);
-  }
-});
 
 // GET /api/orders/:orderId/track - Track order status (public)
-router.get('/:orderId/track', async (req, res, next) => {
+router.get('/:orderId/track', trackLimiter, async (req, res, next) => {
   try {
     const { orderId } = req.params;
 

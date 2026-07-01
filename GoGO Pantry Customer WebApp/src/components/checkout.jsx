@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { G } from '../globals.js';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { G, API_BASE, customerFetch } from '../globals.js';
 import { IconC } from './icons.jsx';
 import { BtnC, ConfirmDialog } from './ui.jsx';
 
@@ -36,6 +36,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
   const [newsletterDone, setNewsletterDone] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [orderError, setOrderError] = useState(null);
 
   useEffect(() => {
     try {
@@ -54,7 +55,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
     Object.entries(cartItems)
       .filter(([, qty]) => qty > 0)
       .map(([id, qty]) => {
-        const p = G.PRODUCTS.find(x => String(x.id) === String(id));
+        const p = G.PRODUCTS_MAP[String(id)];
         return p ? { ...p, qty } : null;
       })
       .filter(Boolean),
@@ -120,10 +121,50 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
     setStep(s => s + 1);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     setConfirmOpen(false);
+    setOrderError(null);
     setProcessing(true);
-    setTimeout(() => onConfirm({ deliveryType: "pickup", slot: selectedSlotLabel, email, name, total }), 800);
+    try {
+      const res = await customerFetch(`${API_BASE}/orders`, {
+        method: "POST",
+        body: JSON.stringify({
+          shopId,
+          items: cartProducts.map(p => ({ productId: p.id, qty: p.qty })),
+          orderType: "pickup",
+          timeSlot: selectedSlotLabel,
+        }),
+      });
+
+      if (!res) {
+        // customerFetch returns null when the session is no longer valid
+        setOrderError("Your session expired — please sign in again to place this order.");
+        setProcessing(false);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setOrderError(data.error || data.message || "We couldn't place your order. Please try again.");
+        setProcessing(false);
+        return;
+      }
+
+      onConfirm({
+        orderId: data.orderId || data.id,
+        status: data.status,
+        deliveryType: "pickup",
+        slot: selectedSlotLabel,
+        email,
+        name,
+        total: data.total,
+        shopId,
+      });
+    } catch (err) {
+      setOrderError("We couldn't reach the server. Please check your connection and try again.");
+      setProcessing(false);
+    }
   };
 
   const renderSummary = (showNewsletter) => (
@@ -395,6 +436,13 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
                 </div>
               </div>
 
+              {orderError && (
+                <div role="alert" style={{ background: "var(--red-100, #fee2e2)", border: "1px solid var(--red-300, #fca5a5)", color: "var(--red-700, #b91c1c)", borderRadius: 12, padding: "12px 16px", fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                  <IconC name="alert" size={16} style={{ flexShrink: 0 }} />
+                  {orderError}
+                </div>
+              )}
+
               <div style={{ display: "flex", gap: 12 }}>
                 <BtnC variant="ghost" onClick={() => setStep(2)}>← Back</BtnC>
                 <BtnC full loading={processing} onClick={handleNext}>
@@ -411,29 +459,49 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
   );
 }
 
-export function CustomerConfirmation({ orderData, onNewOrder }) {
-  const [order] = useState(() => ({
-    id: "GG-" + Math.random().toString().slice(2, 6).padStart(4, "0"),
-    timestamp: new Date(),
-    ...orderData,
-    items: 8,
-  }));
+const CONFIRMATION_STEPS = [
+  { id: "confirmed", rank: 0, label: "Order confirmed" },
+  { id: "picking",   rank: 1, label: "Staff is picking your items" },
+  { id: "ready",      rank: 2, label: "Ready for pickup" },
+  { id: "completed", rank: 3, label: "Picked up" },
+];
+const STATUS_RANK = { new: 0, confirmed: 0, picking: 1, ready: 2, completed: 3, cancelled: -1 };
 
-  const [timeline, setTimeline] = useState([
-    { id: "confirmed", label: "Order confirmed",           time: "Just now", done: true },
-    { id: "picking",   label: "Starting to pick items",    time: "2 min",    done: false },
-    { id: "quality",   label: "Quality check",             time: "8 min",    done: false },
-    { id: "ready",     label: "Ready for pickup / dispatch", time: "12 min", done: false },
-  ]);
+export function CustomerConfirmation({ orderData, onNewOrder }) {
+  const [order] = useState(() => ({ timestamp: new Date(), ...orderData }));
+  const [tracking, setTracking] = useState(null);
+
+  const fetchTracking = useCallback(() => {
+    if (!order.orderId) return;
+    fetch(`${API_BASE}/orders/${order.orderId}/track`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => { if (data) setTracking(data); })
+      .catch(() => {});
+  }, [order.orderId]);
 
   useEffect(() => {
-    const timers = [
-      setTimeout(() => setTimeline(t => t.map(x => x.id === "picking" ? { ...x, done: true } : x)), 3000),
-      setTimeout(() => setTimeline(t => t.map(x => x.id === "quality" ? { ...x, done: true } : x)), 8000),
-      setTimeout(() => setTimeline(t => t.map(x => x.id === "ready"   ? { ...x, done: true } : x)), 14000),
-    ];
-    return () => timers.forEach(clearTimeout);
-  }, []);
+    fetchTracking();
+    const interval = setInterval(() => {
+      setTracking(current => {
+        if (!current || !["completed", "cancelled"].includes(current.status)) fetchTracking();
+        return current;
+      });
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [fetchTracking]);
+
+  const isCancelled = tracking?.status === "cancelled";
+  const currentRank = tracking ? (STATUS_RANK[tracking.status] ?? 0) : 0;
+  const timeline = CONFIRMATION_STEPS.map(step => {
+    const entry = tracking?.timeline?.find(t =>
+      t.status === step.id || (step.id === "confirmed" && (t.status === "new" || t.status === "confirmed"))
+    );
+    return {
+      ...step,
+      done: !isCancelled && currentRank >= step.rank,
+      time: entry ? new Date(entry.timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : null,
+    };
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--bg)" }}>
@@ -451,11 +519,11 @@ export function CustomerConfirmation({ orderData, onNewOrder }) {
           <div className="confirm-detail-grid" style={{ marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid var(--line)" }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 4 }}>Order number</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{order.id}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>{order.orderId || "—"}</div>
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-3)", marginBottom: 4 }}>Total</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>${order.total?.toFixed(2)}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "var(--primary)" }}>{typeof order.total === "number" ? G.money(order.total) : "—"}</div>
             </div>
           </div>
           <div className="confirm-detail-grid">
@@ -478,6 +546,9 @@ export function CustomerConfirmation({ orderData, onNewOrder }) {
 
         <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, padding: 24, marginBottom: 24 }}>
           <h2 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 20px", color: "var(--text)" }}>Order status</h2>
+          {isCancelled ? (
+            <div style={{ fontSize: 14, color: "var(--text-2)", fontWeight: 600 }}>This order was cancelled.</div>
+          ) : (
           <div style={{ position: "relative", paddingLeft: 32 }}>
             {(() => {
               const firstPending = timeline.findIndex(s => !s.done);
@@ -505,10 +576,11 @@ export function CustomerConfirmation({ orderData, onNewOrder }) {
               });
             })()}
           </div>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: 12, marginTop: "auto" }}>
-          <BtnC variant="ghost" full>Track order</BtnC>
+          <BtnC variant="ghost" full onClick={fetchTracking}>Refresh status</BtnC>
           <BtnC full icon="home" onClick={onNewOrder}>Back to shopping</BtnC>
         </div>
       </div>

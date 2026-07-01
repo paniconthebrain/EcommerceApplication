@@ -1,11 +1,12 @@
 const express = require('express');
 const { NewsletterSubscriber } = require('../models');
 const { ValidationError } = require('../utils/errors');
+const { publicWriteLimiter } = require('../middleware/rateLimiters');
 
 const router = express.Router();
 
 // POST /api/newsletter/subscribe — public
-router.post('/subscribe', async (req, res, next) => {
+router.post('/subscribe', publicWriteLimiter, async (req, res, next) => {
   try {
     const email = (req.body.email || '').trim().toLowerCase();
     if (!email.includes('@')) throw new ValidationError('Valid email is required');

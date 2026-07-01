@@ -49,7 +49,9 @@ export default function ManageStaffScreen() {
   const doResetPw = async (s) => {
     setConfirmReset({ open: false, item: null });
     const r = await apiFetch(`${API_BASE}/staff/${s.id}/reset-password`, { method: "POST" });
-    if (r?.ok) { const d = await r.json(); setResetInfo(d); }
+    const d = r ? await r.json() : {};
+    if (r?.ok) setResetInfo(d);
+    else alert(d.message || d.error || "Password reset failed");
   };
 
   const unlock = async s => {
@@ -122,16 +124,10 @@ export default function ManageStaffScreen() {
         {resetInfo && (
           <div>
             <div style={{ background: "var(--surface-2)", borderRadius: 10, padding: 16, marginBottom: 20 }}>
-              <div style={{ fontSize: 12, color: "var(--text-3)", marginBottom: 4 }}>New temporary password</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div className="mono" style={{ fontSize: 20, fontWeight: 800, color: "var(--text)", flex: 1 }}>{resetInfo.temporaryPassword}</div>
-                <button onClick={() => navigator.clipboard?.writeText(resetInfo.temporaryPassword)}
-                  title="Copy to clipboard"
-                  style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--line)", background: "var(--surface)", color: "var(--text-2)", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", whiteSpace: "nowrap" }}>
-                  Copy
-                </button>
+              <div style={{ fontSize: 14, color: "var(--text)", fontWeight: 600 }}>Password reset for {resetInfo.email}</div>
+              <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 6 }}>
+                The new temporary password has been emailed directly to {resetInfo.email}. It is not shown here for security.
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 6 }}>Share this securely with {resetInfo.email}</div>
             </div>
             <Btn full onClick={() => setResetInfo(null)}>Done</Btn>
           </div>

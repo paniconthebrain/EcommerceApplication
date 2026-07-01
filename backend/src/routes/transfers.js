@@ -2,6 +2,7 @@ const express = require('express');
 const { StockTransfer, Inventory, Shop, Product } = require('../models');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { NotFoundError, ValidationError } = require('../utils/errors');
+const { assertAnyShopAccess } = require('../middleware/shopAccess');
 const { sequelize } = require('../models');
 
 const router = express.Router();
@@ -14,6 +15,7 @@ router.get('/suggestions', authMiddleware, async (req, res, next) => {
     if (!fromShop || !toShop) {
       throw new ValidationError('fromShop and toShop are required');
     }
+    assertAnyShopAccess(req, [fromShop, toShop]);
 
     // Get inventory for both shops
     const fromInventory = await Inventory.findAll({
@@ -69,17 +71,17 @@ router.post('/', authMiddleware, async (req, res, next) => {
       throw new ValidationError('Source and destination shops must be different');
     }
 
+    assertAnyShopAccess(req, [fromShop, toShop]);
+
     // Verify all inventory items exist in source shop and have enough stock
     for (const item of items) {
-      const inventory = await Inventory.findOne(
-        {
-          where: {
-            shopId: fromShop,
-            productId: item.productId,
-          },
+      const inventory = await Inventory.findOne({
+        where: {
+          shopId: fromShop,
+          productId: item.productId,
         },
-        { transaction }
-      );
+        transaction,
+      });
 
       if (!inventory) {
         throw new NotFoundError(`Product ${item.productId} not found in source shop`);
@@ -146,6 +148,7 @@ router.get('/:transferId', authMiddleware, async (req, res, next) => {
     if (!transfer) {
       throw new NotFoundError('Transfer not found');
     }
+    assertAnyShopAccess(req, [transfer.fromShopId, transfer.toShopId]);
 
     res.json(transfer);
   } catch (error) {
@@ -170,49 +173,69 @@ router.patch('/:transferId/status', authMiddleware, async (req, res, next) => {
     }
 
     if (status === 'in-transit') {
-      // Decrease inventory in source shop
+      // Only the source shop (or an admin) can release stock out
+      assertAnyShopAccess(req, [transfer.fromShopId]);
+
+      // Decrease inventory in source shop — lock rows and re-validate stock,
+      // since stock may have moved (sale, other transfer) since the transfer was created.
       for (const item of transfer.lineItems) {
-        const inventory = await Inventory.findOne(
-          {
-            where: {
-              shopId: transfer.fromShopId,
-              productId: item.productId,
-            },
+        const inventory = await Inventory.findOne({
+          where: {
+            shopId: transfer.fromShopId,
+            productId: item.productId,
           },
-          { transaction }
-        );
+          transaction,
+          lock: 'UPDATE',
+        });
 
         if (inventory) {
+          if (inventory.stock < item.qty) {
+            throw new ValidationError(
+              `Insufficient stock to release transfer: product ${item.productId} has ${inventory.stock} in stock, transfer requires ${item.qty}`
+            );
+          }
           await inventory.update(
-            {
-              stock: inventory.stock - item.qty,
-            },
+            { stock: inventory.stock - item.qty },
             { transaction }
           );
         }
       }
     } else if (status === 'received') {
+      // Only the destination shop (or an admin) can confirm receipt
+      assertAnyShopAccess(req, [transfer.toShopId]);
+
       // Increase inventory in destination shop
       for (const item of transfer.lineItems) {
-        const inventory = await Inventory.findOne(
-          {
-            where: {
-              shopId: transfer.toShopId,
-              productId: item.productId,
-            },
+        const inventory = await Inventory.findOne({
+          where: {
+            shopId: transfer.toShopId,
+            productId: item.productId,
           },
-          { transaction }
-        );
+          transaction,
+          lock: 'UPDATE',
+        });
 
         if (inventory) {
           await inventory.update(
+            { stock: inventory.stock + item.qty },
+            { transaction }
+          );
+        } else {
+          await Inventory.create(
             {
-              stock: inventory.stock + item.qty,
+              shopId: transfer.toShopId,
+              productId: item.productId,
+              stock: item.qty,
+              par: 10,
+              lastReceived: new Date(),
             },
             { transaction }
           );
         }
       }
+    } else {
+      // Any other status transition (e.g. cancellation) — either shop or admin may act
+      assertAnyShopAccess(req, [transfer.fromShopId, transfer.toShopId]);
     }
 
     await transfer.update(

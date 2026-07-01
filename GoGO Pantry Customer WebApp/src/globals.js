@@ -116,6 +116,25 @@ export async function customerFetch(url, options = {}) {
   return res;
 }
 
+// Fetches real per-shop stock levels and caches them in G.SHOP_INVENTORY so
+// G.shopStock()/G.stockState() reflect actual inventory instead of a fabricated
+// per-shop variation. Dispatches "dataLoaded" so already-mounted components
+// (which all listen for it) re-render with the fresh numbers.
+export async function fetchShopInventory(shopId) {
+  if (!shopId) return;
+  try {
+    const res = await fetch(`${API_BASE}/shops/${shopId}/public-inventory`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      G.SHOP_INVENTORY[shopId] = data;
+      window.dispatchEvent(new CustomEvent("dataLoaded"));
+    }
+  } catch (error) {
+    console.error("Error loading shop inventory:", error);
+  }
+}
+
 export async function initializeAppData() {
   try {
     const shopsRes = await fetch(`${API_BASE}/shops`);

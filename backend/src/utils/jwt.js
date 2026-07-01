@@ -7,13 +7,15 @@ if (!JWT_SECRET) {
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
+const JWT_ALGORITHM = 'HS256';
+
 function generateToken(user, type = 'staff') {
   const payload = { sub: user.id, email: user.email };
   if (type === 'staff') {
     payload.userType = user.userType;
     payload.shopId = user.shopId;
   }
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN, algorithm: JWT_ALGORITHM });
 }
 
 function generateRefreshToken(user, type = 'staff') {
@@ -22,12 +24,14 @@ function generateRefreshToken(user, type = 'staff') {
     payload.userType = user.userType;
     payload.shopId = user.shopId;
   }
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN, algorithm: JWT_ALGORITHM });
 }
 
 function verifyToken(token) {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    // Pin the algorithm so a token signed (or forged) with a different
+    // algorithm than the server issues is never accepted (alg-confusion).
+    return jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
   } catch {
     return null;
   }

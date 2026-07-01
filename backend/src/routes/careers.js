@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { JobApplication } = require('../models');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 const { ValidationError } = require('../utils/errors');
+const { publicWriteLimiter } = require('../middleware/rateLimiters');
 
 const router = express.Router();
 
@@ -22,7 +23,7 @@ const upload = multer({
 });
 
 // POST /api/careers/apply — public
-router.post('/apply', upload.single('resume'), async (req, res, next) => {
+router.post('/apply', publicWriteLimiter, upload.single('resume'), async (req, res, next) => {
   try {
     const { name, email, phone, position, coverLetter } = req.body;
 

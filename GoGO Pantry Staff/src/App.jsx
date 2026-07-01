@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { G, API_BASE, initializeAppData } from './globals.js';
+import { useState, useEffect, useCallback } from 'react';
+import { G, API_BASE, initializeAppData, resolveValidShopId } from './globals.js';
 import StaffLogin from './components/StaffLogin.jsx';
 import Shell, { AdminOnly } from './components/Shell.jsx';
 import DashboardScreen from './components/screens/DashboardScreen.jsx';
@@ -28,6 +28,7 @@ export default function StaffApp() {
   const [user, setUser] = useState(savedUser);
   const [shopId, setShopId] = useState(savedUser?.shopId || null);
   const [shopLoading, setShopLoading] = useState(!!(savedUser && !savedUser.shopId));
+  const [shopError, setShopError] = useState(false);
   const [route, setRoute] = useState(() => (savedUser && shopId) ? staffPathToRoute(window.location.pathname) : "dashboard");
 
   const navigate = (newRoute) => {
@@ -47,24 +48,45 @@ export default function StaffApp() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  // For admin users restored from session, load shops and set shopId
+  // For admin users restored from session, load shops and set shopId. Re-validates
+  // against the live backend rather than trusting a cached/stale shopId, since the
+  // previously-selected shop may have been deleted or renamed since last visit.
+  const resolveAdminShop = useCallback(async (preferredShopId) => {
+    setShopLoading(true);
+    const resolved = await resolveValidShopId(preferredShopId);
+    if (G.dataLoadError) {
+      setShopError(true);
+      setShopLoading(false);
+      return;
+    }
+    setShopError(false);
+    setShopId(resolved);
+    setShopLoading(false);
+  }, []);
+
   useEffect(() => {
     if (!savedUser || savedUser.shopId) return;
-    initializeAppData().then(() => {
-      if (G.SHOPS.length > 0) setShopId(G.SHOPS[0].id);
-      setShopLoading(false);
-    });
+    resolveAdminShop(shopId);
   }, []);
+
+  // If any screen reports its shopId no longer resolves server-side (e.g. the
+  // shop was deleted/renamed in another tab), re-resolve instead of looping
+  // on the same dead request forever.
+  useEffect(() => {
+    if (user?.userType !== 'admin') return;
+    const onInvalid = () => resolveAdminShop(null);
+    window.addEventListener('staffShopInvalid', onInvalid);
+    return () => window.removeEventListener('staffShopInvalid', onInvalid);
+  }, [user, resolveAdminShop]);
 
   const handleLogin = async (loggedInUser) => {
     setUser(loggedInUser);
     if (!loggedInUser.shopId) {
-      await initializeAppData();
-      setShopId(G.SHOPS[0]?.id || null);
+      await resolveAdminShop(null);
     } else {
       setShopId(loggedInUser.shopId);
+      setShopLoading(false);
     }
-    setShopLoading(false);
     navigate("dashboard");
   };
 
@@ -86,6 +108,24 @@ export default function StaffApp() {
   };
 
   if (!user) return <StaffLogin onLogin={handleLogin} />;
+
+  if (!shopLoading && shopError) return (
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: "var(--bg)", fontFamily: "var(--font-sans)", padding: 24, textAlign: "center" }}>
+      <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>Couldn't load shop data</span>
+      <span style={{ fontSize: 13, color: "var(--text-3)", maxWidth: 320 }}>We couldn't reach the server to load your shops. Check your connection and try again.</span>
+      <button onClick={() => resolveAdminShop(shopId)} style={{ padding: "10px 20px", borderRadius: 10, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)" }}>Retry</button>
+      <button onClick={handleLogout} style={{ padding: "8px 20px", borderRadius: 10, border: "1px solid var(--line)", background: "transparent", color: "var(--text-2)", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}>Log out</button>
+    </div>
+  );
+
+  if (!shopLoading && !shopError && !shopId) return (
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: "var(--bg)", fontFamily: "var(--font-sans)", padding: 24, textAlign: "center" }}>
+      <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text)" }}>No shops configured yet</span>
+      <span style={{ fontSize: 13, color: "var(--text-3)", maxWidth: 320 }}>An admin needs to create a shop before this workspace can be used.</span>
+      <button onClick={handleLogout} style={{ padding: "8px 20px", borderRadius: 10, border: "1px solid var(--line)", background: "transparent", color: "var(--text-2)", fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans)" }}>Log out</button>
+    </div>
+  );
+
   if (shopLoading || !shopId) return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, background: "var(--bg)", fontFamily: "var(--font-sans)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>

@@ -289,7 +289,10 @@ export default function DashboardScreen({ shopId, setRoute }) {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      apiFetch(`${API_BASE}/shops/${shopId}/dashboard`).then(r => r?.ok ? r.json() : null),
+      apiFetch(`${API_BASE}/shops/${shopId}/dashboard`).then(r => {
+        if (r?.status === 404) { window.dispatchEvent(new CustomEvent('staffShopInvalid')); return null; }
+        return r?.ok ? r.json() : null;
+      }),
       apiFetch(`${API_BASE}/shops/${shopId}/inventory`).then(r => r?.ok ? r.json() : []),
     ])
       .then(([dash, inv]) => {

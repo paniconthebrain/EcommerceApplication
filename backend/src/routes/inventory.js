@@ -1,13 +1,8 @@
 const express = require('express');
 const { Inventory, Product, Shop, Supplier } = require('../models');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
-const { NotFoundError, ValidationError, AuthenticationError, AuthorizationError } = require('../utils/errors');
-
-function assertShopAccess(req, shopId) {
-  if (req.user.userType !== 'admin' && req.user.shopId !== shopId) {
-    throw new AuthorizationError('Staff can only access their own shop data');
-  }
-}
+const { NotFoundError, ValidationError } = require('../utils/errors');
+const { assertShopAccess } = require('../middleware/shopAccess');
 
 const router = express.Router();
 
@@ -41,6 +36,31 @@ function calculateReorderPoint(par, leadTimeDays) {
   const safetyStock = dailySalesVelocity * 1.5;
   return Math.ceil(dailySalesVelocity * leadTimeDays + safetyStock);
 }
+
+// GET /api/shops/:shopId/public-inventory — public, read-only stock levels for the
+// customer storefront (no cost/supplier data, unlike the staff-only /inventory route).
+router.get('/shops/:shopId/public-inventory', async (req, res, next) => {
+  try {
+    const { shopId } = req.params;
+
+    const shop = await Shop.findByPk(shopId);
+    if (!shop) throw new NotFoundError('Shop not found');
+
+    const inventory = await Inventory.findAll({
+      where: { shopId },
+      attributes: ['productId', 'stock', 'par'],
+    });
+
+    res.json(inventory.map(item => ({
+      productId: item.productId,
+      stock: item.stock,
+      par: item.par,
+      status: getStockStatus(item.stock, item.par),
+    })));
+  } catch (error) {
+    next(error);
+  }
+});
 
 // POST /api/shops/:shopId/inventory - Initialize inventory (admin only)
 router.post('/shops/:shopId/inventory', authMiddleware, requireRole('admin'), async (req, res, next) => {
@@ -168,9 +188,7 @@ router.patch('/shops/:shopId/inventory/:productId', authMiddleware, async (req, 
     const { stock, par, action = 'set', reason, openingCostValue } = req.body;
 
     // Check authorization: admin can do anything, staff can adjust their own shop
-    if (req.user.userType !== 'admin' && req.user.shopId !== shopId) {
-      throw new AuthorizationError('Staff can only adjust inventory for their own shop');
-    }
+    assertShopAccess(req, shopId);
 
     if (stock === undefined && action === 'set') {
       throw new ValidationError('Stock is required when action is "set"');
@@ -247,8 +265,8 @@ router.patch('/shops/:shopId/inventory/:productId', authMiddleware, async (req, 
   }
 });
 
-// GET /api/inventory/:productId/across-shops
-router.get('/inventory/:productId/across-shops', authMiddleware, async (req, res, next) => {
+// GET /api/inventory/:productId/across-shops — admin only (cross-shop stock visibility)
+router.get('/inventory/:productId/across-shops', authMiddleware, requireRole('admin'), async (req, res, next) => {
   try {
     const { productId } = req.params;
 

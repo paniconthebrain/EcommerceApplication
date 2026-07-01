@@ -17,7 +17,7 @@ export function CustomerCart({ shopId, cartItems, onUpdateCart, onCheckout, onCo
 
   const cartProducts = useMemo(() => {
     return Object.entries(cartItems).filter(([, qty]) => qty > 0).map(([id, qty]) => {
-      const p = G.PRODUCTS.find(x => String(x.id) === String(id));
+      const p = G.PRODUCTS_MAP[String(id)];
       if (!p) return null;
       return { ...p, qty, stock: G.shopStock(p.id, shopId), subtotal: (parseFloat(p.price) || 0) * qty };
     }).filter(Boolean);

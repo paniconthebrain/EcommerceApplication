@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { G, API_BASE, customerFetch } from './globals.js';
+import { G, API_BASE, customerFetch, fetchShopInventory } from './globals.js';
 import { CustomerLogin, CustomerSignup, ForgotPassword, ResetPasswordPage } from './components/auth.jsx';
 import { CustomerBrowse } from './components/browse.jsx';
 import { CustomerHomepage } from './components/home.jsx';
@@ -89,8 +89,23 @@ export default function CustomerApp() {
   };
 
   useEffect(() => {
-    if (shopId) localStorage.setItem("shopId", shopId);
+    if (shopId) {
+      localStorage.setItem("shopId", shopId);
+      fetchShopInventory(shopId);
+    }
   }, [shopId]);
+
+  // customerFetch dispatches this when a session dies mid-use (expired token,
+  // refresh failed) — without this listener the header kept showing the user
+  // as logged in while every authenticated call silently failed in the background.
+  useEffect(() => {
+    const onCustomerLogout = () => {
+      setUser(null);
+      setCartItems({});
+    };
+    window.addEventListener("customerLogout", onCustomerLogout);
+    return () => window.removeEventListener("customerLogout", onCustomerLogout);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
