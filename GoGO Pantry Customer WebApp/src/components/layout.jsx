@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { G } from '../globals.js';
+import { G, API_BASE } from '../globals.js';
 import { IconC } from './icons.jsx';
 import { LogoCustomer } from './ui.jsx';
 import { ShopSelector, StorePopup } from './shop.jsx';
@@ -273,6 +273,8 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
   const [shopSelectorOpen, setShopSelectorOpen] = useState(false);
   const [nlEmail, setNlEmail] = useState('');
   const [nlDone, setNlDone] = useState(false);
+  const [nlLoading, setNlLoading] = useState(false);
+  const [nlError, setNlError] = useState(null);
   const [storePopupShop, setStorePopupShop] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showWishlist, setShowWishlist] = useState(false);
@@ -287,6 +289,28 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [userMenuOpen]);
+
+  const handleSubscribe = async () => {
+    if (!nlEmail.includes('@') || nlLoading) return;
+    setNlLoading(true);
+    setNlError(null);
+    try {
+      const res = await fetch(`${API_BASE}/newsletter/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: nlEmail.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Something went wrong. Please try again.');
+      }
+      setNlDone(true);
+    } catch (err) {
+      setNlError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setNlLoading(false);
+    }
+  };
 
   const userInitials = user?.name
     ? user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
@@ -541,16 +565,18 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
                       style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#fff", fontSize: 14, fontFamily: "var(--font-sans)", outline: "none", minWidth: 0, transition: "border-color 0.15s" }}
                       onFocus={e => e.target.style.borderColor = "oklch(0.55 0.17 152 / 0.7)"}
                       onBlur={e => e.target.style.borderColor = "rgba(255,255,255,0.12)"}
-                      onKeyDown={e => { if (e.key === 'Enter' && nlEmail.includes('@')) setNlDone(true); }}
+                      onKeyDown={e => { if (e.key === 'Enter') handleSubscribe(); }}
                     />
                     <button
-                      onClick={() => { if (nlEmail.includes('@')) setNlDone(true); }}
-                      style={{ padding: "13px 20px", borderRadius: 12, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)", whiteSpace: "nowrap", boxShadow: "0 4px 20px oklch(0.55 0.17 152 / 0.45)", transition: "all 0.15s" }}
+                      onClick={handleSubscribe}
+                      disabled={nlLoading}
+                      style={{ padding: "13px 20px", borderRadius: 12, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 800, fontSize: 14, cursor: nlLoading ? "default" : "pointer", fontFamily: "var(--font-sans)", whiteSpace: "nowrap", boxShadow: "0 4px 20px oklch(0.55 0.17 152 / 0.45)", transition: "all 0.15s", opacity: nlLoading ? 0.7 : 1 }}
                       onMouseEnter={e => { e.currentTarget.style.background = "var(--primary-hover)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.transform = "none"; }}>
-                      Subscribe →
+                      {nlLoading ? "Subscribing…" : "Subscribe →"}
                     </button>
                   </div>
+                  {nlError && <div style={{ fontSize: 12, color: "oklch(0.72 0.17 25)", marginTop: 10 }}>{nlError}</div>}
                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", marginTop: 14 }}>By subscribing you agree to our Privacy Policy.</div>
                 </>
               )}

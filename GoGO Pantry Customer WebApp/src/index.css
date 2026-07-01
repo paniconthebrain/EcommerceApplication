@@ -368,6 +368,12 @@ body.theme-dark .app-header {
 .shadow-hover:hover { box-shadow: var(--shadow-md); }
 .shadow-hover-lg:hover { box-shadow: var(--shadow-lg); }
 
+/* ===== ACCESSIBILITY ===== */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
 /* ===== BADGE ===== */
 .badge-new { animation: pulse 2.5s var(--ease) infinite; }
 .cart-badge-new { animation: cartBounce 0.4s var(--spring); }
@@ -509,6 +515,11 @@ body.theme-dark .app-header {
 @media (max-width: 640px) {
   .promo-banner-body { padding: 28px 20px !important; flex-direction: column !important; }
   .promo-banner-body button { width: 100%; }
+}
+
+/* Store search: full width below the section title on mobile instead of hidden */
+@media (max-width: 640px) {
+  .section-search-action { max-width: 100% !important; width: 100%; margin-top: 12px; }
 }
 
 /* Browse toolbar: tighter on small screens */

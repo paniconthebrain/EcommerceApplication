@@ -17,6 +17,7 @@ export function StorePopup({ shop, isOpen, onClose, onSelectShop }) {
   const hue = typeof shop.tint === "number" ? shop.tint : 152;
   const imageUrl = shop.image || null;
   const itemCount = G.PRODUCTS.filter(p => G.shopStock(p.id, shop.id) > 0).length;
+  const openNow = G.isShopOpen(shop);
 
   const stats = [
     { icon: "clock", label: "Hours", value: shop.hours || "9am–9pm" },
@@ -51,11 +52,13 @@ export function StorePopup({ shop, isOpen, onClose, onSelectShop }) {
             <IconC name="x" size={16} />
           </button>
 
-          {/* Open badge */}
-          <div style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(22,163,74,0.92)", backdropFilter: "blur(6px)", color: "#fff", padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#86efac", display: "inline-block", boxShadow: "0 0 6px #86efac" }} />
-            Open Now
-          </div>
+          {/* Open/Closed badge — omitted entirely if hours can't be parsed, rather than guessing */}
+          {openNow != null && (
+            <div style={{ position: "absolute", top: 14, left: 14, display: "inline-flex", alignItems: "center", gap: 6, background: openNow ? "rgba(22,163,74,0.92)" : "rgba(107,114,128,0.92)", backdropFilter: "blur(6px)", color: "#fff", padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: openNow ? "#86efac" : "#d1d5db", display: "inline-block", boxShadow: openNow ? "0 0 6px #86efac" : "none" }} />
+              {openNow ? "Open Now" : "Closed Now"}
+            </div>
+          )}
 
           {/* Shop name over image */}
           <div style={{ position: "absolute", bottom: 20, left: 22, right: 22 }}>
@@ -230,6 +233,7 @@ export function ShopSelector({ isOpen, onClose, onSelectShop, currentShopId }) {
             filteredShops.map((shop, i) => {
               const active = shop.id === currentShopId;
               const hue = typeof shop.tint === "number" ? shop.tint : 152;
+              const openNow = G.isShopOpen(shop);
               return (
                 <button key={shop.id} onClick={() => { onSelectShop(shop.id); onClose(); }}
                   style={{ width: "100%", padding: "16px 20px", border: "none", borderTop: i === 0 ? "none" : "1px solid var(--line)", background: active ? `oklch(0.97 0.03 ${hue})` : "transparent", cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 14, transition: "background 0.15s", outline: "none" }}
@@ -245,10 +249,12 @@ export function ShopSelector({ isOpen, onClose, onSelectShop, currentShopId }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                       <span style={{ fontSize: 14, fontWeight: 800, color: "var(--text)", letterSpacing: "-0.01em" }}>{shop.name}</span>
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#d1fae5", color: "#065f46", padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 800 }}>
-                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
-                        Open
-                      </span>
+                      {openNow != null && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: openNow ? "#d1fae5" : "var(--surface-2)", color: openNow ? "#065f46" : "var(--text-3)", padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 800 }}>
+                          <span style={{ width: 5, height: 5, borderRadius: "50%", background: openNow ? "#16a34a" : "var(--text-3)", display: "inline-block" }} />
+                          {openNow ? "Open" : "Closed"}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: 12, color: "var(--text-2)", marginBottom: 6 }}>
                       {shop.city && <span>{shop.city}</span>}
@@ -300,6 +306,7 @@ export function ShopCard({ shop, onSelect }) {
   const imageUrl = shop.image || null;
   const itemCount = G.PRODUCTS.filter(p => G.shopStock(p.id, shop.id) > 0).length;
   const pickupLabel = shop.pickupTime || null;
+  const openNow = G.isShopOpen(shop);
 
   return (
     <div role="button" tabIndex={0} aria-label={`Shop at ${shop.name}, ${shop.city}`}
@@ -323,9 +330,11 @@ export function ShopCard({ shop, onSelect }) {
           <div style={{ fontSize: 13, color: "var(--text-2)" }}>{shop.city}</div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#d1fae5", color: "#065f46", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} /> Open
-          </span>
+          {openNow != null && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: openNow ? "#d1fae5" : "var(--surface-2)", color: openNow ? "#065f46" : "var(--text-3)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: openNow ? "#16a34a" : "var(--text-3)", display: "inline-block" }} /> {openNow ? "Open" : "Closed"}
+            </span>
+          )}
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
             <IconC name="clock" size={12} /> {shop.hours || "9am–9pm"}
           </span>

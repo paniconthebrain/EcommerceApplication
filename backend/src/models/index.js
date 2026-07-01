@@ -13,6 +13,7 @@ const Order = require('./Order');
 const EmailTemplate = require('./EmailTemplate');
 const JobApplication = require('./JobApplication');
 const TokenBlacklist = require('./TokenBlacklist');
+const NewsletterSubscriber = require('./NewsletterSubscriber');
 
 // Define associations
 User.belongsTo(Shop, { foreignKey: 'shopId', targetKey: 'id' });
@@ -71,4 +72,5 @@ module.exports = {
   EmailTemplate,
   JobApplication,
   TokenBlacklist,
+  NewsletterSubscriber,
 };

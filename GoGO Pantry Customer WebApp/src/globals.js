@@ -38,6 +38,39 @@ export const G = {
   money(amount) {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
   },
+  /** Returns true/false if `shop.hours` (e.g. "8am-8pm") can be parsed against the current time, or null if it can't be determined — callers should omit the Open/Closed badge on null rather than guess. */
+  isShopOpen(shop) {
+    const hoursStr = shop?.hours;
+    if (!hoursStr) return null;
+    if (/24\s*hours?/i.test(hoursStr)) return true;
+
+    const parts = hoursStr.split(/-|–|\bto\b/i).map(s => s.trim()).filter(Boolean);
+    if (parts.length !== 2) return null;
+
+    const parseClock = (str, inferredMeridiem) => {
+      const m = str.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i);
+      if (!m) return null;
+      let h = parseInt(m[1], 10);
+      const min = m[2] ? parseInt(m[2], 10) : 0;
+      const mer = m[3] ? m[3].toLowerCase() : inferredMeridiem;
+      if (!mer || h < 1 || h > 12 || min > 59) return null;
+      if (h === 12) h = 0;
+      return (mer === "pm" ? h + 12 : h) * 60 + min;
+    };
+
+    const [openStr, closeStr] = parts;
+    const closeHasMeridiem = /am|pm/i.test(closeStr);
+    const openHasMeridiem = /am|pm/i.test(openStr);
+    const closeMin = parseClock(closeStr, openHasMeridiem ? null : "pm");
+    const openMin = parseClock(openStr, closeHasMeridiem ? null : "am");
+    if (openMin == null || closeMin == null) return null;
+
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    return closeMin > openMin
+      ? (nowMin >= openMin && nowMin < closeMin)
+      : (nowMin >= openMin || nowMin < closeMin); // overnight range, e.g. 10pm–6am
+  },
 };
 
 export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000/api";

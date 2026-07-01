@@ -25,11 +25,16 @@ const HERO_SLIDES = [
   },
 ];
 
-const HERO_STATS = [
-  { icon: "star", label: "4.9 rating" },
-  { icon: "pin",  label: (n) => `${n || 4} stores` },
-  { icon: "zap",  label: "Under 1hr" },
-];
+/** Real, computed stats only — no placeholder rating or made-up numbers. */
+function getHeroStats() {
+  const shopCount = G.SHOPS.length;
+  const productCount = G.PRODUCTS.length;
+  return [
+    { icon: "pin",  label: `${shopCount || 0} local store${shopCount === 1 ? "" : "s"}` },
+    { icon: "box",  label: `${productCount}+ fresh items` },
+    { icon: "zap",  label: "Pickup today" },
+  ];
+}
 
 function HeroCarousel({ onSelectShop, onBrowse }) {
   const [slide, setSlide] = useState(0);
@@ -62,10 +67,16 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
+      <p className="sr-only" role="status" aria-live="polite">{s.title.join(" ")}</p>
       {/* Slide track */}
       <div style={{ position: "relative", overflow: "hidden" }}
+        role="region"
+        aria-roledescription="carousel"
+        aria-label="Promotional highlights"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={() => setPaused(false)}
       >
       <div style={{ display: "flex", transform: `translateX(-${slide * 100}%)`, transition: "transform 0.65s cubic-bezier(0.4, 0, 0.2, 1)", willChange: "transform" }}>
         {HERO_SLIDES.map((sl, i) => (
@@ -95,7 +106,7 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
                 {/* CTAs */}
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                   <button
-                    onClick={() => { const sh = G.SHOPS[0]; if (sh) onSelectShop(sh.id); }}
+                    onClick={() => { G.SHOPS.length === 1 ? onSelectShop(G.SHOPS[0].id) : onBrowse(); }}
                     style={{ padding: "14px 28px", borderRadius: 14, border: "none", background: "#fff", color: "oklch(0.3 0.12 152)", fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 4px 24px rgba(0,0,0,0.22)", transition: "all 0.2s var(--spring)", display: "flex", alignItems: "center", gap: 8, letterSpacing: "-0.01em" }}
                     onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 10px 32px rgba(0,0,0,0.28)"; }}
                     onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.22)"; }}
@@ -114,10 +125,10 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
 
                 {/* Stats */}
                 <div style={{ display: "flex", gap: 24, marginTop: 30, flexWrap: "wrap" }}>
-                  {HERO_STATS.map(({ icon, label }) => (
+                  {getHeroStats().map(({ icon, label }) => (
                     <div key={icon} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, opacity: 0.85 }}>
                       <IconC name={icon} size={15} stroke={2} />
-                      <span style={{ fontWeight: 600 }}>{typeof label === "function" ? label(G.SHOPS.length) : label}</span>
+                      <span style={{ fontWeight: 600 }}>{label}</span>
                     </div>
                   ))}
                 </div>
@@ -143,8 +154,8 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
       </div>
 
       {/* Arrow buttons — hidden on mobile (swipe handles navigation) */}
-      {[["prev", "left", prev], ["next", "right", next]].map(([dir, side, fn]) => (
-        <button key={dir} onClick={fn} className="hideOnMobile"
+      {[["prev", "left", prev, "Previous slide"], ["next", "right", next, "Next slide"]].map(([dir, side, fn, label]) => (
+        <button key={dir} onClick={fn} aria-label={label} className="hideOnMobile"
           style={{ position: "absolute", [side]: 16, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 36, height: 36, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", transition: "all 0.2s" }}
           onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.28)"}
           onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.12)"}
@@ -158,6 +169,7 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "10px 0 14px" }}>
         {HERO_SLIDES.map((_, i) => (
           <button key={i} onClick={() => { setPaused(true); setSlide(i); }}
+            aria-label={`Go to slide ${i + 1}`} aria-current={i === slide ? "true" : undefined}
             style={{ padding: "6px 4px", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
             <span style={{ display: "block", width: i === slide ? 14 : 4, height: 4, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.45)", transition: "all 0.32s var(--spring)" }} />
           </button>
@@ -169,13 +181,10 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
 
 
 export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
-  const goToBrowse = (catId) => {
-    if (shopId) { onGoToBrowse(catId); }
-    else { document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" }); }
-  };
-
   const [search, setSearch] = useState("");
   const [dataVersion, setDataVersion] = useState(() => G.SHOPS?.length > 0 ? 1 : 0);
+  const [pendingCatHint, setPendingCatHint] = useState(null);
+  const hintTimerRef = useRef(null);
 
   useEffect(() => {
     if (G.SHOPS?.length > 0) setDataVersion(n => n > 0 ? n : 1);
@@ -183,6 +192,18 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
     window.addEventListener("dataLoaded", handler);
     return () => window.removeEventListener("dataLoaded", handler);
   }, []);
+
+  useEffect(() => () => clearTimeout(hintTimerRef.current), []);
+
+  // Clicking a category before picking a store used to silently scroll away with
+  // no explanation — now it also surfaces a hint banner next to the store list.
+  const goToBrowse = (catId, catName) => {
+    if (shopId) { onGoToBrowse(catId); return; }
+    document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" });
+    clearTimeout(hintTimerRef.current);
+    setPendingCatHint(catName || null);
+    hintTimerRef.current = setTimeout(() => setPendingCatHint(null), 4500);
+  };
 
   const filteredShops = search
     ? G.SHOPS.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || (s.city || "").toLowerCase().includes(search.toLowerCase()))
@@ -198,11 +219,16 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
 
       {/* ── Featured Stores ── */}
       <div id="featured-stores" style={{ padding: "56px 24px", maxWidth: 1400, margin: "0 auto" }}>
+        {pendingCatHint && (
+          <div role="status" style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--primary-soft)", color: "var(--green-700)", border: "1px solid var(--green-300)", borderRadius: 12, padding: "10px 16px", marginBottom: 20, fontSize: 13, fontWeight: 700 }}>
+            <IconC name="pin" size={15} /> Choose a store below to browse {pendingCatHint}
+          </div>
+        )}
         <SectionHeader icon="pin" iconBg="oklch(0.94 0.06 152)" iconColor="oklch(0.42 0.14 152)"
           title={search ? "Search Results" : "Featured Stores"}
           sub={`${filteredShops.length} store${filteredShops.length !== 1 ? "s" : ""} available near you`}
           action={
-            <div className="hideOnMobile" style={{ position: "relative", maxWidth: 220 }}>
+            <div className="section-search-action" style={{ position: "relative", maxWidth: 220 }}>
               <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }}><IconC name="search" size={15} /></span>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores…"
                 style={{ width: "100%", padding: "8px 12px 8px 33px", borderRadius: 999, border: "1.5px solid var(--line)", background: "var(--surface)", color: "var(--text)", fontSize: 13, fontFamily: "var(--font-sans)", outline: "none" }} />
@@ -227,13 +253,16 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
           />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(128px, 1fr))", gap: 12 }}>
             {G.CATEGORIES.map(c => (
-              <CategoryTile key={c.id} category={c} onClick={() => goToBrowse(c.id)} />
+              <CategoryTile key={c.id} category={c} onClick={() => goToBrowse(c.id, c.name)} />
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── Promo Banner ── */}
+      {/* ── Value Banner ── */}
+      {/* Replaces a "20% off WELCOME20" claim that had no coupon system behind it —
+          this highlights a real, always-true fact instead: delivery isn't offered,
+          so there's no delivery markup to charge in the first place. */}
       <div style={{ margin: "0 24px 0", maxWidth: 1400, marginLeft: "auto", marginRight: "auto" }}>
         <div className="promo-banner-body" style={{ background: "linear-gradient(135deg, oklch(0.42 0.18 255) 0%, oklch(0.35 0.16 255) 100%)", borderRadius: 24, color: "#fff", padding: "40px 36px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap", margin: "48px 24px", position: "relative", overflow: "hidden" }}>
           {/* bg decoration */}
@@ -241,10 +270,10 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
           <div style={{ position: "absolute", right: 60, bottom: -40, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
           <div>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.14)", borderRadius: 999, padding: "4px 12px", marginBottom: 12, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              <IconC name="gift" size={12} />Limited offer
+              <IconC name="checkCircle" size={12} />Pickup only, always
             </div>
-            <h3 style={{ fontSize: 30, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.03em", lineHeight: 1.1 }}>New Customer? Save 20%</h3>
-            <p style={{ fontSize: 14, margin: 0, opacity: 0.8 }}>Use code <strong>WELCOME20</strong> on your first order</p>
+            <h3 style={{ fontSize: 30, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.03em", lineHeight: 1.1 }}>$0 Delivery Fees. Ever.</h3>
+            <p style={{ fontSize: 14, margin: 0, opacity: 0.8, maxWidth: 420 }}>No delivery markup, no surge pricing — just the shelf price, picked up at your local store.</p>
           </div>
           <button
             onClick={() => document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" })}
@@ -252,7 +281,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
             onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 28px rgba(0,0,0,0.28)"; }}
             onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)"; }}
           >
-            Explore Stores →
+            Find a Store →
           </button>
         </div>
       </div>
@@ -288,13 +317,14 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
         </div>
       </div>
 
-      {/* ── Trust Badges ── */}
+      {/* ── Trust Badges — real, verifiable numbers instead of generic claims ── */}
       <div style={{ padding: "32px 24px", maxWidth: 1400, margin: "0 auto" }}>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 32 }}>
           {[
-            { icon: "checkCircle", label: "100% Fresh Guarantee" },
-            { icon: "pin",         label: "Same-Day Pickup Available" },
-            { icon: "check",       label: "Secure Checkout" },
+            { icon: "checkCircle", label: "Verified local stores" },
+            { icon: "pin",         label: `${G.SHOPS.length} store${G.SHOPS.length === 1 ? "" : "s"} near you` },
+            { icon: "box",         label: `${G.PRODUCTS.length}+ products` },
+            { icon: "check",       label: "Secure checkout" },
           ].map(({ icon, label }) => (
             <div key={label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--text-2)", fontWeight: 600 }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--primary-soft)", display: "grid", placeItems: "center" }}>
