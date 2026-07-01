@@ -12,6 +12,8 @@ import { TermsOfService } from './components/terms.jsx';
 import { CookieSettings } from './components/cookies.jsx';
 import { CareersPage } from './components/careers.jsx';
 import { ProductDetailPage } from './components/productDetail.jsx';
+import { MyOrdersPage } from './components/orders.jsx';
+import { AccountSettingsPage } from './components/accountSettings.jsx';
 
 function pageToPath(page, shopId, productId) {
   if (page === "product" && shopId && productId) return `/shop/${shopId}/product/${productId}`;
@@ -24,6 +26,8 @@ function pageToPath(page, shopId, productId) {
   if (page === "terms")            return "/terms";
   if (page === "cookies")          return "/cookies";
   if (page === "careers")          return "/careers";
+  if (page === "orders")           return "/account/orders";
+  if (page === "settings")         return "/account/settings";
   return "/";
 }
 
@@ -41,6 +45,8 @@ function pathToState(pathname) {
   if (pathname === "/terms")          return { page: "terms",          shopId: null };
   if (pathname === "/cookies")        return { page: "cookies",        shopId: null };
   if (pathname === "/careers")        return { page: "careers",        shopId: null };
+  if (pathname === "/account/orders")   return { page: "orders",   shopId: null };
+  if (pathname === "/account/settings") return { page: "settings", shopId: null };
   return { page: "home", shopId: null };
 }
 
@@ -237,6 +243,7 @@ export default function CustomerApp() {
   // Guard: browse requires a shopId — redirect home if missing
   if (page === "browse" && !shopId) navigate("home", null);
   if (page === "confirmation" && !orderData) navigate("home", null);
+  if ((page === "orders" || page === "settings") && !user) navigate("home", null);
 
   const handleSelectProduct = (pid) => navigate("product", shopId, pid);
   const handleBackToBrowse = () => navigate("browse", shopId);
@@ -253,6 +260,8 @@ export default function CustomerApp() {
     terms: <TermsOfService />,
     cookies: <CookieSettings />,
     careers: <CareersPage onBack={() => navigate("home")} />,
+    orders: user ? <MyOrdersPage user={user} onBack={() => navigate("home")} /> : null,
+    settings: user ? <AccountSettingsPage user={user} onUserUpdate={(u) => { setUser(u); localStorage.setItem("customerAuth", JSON.stringify(u)); }} onBack={() => navigate("home")} /> : null,
   };
 
   const closeOverlay = () => { setShowAuth(false); setPendingCartId(null); };

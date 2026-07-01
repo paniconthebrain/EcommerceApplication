@@ -9,6 +9,7 @@ const Inventory = require('./Inventory');
 const PurchaseOrder = require('./PurchaseOrder');
 const StockTransfer = require('./StockTransfer');
 const Customer = require('./Customer');
+const Address = require('./Address');
 const Order = require('./Order');
 const EmailTemplate = require('./EmailTemplate');
 const JobApplication = require('./JobApplication');
@@ -53,6 +54,9 @@ StockTransfer.belongsTo(User, { foreignKey: 'receivedBy', targetKey: 'id', as: '
 Order.belongsTo(Customer, { foreignKey: 'customerId', targetKey: 'id' });
 Customer.hasMany(Order, { foreignKey: 'customerId', sourceKey: 'id' });
 
+Address.belongsTo(Customer, { foreignKey: 'customerId', targetKey: 'id' });
+Customer.hasMany(Address, { foreignKey: 'customerId', sourceKey: 'id' });
+
 Order.belongsTo(Shop, { foreignKey: 'shopId', targetKey: 'id' });
 Shop.hasMany(Order, { foreignKey: 'shopId', sourceKey: 'id' });
 
@@ -68,6 +72,7 @@ module.exports = {
   PurchaseOrder,
   StockTransfer,
   Customer,
+  Address,
   Order,
   EmailTemplate,
   JobApplication,

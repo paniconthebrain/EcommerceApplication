@@ -589,14 +589,19 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>{user?.name || "Account"}</div>
                   <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>{user?.email}</div>
                 </div>
-                {["My orders", "Account settings"].map(label => (
-                  <div
+                {[
+                  { label: "My orders", page: "orders" },
+                  { label: "Account settings", page: "settings" },
+                ].map(({ label, page: target }) => (
+                  <button
                     key={label}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", fontSize: 13, color: "var(--text-3)", cursor: "default" }}
+                    onClick={() => { setUserMenuOpen(false); setPage(target); }}
+                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "transparent", border: "none", textAlign: "left", fontSize: 13, color: "var(--text-2)", cursor: "pointer", fontFamily: "var(--font-sans)", transition: "background 0.12s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--surface-2)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                   >
                     <span>{label}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, background: "var(--surface-2)", color: "var(--text-3)", padding: "2px 7px", borderRadius: 999 }}>Soon</span>
-                  </div>
+                  </button>
                 ))}
                 <button
                   onClick={() => { setUserMenuOpen(false); onLogout(); }}
