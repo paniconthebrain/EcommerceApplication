@@ -16,3 +16,5 @@ build/
 *~
 .next/
 out/
+.vercel
+.env*

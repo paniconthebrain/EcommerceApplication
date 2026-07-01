@@ -77,6 +77,15 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(path.join(__dirname, '../uploads')));
 
+// API responses reflect live, frequently-changing data (inventory, orders, etc.) —
+// never let the browser cache them or issue conditional requests, since a 304
+// has no body and callers checking res.ok (200-299) would otherwise treat a
+// valid cache-hit as a failure.
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date() });
