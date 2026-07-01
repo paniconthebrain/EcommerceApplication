@@ -66,8 +66,63 @@ function NutritionPanel({ facts }) {
   );
 }
 
+/** Branded stand-in for a missing/broken product photo — a grocery basket, not a bare cart icon. */
+function ProductPlaceholder({ hue, iconSize = 100 }) {
+  return (
+    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, hsl(${hue},45%,92%) 0%, hsl(${hue},50%,87%) 100%)` }}>
+      <IconC name="basket" size={iconSize} stroke={1.4} style={{ color: `hsl(${hue},45%,55%)` }} />
+    </div>
+  );
+}
+
+/** Collapsed-by-default "Substitution: <label> ▾" control — expands into the 3 preference options. */
+function SubstitutionPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const current = SUB_PREFS.find(o => o.value === value) || SUB_PREFS[0];
+  return (
+    <div style={{ border: "1.5px solid var(--line)", borderRadius: 12, marginBottom: 20 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 16px", background: "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)", textAlign: "left" }}
+      >
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+          Substitution: <span style={{ fontWeight: 500, color: "var(--text-3)" }}>{current.label}</span>
+        </span>
+        <span style={{ fontSize: 16, color: "var(--text-3)", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}>⌄</span>
+      </button>
+      {open && (
+        <div role="radiogroup" aria-label="Substitution preference" style={{ display: "flex", flexDirection: "column", gap: 6, padding: "0 14px 14px" }}>
+          {SUB_PREFS.map(opt => {
+            const active = value === opt.value;
+            return (
+              <label
+                key={opt.value}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", borderRadius: 10, border: `1.5px solid ${active ? "var(--primary)" : "var(--line)"}`, background: active ? "var(--primary-soft)" : "var(--surface)", cursor: "pointer", transition: "all 0.15s" }}
+              >
+                <input
+                  type="radio"
+                  name="subpref"
+                  value={opt.value}
+                  checked={active}
+                  onChange={() => { onChange(opt.value); setOpen(false); }}
+                  style={{ accentColor: "var(--primary)", flexShrink: 0 }}
+                />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{opt.label}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 1 }}>{opt.desc}</div>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProductDetailPage({
-  shopId, productId, cartItems, onAddToCart, onUpdateCart, onBack, savedItems, onToggleSave, onRequireAuth, user,
+  shopId, productId, cartItems, onAddToCart, onUpdateCart, onBack, onSelectProduct, savedItems, onToggleSave, onRequireAuth, user,
 }) {
   const product = G.PRODUCTS_MAP[productId];
   const [qty, setQty] = useState(1);
@@ -75,9 +130,23 @@ export function ProductDetailPage({
   const [heroImg, setHeroImg] = useState(null);
   const [toast, setToast] = useState(null);
   const [notified, setNotified] = useState(false);
+  const [pulseKey, setPulseKey] = useState(0);
+  const [zoom, setZoom] = useState({ active: false, origin: "50% 50%" });
+  const [dataVersion, setDataVersion] = useState(() => (G.PRODUCTS?.length > 0 ? 1 : 0));
   const toastTimerRef = useRef(null);
 
   const inCart = product ? (cartItems[product.id] || 0) : 0;
+
+  // On a hard reload/deep link, G.PRODUCTS_MAP is still empty while
+  // initializeAppData()'s fetch is in flight — without this, the page would
+  // permanently show "Product not found" since G is a plain mutable object,
+  // not React state, so filling it in later doesn't trigger a re-render.
+  useEffect(() => {
+    if (G.PRODUCTS?.length > 0) setDataVersion(n => n > 0 ? n : 1);
+    const handler = () => setDataVersion(n => n + 1);
+    window.addEventListener("dataLoaded", handler);
+    return () => window.removeEventListener("dataLoaded", handler);
+  }, []);
 
   useEffect(() => {
     if (product) {
@@ -95,6 +164,15 @@ export function ProductDetailPage({
   useEffect(() => () => clearTimeout(toastTimerRef.current), []);
 
   if (!product) {
+    if (dataVersion === 0) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 16 }}>
+          <style>{`@keyframes pdpSpin { to { transform: rotate(360deg); } }`}</style>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid var(--line)", borderTopColor: "var(--primary)", animation: "pdpSpin 0.7s linear infinite" }} />
+          <p style={{ color: "var(--text-3)", fontSize: 14, fontWeight: 600 }}>Loading product…</p>
+        </div>
+      );
+    }
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", gap: 16 }}>
         <IconC name="box" size={48} style={{ opacity: 0.2 }} />
@@ -117,6 +195,7 @@ export function ProductDetailPage({
   const savings = salePrice && price > salePrice ? ((1 - salePrice / price) * 100).toFixed(0) : null;
   const gallery = [product.image, ...(product.galleryImages || [])].filter(Boolean);
   const isSaved = savedItems?.has(product.id);
+  const related = G.PRODUCTS.filter(p => p.cat === product.cat && p.id !== product.id).slice(0, 8);
 
   const stockColors = {
     out: { bg: "var(--red-100)",   color: "var(--red-500)",   dot: "var(--red-500)" },
@@ -133,6 +212,7 @@ export function ProductDetailPage({
 
   const handleAdd = () => {
     if (!user) { onRequireAuth?.(); return; }
+    setPulseKey(k => k + 1);
     if (inCart > 0) {
       onUpdateCart(product.id, qty);
       showToast(`Cart updated — ${qty} × ${product.name}`, false);
@@ -151,6 +231,20 @@ export function ProductDetailPage({
   const handleNotify = () => {
     setNotified(true);
     showToast("We'll notify you when this is back in stock", false);
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.name, text: `Check out ${product.name} on GoGO Pantry`, url });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        showToast("Link copied to clipboard", false);
+      }
+    } catch {
+      // User dismissed the native share sheet.
+    }
   };
 
   const specRows = [
@@ -173,6 +267,8 @@ export function ProductDetailPage({
           .pdp-layout { display: block !important; }
           .pdp-info-col { padding: 0 16px; }
         }
+        @keyframes pdpPop { 0% { transform: scale(1); } 40% { transform: scale(0.94); } 100% { transform: scale(1); } }
+        @keyframes pdpToastIn { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       `}</style>
 
       {/* ── Sticky header ── */}
@@ -204,7 +300,7 @@ export function ProductDetailPage({
           role="status"
           aria-live="assertive"
           aria-atomic="true"
-          style={{ margin: "12px 20px 0", padding: "11px 16px", background: "var(--text)", color: "#fff", borderRadius: 12, display: "flex", alignItems: "center", gap: 10, fontSize: 13, maxWidth: 760, marginLeft: "auto", marginRight: "auto" }}
+          style={{ margin: "12px 20px 0", padding: "11px 16px", background: "var(--text)", color: "#fff", borderRadius: 12, display: "flex", alignItems: "center", gap: 10, fontSize: 13, maxWidth: 760, marginLeft: "auto", marginRight: "auto", animation: "pdpToastIn 0.2s ease-out" }}
         >
           <span style={{ flex: 1 }}>{toast.msg}</span>
           {toast.withUndo && (
@@ -222,10 +318,28 @@ export function ProductDetailPage({
           {/* ── LEFT: Image gallery ── */}
           <div className="pdp-gallery-col">
             {/* Hero */}
-            <div style={{ background: `linear-gradient(135deg, hsl(${hue},45%,92%) 0%, hsl(${hue},50%,87%) 100%)`, borderRadius: 20, overflow: "hidden", aspectRatio: "1/1", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+            <div
+              style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "1/1", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", cursor: heroImg ? "zoom-in" : "default" }}
+              onMouseEnter={() => heroImg && setZoom(z => ({ ...z, active: true }))}
+              onMouseLeave={() => setZoom({ active: false, origin: "50% 50%" })}
+              onMouseMove={e => {
+                if (!heroImg) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+                setZoom({ active: true, origin: `${x}% ${y}%` });
+              }}
+            >
               {heroImg
-                ? <img src={heroImg} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 20 }} />
-                : <div style={{ color: `hsl(${hue},45%,62%)` }}><IconC name="cart" size={100} stroke={1.2} /></div>
+                ? (
+                  <img
+                    src={heroImg}
+                    alt={product.name}
+                    onError={() => setHeroImg(null)}
+                    style={{ width: "100%", height: "100%", objectFit: "contain", padding: 20, background: `linear-gradient(135deg, hsl(${hue},45%,92%) 0%, hsl(${hue},50%,87%) 100%)`, transform: zoom.active ? "scale(1.8)" : "scale(1)", transformOrigin: zoom.origin, transition: "transform 0.15s ease-out" }}
+                  />
+                )
+                : <ProductPlaceholder hue={hue} />
               }
               {salePrice && savings && (
                 <div style={{ position: "absolute", top: 14, left: 14, background: "#ef4444", color: "#fff", padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: 800, letterSpacing: "0.02em" }}>
@@ -289,19 +403,39 @@ export function ProductDetailPage({
               )}
             </div>
 
-            {/* Stock status */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+            {/* Stock + fulfillment — single inline row */}
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 14, marginBottom: 14 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 700, color: sc.color, background: sc.bg, padding: "5px 12px", borderRadius: 999 }}>
                 <span style={{ width: 6, height: 6, borderRadius: 999, background: sc.dot, display: "inline-block", flexShrink: 0 }} />
                 {stockState === "out" ? "Out of stock" : stockState === "low" ? `Only ${stock} left` : "In stock"}
               </span>
+              {currentShop && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-2)" }}>
+                  <IconC name="pin" size={14} style={{ color: "var(--text-3)" }} />
+                  Pickup at <strong style={{ color: "var(--text)" }}>{currentShop.name}</strong>
+                </span>
+              )}
+              {currentShop?.pickupTime && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-2)" }}>
+                  <IconC name="clock" size={14} style={{ color: "var(--text-3)" }} />
+                  Ready in {currentShop.pickupTime}
+                </span>
+              )}
             </div>
 
-            {/* Pickup info */}
-            {currentShop && (
-              <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: "var(--text-2)", marginBottom: 16 }}>
-                <span>🏪</span>
-                <span>Available for pickup at <strong>{currentShop.name}</strong></span>
+            {/* Size / tags */}
+            {(product.size || product.weight || product.tags?.length > 0) && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+                {(product.size || product.weight) && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5, border: "1px solid var(--line)", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, color: "var(--text-2)" }}>
+                    <IconC name="box" size={12} style={{ color: "var(--text-3)" }} /> {product.size || product.weight}
+                  </span>
+                )}
+                {product.tags?.map(t => (
+                  <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 5, border: "1px solid var(--line)", padding: "4px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, color: "var(--text-2)" }}>
+                    <IconC name="tag" size={12} style={{ color: "var(--text-3)" }} /> {t}
+                  </span>
+                ))}
               </div>
             )}
 
@@ -351,9 +485,11 @@ export function ProductDetailPage({
                   onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "var(--shadow-primary-lg)"; e.currentTarget.style.background = "var(--primary-hover)"; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "var(--shadow-primary)"; e.currentTarget.style.background = "var(--primary)"; }}
                 >
-                  {inCart > 0
-                    ? `Update Cart (${qty}) · $${(displayPrice * qty).toFixed(2)}`
-                    : `Add ${qty} to Cart · $${(displayPrice * qty).toFixed(2)}`}
+                  <span key={pulseKey} style={{ display: "inline-block", animation: "pdpPop 0.22s ease-out" }}>
+                    {inCart > 0
+                      ? `Update Cart (${qty}) · $${(displayPrice * qty).toFixed(2)}`
+                      : `Add ${qty} to Cart · $${(displayPrice * qty).toFixed(2)}`}
+                  </span>
                 </button>
               </div>
             )}
@@ -373,36 +509,20 @@ export function ProductDetailPage({
               </div>
             )}
 
-            {/* Substitution preference */}
+            {/* Substitution preference — collapsed by default */}
             {stockState !== "out" && (
-              <div style={{ marginBottom: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 10 }}>Substitution preference</div>
-                <div role="radiogroup" aria-label="Substitution preference" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {SUB_PREFS.map(opt => {
-                    const active = subPref === opt.value;
-                    return (
-                      <label
-                        key={opt.value}
-                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", borderRadius: 10, border: `1.5px solid ${active ? "var(--primary)" : "var(--line)"}`, background: active ? `hsl(${hue},60%,97%)` : "var(--surface)", cursor: "pointer", transition: "all 0.15s" }}
-                      >
-                        <input
-                          type="radio"
-                          name={`subpref-${product.id}`}
-                          value={opt.value}
-                          checked={active}
-                          onChange={() => setSubPref(opt.value)}
-                          style={{ accentColor: "var(--primary)", flexShrink: 0 }}
-                        />
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{opt.label}</div>
-                          <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 1 }}>{opt.desc}</div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
+              <SubstitutionPicker value={subPref} onChange={setSubPref} />
             )}
+
+            {/* Secondary actions */}
+            <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+              <button
+                onClick={handleShare}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 700, color: "var(--text-2)" }}
+              >
+                <IconC name="share" size={15} /> Share
+              </button>
+            </div>
           </div>
         </div>
 
@@ -461,6 +581,47 @@ export function ProductDetailPage({
               )}
             </Accordion>
           )}
+        </div>
+
+        {/* ── You might also like ── */}
+        {related.length > 0 && (
+          <div style={{ marginTop: 40 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 800, color: "var(--text)", margin: "0 0 14px" }}>You might also like</h2>
+            <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 6 }}>
+              {related.map(rp => {
+                const rpHue = G.catOf(rp.cat)?.hue || 152;
+                const rpPrice = rp.salePrice ? parseFloat(rp.salePrice) : parseFloat(rp.price) || 0;
+                return (
+                  <button
+                    key={rp.id}
+                    onClick={() => onSelectProduct?.(rp.id)}
+                    style={{ width: 132, flexShrink: 0, textAlign: "left", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "var(--font-sans)" }}
+                  >
+                    <div style={{ width: "100%", aspectRatio: "1/1", borderRadius: 14, overflow: "hidden", marginBottom: 8 }}>
+                      {rp.image
+                        ? <img src={rp.image} alt={rp.name} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 10, background: `hsl(${rpHue},50%,95%)` }} />
+                        : <ProductPlaceholder hue={rpHue} iconSize={40} />
+                      }
+                    </div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--text)", lineHeight: 1.35, marginBottom: 4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                      {rp.name}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text)" }}>${rpPrice.toFixed(2)}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Customer reviews ── */}
+        <div style={{ maxWidth: 760, margin: "40px 0 20px" }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: "var(--text)", margin: "0 0 14px" }}>Customer reviews</h2>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "32px 20px", border: "1.5px dashed var(--line)", borderRadius: 16, textAlign: "center" }}>
+            <IconC name="star" size={26} style={{ color: "var(--text-3)", opacity: 0.5 }} />
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text-2)" }}>No reviews yet</p>
+            <p style={{ margin: 0, fontSize: 13, color: "var(--text-3)", maxWidth: 320 }}>Be the first to try this item and share what you thought.</p>
+          </div>
         </div>
       </div>
 

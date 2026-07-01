@@ -229,7 +229,7 @@ export default function CustomerApp() {
   const screens = {
     home: <CustomerHomepage onSelectShop={handleSelectShop} shopId={shopId} onGoToBrowse={(catId) => { setInitialCat(catId || null); setPage("browse"); }} />,
     browse: shopId ? <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={() => navigate("home", null)} initialCat={initialCat} savedItems={savedItems} onToggleSave={handleToggleSave} onSelectProduct={handleSelectProduct} /> : null,
-    product: (shopId && productId) ? <ProductDetailPage shopId={shopId} productId={productId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onBack={handleBackToBrowse} savedItems={savedItems} onToggleSave={handleToggleSave} onRequireAuth={() => { setAuthPage("login"); setShowAuth(true); }} user={user} /> : null,
+    product: (shopId && productId) ? <ProductDetailPage shopId={shopId} productId={productId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onBack={handleBackToBrowse} onSelectProduct={handleSelectProduct} savedItems={savedItems} onToggleSave={handleToggleSave} onRequireAuth={() => { setAuthPage("login"); setShowAuth(true); }} user={user} /> : null,
     cart: <CustomerCart shopId={shopId} cartItems={cartItems} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} onContinueShopping={() => navigate("browse")} />,
     checkout: <CustomerCheckout shopId={shopId} cartItems={cartItems} onConfirm={handleConfirm} onBack={() => setPage("cart")} />,
     confirmation: orderData ? <CustomerConfirmation orderData={orderData} onNewOrder={handleNewOrder} /> : null,
