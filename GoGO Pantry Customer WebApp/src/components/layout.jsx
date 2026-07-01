@@ -182,6 +182,81 @@ function WishlistPanel({ savedItems, onClose, onAddToCart, cartItems, onUpdateCa
   );
 }
 
+/* ── Inline header search (desktop) — live results dropdown anchored to the input ── */
+function HeaderSearchBar({ cartItems, onAddToCart, onUpdateCart }) {
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const [modalProduct, setModalProduct] = useState(null);
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    const onClickOutside = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  const results = useMemo(() => {
+    if (!q.trim()) return [];
+    const lq = q.toLowerCase();
+    return G.PRODUCTS.filter(p => p.name.toLowerCase().includes(lq) || (p.brand || '').toLowerCase().includes(lq)).slice(0, 6);
+  }, [q]);
+
+  return (
+    <div ref={wrapRef} className="hideOnMobile" style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
+      <div style={{ position: 'relative' }}>
+        <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }}>
+          <IconC name="search" size={16} />
+        </span>
+        <input
+          value={q}
+          onChange={e => { setQ(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder="Search products…"
+          style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: 999, border: '1.5px solid var(--line)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: 13.5, fontFamily: 'var(--font-sans)', outline: 'none' }}
+          onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); e.currentTarget.blur(); } }}
+        />
+      </div>
+      {open && q.trim() && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, background: 'var(--surface)', borderRadius: 14, border: '1px solid var(--line)', boxShadow: 'var(--shadow-xl)', overflow: 'hidden', zIndex: 60, maxHeight: 400, overflowY: 'auto', animation: 'slideInDown 0.14s var(--ease)' }}>
+          {results.length === 0 ? (
+            <div style={{ padding: '18px 16px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13, fontWeight: 600 }}>No products found for "{q}"</div>
+          ) : results.map((p, i) => {
+            const cat = G.catOf(p.cat);
+            const inCart = cartItems[p.id] || 0;
+            return (
+              <div key={p.id}
+                onClick={() => { setModalProduct(p); setOpen(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', cursor: 'pointer', borderBottom: i < results.length - 1 ? '1px solid var(--line)' : 'none', transition: 'background 0.12s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                <div style={{ width: 38, height: 38, borderRadius: 9, background: `hsl(${cat.hue || 152},45%,92%)`, flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {p.image ? <img src={p.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <IconC name="cart" size={18} style={{ color: `hsl(${cat.hue || 152},50%,62%)` }} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>${parseFloat(p.price).toFixed(2)} / {p.unit}</div>
+                </div>
+                {inCart > 0 && <span style={{ background: 'var(--primary-soft)', color: 'var(--green-700)', fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 999, flexShrink: 0 }}>{inCart}</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {modalProduct && (
+        <div style={{ position: 'relative', zIndex: 500 }}>
+          <ProductDetailModal
+            product={modalProduct}
+            inCart={cartItems[modalProduct.id] || 0}
+            onClose={() => setModalProduct(null)}
+            onAdd={() => onAddToCart(modalProduct.id)}
+            onUpdateCart={onUpdateCart}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, onOpenSearch, onOpenWishlist, savedCount = 0 }) {
   const tabs = [
     { id: "home",   label: "Home",   icon: "home" },
@@ -278,8 +353,25 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
   const [storePopupShop, setStorePopupShop] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showWishlist, setShowWishlist] = useState(false);
-  const currentShopName = shopId ? (G.SHOPS.find(s => s.id === shopId)?.name || shopId) : null;
+  const [topStripDismissed, setTopStripDismissed] = useState(() => localStorage.getItem('topStripDismissed') === 'true');
+  const [showCartPreview, setShowCartPreview] = useState(false);
+  const [cartBounce, setCartBounce] = useState(false);
+  const [dataVersion, setDataVersion] = useState(() => G.SHOPS?.length > 0 ? 1 : 0);
+  const currentShop = shopId ? G.SHOPS.find(s => s.id === shopId) : null;
+  const currentShopName = currentShop?.name || shopId || null;
+  const shopOpenNow = currentShop ? G.isShopOpen(currentShop) : null;
   const userMenuRef = useRef(null);
+  const prevCartCountRef = useRef(cartCount);
+
+  // Without this, a hard reload/deep link shows the raw shopId (e.g. "bp") in the
+  // header forever — G is a plain mutable object, not React state, so filling in
+  // G.SHOPS after the initial render doesn't trigger a re-render on its own.
+  useEffect(() => {
+    if (G.SHOPS?.length > 0) setDataVersion(n => n > 0 ? n : 1);
+    const handler = () => setDataVersion(n => n + 1);
+    window.addEventListener("dataLoaded", handler);
+    return () => window.removeEventListener("dataLoaded", handler);
+  }, []);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -289,6 +381,25 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [userMenuOpen]);
+
+  // Bounce the cart icon whenever an item is actually added (not on decreases/removals).
+  useEffect(() => {
+    if (cartCount > prevCartCountRef.current) {
+      setCartBounce(true);
+      const t = setTimeout(() => setCartBounce(false), 400);
+      prevCartCountRef.current = cartCount;
+      return () => clearTimeout(t);
+    }
+    prevCartCountRef.current = cartCount;
+  }, [cartCount]);
+
+  const dismissTopStrip = () => { setTopStripDismissed(true); localStorage.setItem('topStripDismissed', 'true'); };
+
+  const cartPreviewItems = Object.entries(cartItems)
+    .filter(([, qty]) => qty > 0)
+    .map(([pid, qty]) => ({ product: G.PRODUCTS_MAP[pid], qty }))
+    .filter(x => x.product);
+  const cartSubtotal = cartPreviewItems.reduce((sum, { product, qty }) => sum + (parseFloat(product.salePrice || product.price) || 0) * qty, 0);
 
   const handleSubscribe = async () => {
     if (!nlEmail.includes('@') || nlLoading) return;
@@ -319,6 +430,37 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
 
+      {/* ── Top strip: real store status once selected, honest value prop otherwise ── */}
+      {!topStripDismissed && (
+        <div style={{ background: "oklch(0.2 0.03 152)", color: "#fff", padding: "8px 44px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12.5, fontWeight: 600, position: "relative", flexWrap: "wrap", textAlign: "center" }}>
+          {currentShop ? (
+            <>
+              <IconC name="pin" size={13} style={{ color: "oklch(0.75 0.14 152)", flexShrink: 0 }} />
+              <span>
+                <strong style={{ fontWeight: 800 }}>{currentShop.name}</strong>
+                {shopOpenNow != null && (
+                  <span style={{ marginLeft: 8, color: shopOpenNow ? "oklch(0.75 0.14 152)" : "oklch(0.7 0.1 25)" }}>
+                    ● {shopOpenNow ? "Open now" : "Closed now"}
+                  </span>
+                )}
+                {currentShop.pickupTime && <span style={{ marginLeft: 8, opacity: 0.75 }}>· Ready in {currentShop.pickupTime}</span>}
+              </span>
+              <button onClick={() => setShopSelectorOpen(true)} style={{ background: "none", border: "none", color: "oklch(0.78 0.14 152)", fontWeight: 800, fontSize: 12.5, cursor: "pointer", fontFamily: "var(--font-sans)", textDecoration: "underline", padding: 0, marginLeft: 4 }}>
+                Change
+              </button>
+            </>
+          ) : (
+            <>
+              <IconC name="checkCircle" size={13} style={{ color: "oklch(0.75 0.14 152)", flexShrink: 0 }} />
+              <span>$0 delivery fees — pickup only, always.</span>
+            </>
+          )}
+          <button onClick={dismissTopStrip} aria-label="Dismiss" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "rgba(255,255,255,0.5)", cursor: "pointer", display: "grid", placeItems: "center", padding: 4 }}>
+            <IconC name="x" size={13} />
+          </button>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <header className="app-header" style={{ padding: "0 20px", height: 62, display: "flex", alignItems: "center", gap: 14 }}>
         <LogoCustomer size={24} onClick={() => setPage("home")} />
@@ -348,6 +490,9 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
           }}
         >
           <IconC name="pin" size={14} stroke={2.5} />
+          {currentShopName && shopOpenNow != null && (
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: shopOpenNow ? "#16a34a" : "var(--text-3)", flexShrink: 0 }} />
+          )}
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {currentShopName || "Select store"}
           </span>
@@ -369,28 +514,21 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
           }}
         >
           <IconC name="pin" size={12} stroke={2.5} />
+          {currentShopName && shopOpenNow != null && (
+            <span style={{ width: 5, height: 5, borderRadius: "50%", background: shopOpenNow ? "#16a34a" : "var(--text-3)", flexShrink: 0 }} />
+          )}
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {currentShopName || "Store"}
           </span>
         </button>
 
+        <HeaderSearchBar cartItems={cartItems} onAddToCart={onAddToCart} onUpdateCart={onUpdateCart} />
+
         <div style={{ flex: 1 }} />
 
         {/* Right actions */}
+        {/* Desktop search now lives inline (HeaderSearchBar above); mobile search is the bottom-nav "Search" tab — no header icon needed on either. */}
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-
-          {/* Search */}
-          <button
-            aria-label="Search"
-            title="Search products"
-            className="hideOnMobile"
-            onClick={() => setShowSearch(true)}
-            style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: "transparent", color: "var(--text-3)", cursor: "pointer", display: "grid", placeItems: "center", transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--text)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-3)"; }}
-          >
-            <IconC name="search" size={19} />
-          </button>
 
           {/* Saved / Wishlist */}
           <button
@@ -418,21 +556,25 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
               aria-haspopup="menu"
               onClick={() => user ? setUserMenuOpen(!userMenuOpen) : onLoginClick?.()}
               style={{
-                width: 38, height: 38, borderRadius: 10, border: "none", cursor: "pointer",
-                display: "grid", placeItems: "center", transition: "all 0.15s",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                width: user ? 38 : "auto", height: 38,
+                padding: user ? 0 : "0 14px 0 10px",
+                borderRadius: user ? 10 : 999, border: "none", cursor: "pointer",
+                transition: "all 0.15s",
                 background: user ? "var(--primary-soft)" : "transparent",
-                color: user ? "var(--green-700)" : "var(--text-3)",
+                color: user ? "var(--green-700)" : "var(--text-2)",
               }}
               onMouseEnter={e => { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--text)"; }}
               onMouseLeave={e => {
                 e.currentTarget.style.background = user ? "var(--primary-soft)" : "transparent";
-                e.currentTarget.style.color = user ? "var(--green-700)" : "var(--text-3)";
+                e.currentTarget.style.color = user ? "var(--green-700)" : "var(--text-2)";
               }}
             >
               {user && userInitials
                 ? <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "-0.02em" }}>{userInitials}</span>
                 : <IconC name="user" size={19} />
               }
+              {!user && <span className="hideOnMobile" style={{ fontSize: 13, fontWeight: 700 }}>Sign in</span>}
             </button>
 
             {userMenuOpen && (
@@ -468,39 +610,87 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             )}
           </div>
 
-          {/* Cart button / pill */}
-          <button
-            aria-label={cartCount > 0 ? `Cart, ${cartCount} item${cartCount !== 1 ? "s" : ""}` : "Cart"}
-            onClick={() => setPage("cart")}
-            style={{
-              display: "flex", alignItems: "center", gap: cartCount > 0 ? 7 : 0,
-              height: 38,
-              padding: cartCount > 0 ? "0 14px 0 10px" : "0 10px",
-              borderRadius: 999,
-              border: "none",
-              background: cartCount > 0 ? "var(--primary)" : "transparent",
-              color: cartCount > 0 ? "var(--primary-ink)" : "var(--text-3)",
-              cursor: "pointer",
-              transition: "all 0.2s var(--spring)",
-              boxShadow: cartCount > 0 ? "var(--shadow-primary)" : "none",
-              position: "relative",
-            }}
-            onMouseEnter={e => {
-              if (cartCount === 0) { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--text)"; }
-              else { e.currentTarget.style.filter = "brightness(1.06)"; e.currentTarget.style.transform = "translateY(-1px)"; }
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = cartCount > 0 ? "var(--primary)" : "transparent";
-              e.currentTarget.style.color = cartCount > 0 ? "var(--primary-ink)" : "var(--text-3)";
-              e.currentTarget.style.filter = "none";
-              e.currentTarget.style.transform = "none";
-            }}
+          {/* Cart button / pill, with a hover preview dropdown (desktop only — click still always goes straight to the cart page) */}
+          <div
+            style={{ position: "relative" }}
+            onMouseEnter={() => cartCount > 0 && setShowCartPreview(true)}
+            onMouseLeave={() => setShowCartPreview(false)}
           >
-            <IconC name="cart" size={19} stroke={cartCount > 0 ? 2.5 : 1.8} />
-            {cartCount > 0 && (
-              <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "-0.02em" }}>{cartCount}</span>
+            <button
+              aria-label={cartCount > 0 ? `Cart, ${cartCount} item${cartCount !== 1 ? "s" : ""}` : "Cart"}
+              onClick={() => setPage("cart")}
+              style={{
+                display: "flex", alignItems: "center", gap: cartCount > 0 ? 7 : 0,
+                height: 38,
+                padding: cartCount > 0 ? "0 14px 0 10px" : "0 10px",
+                borderRadius: 999,
+                border: "none",
+                background: cartCount > 0 ? "var(--primary)" : "transparent",
+                color: cartCount > 0 ? "var(--primary-ink)" : "var(--text-3)",
+                cursor: "pointer",
+                transition: "all 0.2s var(--spring)",
+                boxShadow: cartCount > 0 ? "var(--shadow-primary)" : "none",
+                position: "relative",
+              }}
+              onMouseEnter={e => {
+                if (cartCount === 0) { e.currentTarget.style.background = "var(--surface-2)"; e.currentTarget.style.color = "var(--text)"; }
+                else { e.currentTarget.style.filter = "brightness(1.06)"; e.currentTarget.style.transform = "translateY(-1px)"; }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = cartCount > 0 ? "var(--primary)" : "transparent";
+                e.currentTarget.style.color = cartCount > 0 ? "var(--primary-ink)" : "var(--text-3)";
+                e.currentTarget.style.filter = "none";
+                e.currentTarget.style.transform = "none";
+              }}
+            >
+              <span className={cartBounce ? "cart-badge-new" : ""} style={{ display: "inline-flex" }}>
+                <IconC name="cart" size={19} stroke={cartCount > 0 ? 2.5 : 1.8} />
+              </span>
+              {cartCount > 0 && (
+                <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "-0.02em" }}>{cartCount}</span>
+              )}
+            </button>
+
+            {showCartPreview && cartCount > 0 && (
+              <div className="hideOnMobile" style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 320, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 18, boxShadow: "var(--shadow-xl)", zIndex: 60, overflow: "hidden", animation: "scaleIn 0.15s var(--ease)", transformOrigin: "top right" }}>
+                <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)", fontSize: 13, fontWeight: 800, color: "var(--text)" }}>
+                  Your Cart · {cartCount} item{cartCount !== 1 ? "s" : ""}
+                </div>
+                <div style={{ maxHeight: 260, overflowY: "auto" }}>
+                  {cartPreviewItems.slice(0, 4).map(({ product, qty }) => {
+                    const cat = G.catOf(product.cat);
+                    const price = parseFloat(product.salePrice || product.price) || 0;
+                    return (
+                      <div key={product.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px" }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: `hsl(${cat.hue || 152},45%,92%)`, flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {product.image ? <img src={product.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <IconC name="cart" size={16} style={{ color: `hsl(${cat.hue || 152},50%,62%)` }} />}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{product.name}</div>
+                          <div style={{ fontSize: 11, color: "var(--text-3)" }}>Qty {qty} · ${price.toFixed(2)}</div>
+                        </div>
+                        <div style={{ fontSize: 12.5, fontWeight: 800, color: "var(--text)", flexShrink: 0 }}>${(price * qty).toFixed(2)}</div>
+                      </div>
+                    );
+                  })}
+                  {cartPreviewItems.length > 4 && (
+                    <div style={{ padding: "6px 16px 10px", fontSize: 11.5, color: "var(--text-3)", fontWeight: 600 }}>
+                      +{cartPreviewItems.length - 4} more item{cartPreviewItems.length - 4 !== 1 ? "s" : ""}
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: 14, borderTop: "1px solid var(--line)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, fontSize: 13.5, fontWeight: 700, color: "var(--text)" }}>
+                    <span>Subtotal</span><span>${cartSubtotal.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => setPage("cart")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1.5px solid var(--line)", background: "transparent", color: "var(--text)", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)" }}>View Cart</button>
+                    <button onClick={() => setPage("checkout")} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-sans)" }}>Checkout</button>
+                  </div>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
         </div>
       </header>
 
