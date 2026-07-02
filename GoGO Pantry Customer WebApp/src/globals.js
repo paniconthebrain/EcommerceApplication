@@ -71,6 +71,14 @@ export const G = {
       ? (nowMin >= openMin && nowMin < closeMin)
       : (nowMin >= openMin || nowMin < closeMin); // overnight range, e.g. 10pm–6am
   },
+  /** Returns the shop's posted opening time as a display string (e.g. "8am"), or null if `shop.hours` can't be parsed. */
+  openingTimeLabel(shop) {
+    const hoursStr = shop?.hours;
+    if (!hoursStr) return null;
+    if (/24\s*hours?/i.test(hoursStr)) return null;
+    const parts = hoursStr.split(/-|–|\bto\b/i).map(s => s.trim()).filter(Boolean);
+    return parts[0] || null;
+  },
 };
 
 export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000/api";

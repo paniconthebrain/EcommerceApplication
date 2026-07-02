@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { G } from '../globals.js';
+import { G, API_BASE } from '../globals.js';
 import { IconC } from './icons.jsx';
 import { BtnC } from './ui.jsx';
 
-export function PriceRangeInput({ value, onChange, cap = 100 }) {
+export function PriceRangeInput({ value, onChange, cap = 100, floor = 0 }) {
   const [lo, hi] = value;
   const numStyle = {
     width: "100%", padding: "9px 10px", borderRadius: 10, border: "1.5px solid var(--line)",
@@ -16,8 +16,8 @@ export function PriceRangeInput({ value, onChange, cap = 100 }) {
         <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Min</div>
         <div style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", fontSize: 13 }}>$</span>
-          <input type="number" min={0} max={cap} value={lo}
-            onChange={e => { const v = Math.max(0, Math.min(parseInt(e.target.value) || 0, hi - 1)); onChange([v, hi]); }}
+          <input type="number" min={floor} max={cap} value={lo}
+            onChange={e => { const v = Math.max(floor, Math.min(parseInt(e.target.value) || floor, hi - 1)); onChange([v, hi]); }}
             style={{ ...numStyle, paddingLeft: 20 }} />
         </div>
       </div>
@@ -26,8 +26,8 @@ export function PriceRangeInput({ value, onChange, cap = 100 }) {
         <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Max</div>
         <div style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", fontSize: 13 }}>$</span>
-          <input type="number" min={0} max={cap} value={hi}
-            onChange={e => { const v = Math.min(cap, Math.max(parseInt(e.target.value) || 0, lo + 1)); onChange([lo, v]); }}
+          <input type="number" min={floor} max={cap} value={hi}
+            onChange={e => { const v = Math.min(cap, Math.max(parseInt(e.target.value) || cap, lo + 1)); onChange([lo, v]); }}
             style={{ ...numStyle, paddingLeft: 20 }} />
         </div>
       </div>
@@ -35,9 +35,9 @@ export function PriceRangeInput({ value, onChange, cap = 100 }) {
   );
 }
 
-export function FilterSidebar({ priceRange = [0, 500], onPriceChange, priceCap = 100, showInStockOnly = false, onStockToggle, showOnSaleOnly = false, onSaleToggle, resetFilters }) {
+export function FilterSidebar({ priceRange = [0, 500], onPriceChange, priceCap = 100, priceFloor = 0, showInStockOnly = false, onStockToggle, showOnSaleOnly = false, onSaleToggle, resetFilters }) {
   const [showMore, setShowMore] = useState(false);
-  const activeCount = (showInStockOnly ? 1 : 0) + (showOnSaleOnly ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < priceCap ? 1 : 0);
+  const activeCount = (showInStockOnly ? 1 : 0) + (showOnSaleOnly ? 1 : 0) + (priceRange[0] > priceFloor || priceRange[1] < priceCap ? 1 : 0);
 
   return (
     <div style={{ width: 272, flexShrink: 0, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -61,7 +61,7 @@ export function FilterSidebar({ priceRange = [0, 500], onPriceChange, priceCap =
       {/* Price range */}
       <div style={{ background: "var(--surface)", borderRadius: 14, padding: "14px 14px 12px", border: "1px solid var(--line)" }}>
         <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-2)", display: "block", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Price Range</label>
-        <PriceRangeInput value={priceRange} onChange={onPriceChange} cap={priceCap} />
+        <PriceRangeInput value={priceRange} onChange={onPriceChange} cap={priceCap} floor={priceFloor} />
       </div>
 
       {/* In stock toggle */}
@@ -118,7 +118,7 @@ const TAG_STYLES = {
   new:     { bg: "#ede9fe", color: "#5b21b6", icon: "zap",   label: "New"     },
 };
 
-export function ProductCardEnhanced({ product, inCart, disabled, stockState, onAdd, onAddQty, onRemoveQty, onClick, isSaved, onToggleSave }) {
+export function ProductCardEnhanced({ product, inCart, disabled, stockState, onAdd, onAddQty, onRemoveQty, onClick, isSaved, onToggleSave, closedForOrder }) {
   const cat = G.catOf(product.cat);
   const hue = cat?.hue || 152;
   const price = parseFloat(product.price) || 0;
@@ -168,16 +168,6 @@ export function ProductCardEnhanced({ product, inCart, disabled, stockState, onA
           </button>
         )}
 
-        {/* Floating add button */}
-        {!disabled && inCart === 0 && (
-          <button
-            className="prod-add-btn"
-            onClick={e => { e.stopPropagation(); onAdd(); }}
-            aria-label={`Add ${product.name} to cart`}
-          >
-            +
-          </button>
-        )}
       </div>
 
       {/* Card body */}
@@ -185,7 +175,7 @@ export function ProductCardEnhanced({ product, inCart, disabled, stockState, onA
         <div className="prod-name">{product.name}</div>
         {product.unit && <div className="prod-unit">{product.unit}</div>}
 
-        <div className="prod-price-row">
+        <div className="prod-price-row" style={closedForOrder && inCart === 0 && !disabled ? { flexDirection: "column", alignItems: "stretch", gap: 8 } : undefined}>
           <span className="prod-price">${price.toFixed(2)}</span>
 
           {inCart > 0 ? (
@@ -194,15 +184,21 @@ export function ProductCardEnhanced({ product, inCart, disabled, stockState, onA
               <span className="prod-stepper-count">{inCart}</span>
               <button className="prod-stepper-btn" onClick={() => onAddQty && onAddQty()}>+</button>
             </div>
+          ) : disabled ? null : closedForOrder ? (
+            <button
+              onClick={e => { e.stopPropagation(); onAdd(); }}
+              aria-label={`Pre-order ${product.name} for tomorrow`}
+              style={{ width: "100%", padding: "7px 8px", borderRadius: 9, border: "1.5px solid var(--primary)", background: "transparent", color: "var(--primary)", cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)", fontSize: 11, fontWeight: 700, lineHeight: 1.2, transition: "all 0.16s var(--spring)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.color = "var(--primary-ink)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--primary)"; }}
+            >Pre-order for tomorrow</button>
           ) : (
-            !disabled && (
-              <button
-                onClick={e => { e.stopPropagation(); onAdd(); }}
-                style={{ width: 32, height: 32, borderRadius: 9, border: "1.5px solid var(--line)", background: "transparent", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)", fontSize: 19, fontWeight: 400, transition: "all 0.16s var(--spring)" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.color = "var(--primary-ink)"; e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "var(--shadow-primary)"; e.currentTarget.style.transform = "scale(1.08)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-2)"; e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}
-              >+</button>
-            )
+            <button
+              onClick={e => { e.stopPropagation(); onAdd(); }}
+              style={{ width: 32, height: 32, borderRadius: 9, border: "1.5px solid var(--line)", background: "transparent", color: "var(--text-2)", cursor: "pointer", display: "grid", placeItems: "center", fontFamily: "var(--font-sans)", fontSize: 19, fontWeight: 400, transition: "all 0.16s var(--spring)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.color = "var(--primary-ink)"; e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.boxShadow = "var(--shadow-primary)"; e.currentTarget.style.transform = "scale(1.08)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-2)"; e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}
+            >+</button>
           )}
         </div>
       </div>
@@ -461,7 +457,6 @@ export function ProductDetailModal({ product, inCart, onClose, onAdd, onUpdateCa
 export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, onChangeShop, initialCat, savedItems, onToggleSave, onSelectProduct }) {
   const [cat, setCat] = useState(initialCat || "all");
   const [sort, setSort] = useState("popularity");
-  const [search, setSearch] = useState("");
   // null = untouched → [0, priceCap]. The cap adapts to the catalog so a
   // default range never silently hides products priced above a hardcoded max.
   const [priceRange, setPriceRange] = useState(null);
@@ -469,6 +464,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [dataVersion, setDataVersion] = useState(() => G.PRODUCTS?.length > 0 ? 1 : 0);
+  const [priceBounds, setPriceBounds] = useState({ min: 0, max: 100 });
 
   useEffect(() => {
     if (initialCat) setCat(initialCat);
@@ -481,93 +477,99 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
     return () => window.removeEventListener("dataLoaded", handler);
   }, []);
 
-  const priceCap = useMemo(() => {
-    const maxPrice = Math.max(0, ...G.PRODUCTS.map(p => p.price || 0));
-    return Math.max(100, Math.ceil(maxPrice / 10) * 10);
-  }, [dataVersion]);
-  const effectiveRange = priceRange || [0, priceCap];
+  // Price bounds come from the backend for the current category subset,
+  // rather than a hardcoded $0–$100 range — see GET /api/products/price-range.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (cat !== "all") params.set("categoryId", cat);
+    const t = setTimeout(() => {
+      fetch(`${API_BASE}/products/price-range?${params.toString()}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data && typeof data.min === "number" && typeof data.max === "number") {
+            setPriceBounds({ min: Math.floor(data.min), max: Math.max(Math.ceil(data.max), Math.floor(data.min) + 1) });
+          }
+        })
+        .catch(() => {});
+    }, 250);
+    return () => clearTimeout(t);
+  }, [cat]);
+
+  const priceFloor = priceBounds.min;
+  const priceCap = priceBounds.max;
+  const effectiveRange = priceRange || [priceFloor, priceCap];
 
   const products = useMemo(() => {
     let p = G.productsByCat(cat).map(x => ({ ...x, stock: G.shopStock(x.id, shopId) }));
-    if (search) p = p.filter(x => x.name.toLowerCase().includes(search.toLowerCase()));
     if (showInStockOnly) p = p.filter(x => G.stockState(x.stock) !== "out");
     p = p.filter(x => x.price >= effectiveRange[0] && x.price <= effectiveRange[1]);
     if (sort === "price-low") p.sort((a, b) => a.price - b.price);
     if (sort === "price-high") p.sort((a, b) => b.price - a.price);
     if (sort === "name") p.sort((a, b) => a.name.localeCompare(b.name));
     return p;
-  }, [cat, sort, search, shopId, priceRange, showInStockOnly, dataVersion, priceCap]);
+  }, [cat, sort, shopId, priceRange, showInStockOnly, dataVersion, priceFloor, priceCap]);
 
   const currentCat = cat === "all" ? { name: "All Products", hue: 152 } : G.catOf(cat);
   const currentShop = G.SHOPS.find(s => s.id === shopId);
-  const resetFilters = () => { setPriceRange(null); setShowInStockOnly(false); setShowOnSaleOnly(false); setSearch(""); };
+  const shopClosed = currentShop ? G.isShopOpen(currentShop) === false : false;
+  const reopenLabel = shopClosed ? G.openingTimeLabel(currentShop) : null;
+  const resetFilters = () => { setPriceRange(null); setShowInStockOnly(false); setShowOnSaleOnly(false); };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--bg)" }}>
 
-      {/* ── Toolbar ── */}
-      <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", padding: "10px 16px" }}>
-        <div style={{ maxWidth: 1600, margin: "0 auto", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          {/* Back to store selector */}
-          <button onClick={onChangeShop}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 13px", background: "var(--primary-soft)", borderRadius: 999, fontSize: 12.5, color: "var(--green-700)", fontWeight: 700, border: "1.5px solid var(--green-300)", cursor: "pointer", fontFamily: "var(--font-sans)", transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0 }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--primary)"; e.currentTarget.style.color = "var(--primary-ink)"; e.currentTarget.style.borderColor = "var(--primary)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "var(--primary-soft)"; e.currentTarget.style.color = "var(--green-700)"; e.currentTarget.style.borderColor = "var(--green-300)"; }}>
-            <IconC name="pin" size={13} stroke={2.5} />
-            <span>{currentShop?.name || "Select Store"}</span>
-            <IconC name="chevD" size={11} stroke={2.5} />
-          </button>
-
-          {/* Search */}
-          <div style={{ flex: 1, minWidth: 180, position: "relative" }}>
-            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }}><IconC name="search" size={15} /></span>
-            <input
-              aria-label="Search products"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search products…"
-              style={{ width: "100%", padding: "9px 13px 9px 36px", borderRadius: 999, border: "1.5px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 13.5, outline: "none", fontFamily: "var(--font-sans)" }}
-            />
+      {/* ── Category pills + sort/filter ── */}
+      <div style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", position: "sticky", top: 62, zIndex: 30, padding: "10px 16px" }}>
+        <div style={{ maxWidth: 1600, margin: "0 auto", display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="cat-strip" style={{ display: "flex", gap: 8, overflowX: "auto", flex: 1, minWidth: 0 }}>
+            <button
+              className={`cat-pill${cat === "all" ? " active" : ""}`}
+              onClick={() => setCat("all")}
+            >All</button>
+            {G.CATEGORIES.map(c => (
+              <button
+                key={c.id}
+                className={`cat-pill${cat === c.id ? " active" : ""}`}
+                onClick={() => setCat(c.id)}
+              >
+                {c.name}
+              </button>
+            ))}
           </div>
 
-          {/* Sort */}
-          <div className="hideOnMobile" style={{ position: "relative", flexShrink: 0 }}>
-            <select value={sort} onChange={e => setSort(e.target.value)}
-              style={{ padding: "9px 32px 9px 13px", borderRadius: 999, border: "1.5px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 13, fontFamily: "var(--font-sans)", appearance: "none", cursor: "pointer", outline: "none", fontWeight: 600 }}>
-              <option value="popularity">Popular</option>
-              <option value="price-low">Price: Low → High</option>
-              <option value="price-high">Price: High → Low</option>
-              <option value="name">A–Z</option>
-            </select>
-            <span style={{ position: "absolute", right: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-3)" }}><IconC name="chevD" size={13} /></span>
-          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {/* Sort */}
+            <div className="hideOnMobile" style={{ position: "relative" }}>
+              <select value={sort} onChange={e => setSort(e.target.value)}
+                style={{ padding: "9px 32px 9px 13px", borderRadius: 999, border: "1.5px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 13, fontFamily: "var(--font-sans)", appearance: "none", cursor: "pointer", outline: "none", fontWeight: 600 }}>
+                <option value="popularity">Popular</option>
+                <option value="price-low">Price: Low → High</option>
+                <option value="price-high">Price: High → Low</option>
+                <option value="name">A–Z</option>
+              </select>
+              <span style={{ position: "absolute", right: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--text-3)" }}><IconC name="chevD" size={13} /></span>
+            </div>
 
-          {/* Filter toggle */}
-          <button
-            onClick={() => setShowFiltersModal(!showFiltersModal)}
-            style={{ padding: "9px 16px", borderRadius: 999, border: `1.5px solid ${showFiltersModal ? "var(--primary)" : "var(--line)"}`, background: showFiltersModal ? "var(--primary)" : "transparent", color: showFiltersModal ? "var(--primary-ink)" : "var(--text-2)", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s", flexShrink: 0 }}
-          >
-            <IconC name="sliders" size={14} />Filters
-          </button>
+            {/* Filter toggle */}
+            <button
+              onClick={() => setShowFiltersModal(!showFiltersModal)}
+              style={{ padding: "9px 16px", borderRadius: 999, border: `1.5px solid ${showFiltersModal ? "var(--primary)" : "var(--line)"}`, background: showFiltersModal ? "var(--primary)" : "transparent", color: showFiltersModal ? "var(--primary-ink)" : "var(--text-2)", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", gap: 6, transition: "all 0.15s", whiteSpace: "nowrap" }}
+            >
+              <IconC name="sliders" size={14} />Filters
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Category pills ── */}
-      <div className="cat-strip" style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)", position: "sticky", top: 62, zIndex: 30, padding: "10px 16px", display: "flex", gap: 8, overflowX: "auto" }}>
-        <button
-          className={`cat-pill${cat === "all" ? " active" : ""}`}
-          onClick={() => { setCat("all"); setSearch(""); }}
-        >All</button>
-        {G.CATEGORIES.map(c => (
-          <button
-            key={c.id}
-            className={`cat-pill${cat === c.id ? " active" : ""}`}
-            onClick={() => { setCat(c.id); setSearch(""); }}
-          >
-            {c.name}
-          </button>
-        ))}
-      </div>
+      {/* ── Store closed banner ── */}
+      {shopClosed && (
+        <div style={{ background: "var(--amber-100)", borderBottom: "1px solid #fde68a", color: "#92400e", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 13, fontWeight: 600, textAlign: "center", flexWrap: "wrap" }}>
+          <IconC name="clock" size={15} style={{ flexShrink: 0 }} />
+          <span>
+            {currentShop?.name || "This store"} is closed right now — orders placed now will be fulfilled when we reopen{reopenLabel ? ` at ${reopenLabel}` : ""}.
+          </span>
+        </div>
+      )}
 
       {/* ── Category hero strip ── */}
       {currentCat.name !== "All Products" && (
@@ -593,7 +595,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
         <div className="sidebar-desktop" style={{ minWidth: 272, paddingTop: 4 }}>
           <div style={{ position: "sticky", top: 120, display: "flex", flexDirection: "column", gap: 12 }}>
             <FilterSidebar
-              priceRange={effectiveRange} onPriceChange={setPriceRange} priceCap={priceCap}
+              priceRange={effectiveRange} onPriceChange={setPriceRange} priceCap={priceCap} priceFloor={priceFloor}
               showInStockOnly={showInStockOnly} onStockToggle={setShowInStockOnly}
               showOnSaleOnly={showOnSaleOnly} onSaleToggle={setShowOnSaleOnly}
               resetFilters={resetFilters}
@@ -647,6 +649,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
                     onClick={() => onSelectProduct && onSelectProduct(p.id)}
                     isSaved={savedItems?.has(p.id)}
                     onToggleSave={onToggleSave}
+                    closedForOrder={shopClosed}
                   />
                 );
               })}
@@ -674,7 +677,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
               </button>
             </div>
             <FilterSidebar
-              priceRange={effectiveRange} onPriceChange={setPriceRange} priceCap={priceCap}
+              priceRange={effectiveRange} onPriceChange={setPriceRange} priceCap={priceCap} priceFloor={priceFloor}
               showInStockOnly={showInStockOnly} onStockToggle={setShowInStockOnly}
               showOnSaleOnly={showOnSaleOnly} onSaleToggle={setShowOnSaleOnly}
               resetFilters={resetFilters}

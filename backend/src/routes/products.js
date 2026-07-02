@@ -144,6 +144,35 @@ router.post('/group', authMiddleware, requireRole('admin'), async (req, res, nex
   } catch (err) { next(err); }
 });
 
+// ─── GET /api/products/price-range ───────────────────────────────────────────
+// Returns the MIN/MAX price across products matching the given categoryId/search
+// filters, so the storefront can size its price filter to the current subset
+// instead of a hardcoded bound. Excludes variable parents (price is null there).
+router.get('/price-range', async (req, res, next) => {
+  try {
+    const { categoryId, search } = req.query;
+
+    const where = { price: { [Op.ne]: null } };
+    if (categoryId) where.categoryId = categoryId;
+    if (search)     where.name = { [Op.iLike]: `%${search}%` };
+    if (!isStaffRequest(req)) where.status = 'active';
+
+    const result = await Product.findOne({
+      where,
+      attributes: [
+        [Product.sequelize.fn('MIN', Product.sequelize.col('price')), 'min'],
+        [Product.sequelize.fn('MAX', Product.sequelize.col('price')), 'max'],
+      ],
+      raw: true,
+    });
+
+    res.json({
+      min: result?.min != null ? parseFloat(result.min) : 0,
+      max: result?.max != null ? parseFloat(result.max) : 0,
+    });
+  } catch (err) { next(err); }
+});
+
 // ─── GET /api/products ───────────────────────────────────────────────────────
 // Query params:
 //   shopId   — attach stock/availability from that shop's inventory

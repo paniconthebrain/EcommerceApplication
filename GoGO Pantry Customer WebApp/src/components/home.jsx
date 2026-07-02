@@ -9,18 +9,18 @@ const HERO_SLIDES = [
     gradient: "linear-gradient(135deg, oklch(0.3 0.12 152) 0%, oklch(0.42 0.16 152) 55%, oklch(0.5 0.1 175) 100%)",
     badge: "Easy pickup at your local store",
     badgeIcon: "pin",
-    title: ["Fresh Groceries,", "Ready for Pickup"],
-    sub: "Shop local stores. Get fresh produce, dairy, bakery & more — order online, pick up in minutes.",
+    title: ["Snacks & Drinks,", "Ready for Pickup"],
+    sub: "Shop your local convenience store. Candy, energy drinks, soda & more — order online, pick up in minutes.",
     cta1: "Shop Now", cta1Icon: "cart", cta2: "Browse Stores",
     accent: "oklch(0.55 0.17 152)",
   },
   {
     gradient: "linear-gradient(135deg, oklch(0.27 0.1 170) 0%, oklch(0.37 0.13 158) 55%, oklch(0.44 0.1 140) 100%)",
-    badge: "Locally sourced every day",
-    badgeIcon: "leaf",
-    title: ["Farm Fresh", "Produce Daily"],
-    sub: "Handpicked fruits and vegetables from local farms — fresh, seasonal, and full of flavor.",
-    cta1: "Shop Produce", cta1Icon: "cart", cta2: "Browse Stores",
+    badge: "New arrivals every week",
+    badgeIcon: "zap",
+    title: ["Energy Drinks &", "Snacks In Stock"],
+    sub: "From energy drinks to candy, soda, and grab-and-go essentials — always stocked, always ready.",
+    cta1: "Shop Now", cta1Icon: "cart", cta2: "Browse Stores",
     accent: "oklch(0.62 0.15 155)",
   },
 ];
@@ -31,9 +31,26 @@ function getHeroStats() {
   const productCount = G.PRODUCTS.length;
   return [
     { icon: "pin",  label: `${shopCount || 0} local store${shopCount === 1 ? "" : "s"}` },
-    { icon: "box",  label: `${productCount} fresh item${productCount === 1 ? "" : "s"}` },
+    { icon: "box",  label: `${productCount} item${productCount === 1 ? "" : "s"}` },
     { icon: "zap",  label: "Pickup today" },
   ];
+}
+
+// Hover state must live in React (not an imperative style.background mutation) —
+// clicking the button re-renders the carousel via setSlide, and a plain DOM
+// mutation gets wiped out by that re-render, causing a visible flicker back to
+// the non-hover background right as you click.
+function ArrowButton({ dir, side, onClick, label }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button onClick={onClick} aria-label={label} className="hideOnMobile"
+      style={{ position: "absolute", [side]: 16, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 36, height: 36, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: hovered ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", transition: "all 0.2s" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <IconC name="chevR" size={16} style={{ transform: dir === "prev" ? "rotate(180deg)" : "none" }} />
+    </button>
+  );
 }
 
 function HeroCarousel({ onSelectShop, onBrowse }) {
@@ -139,9 +156,9 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
               {/* Feature cards */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, flexShrink: 0 }} className="hideOnMobile">
                 {[
-                  { icon: "leaf",  bg: "rgba(255,255,255,0.15)", label: "Organic" },
+                  { icon: "zap",   bg: "rgba(255,255,255,0.15)", label: "In Stock" },
                   { icon: "cart",  bg: "rgba(255,255,255,0.1)",  label: "Fast" },
-                  { icon: "check", bg: "rgba(255,255,255,0.1)",  label: "Fresh" },
+                  { icon: "check", bg: "rgba(255,255,255,0.1)",  label: "Verified" },
                   { icon: "star",  bg: "rgba(255,255,255,0.15)", label: "Top Rated" },
                 ].map((c, ci) => (
                   <div key={ci} style={{ height: 100, width: 100, borderRadius: 18, background: c.bg, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "#fff" }}>
@@ -157,13 +174,7 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
 
       {/* Arrow buttons — hidden on mobile (swipe handles navigation) */}
       {[["prev", "left", prev, "Previous slide"], ["next", "right", next, "Next slide"]].map(([dir, side, fn, label]) => (
-        <button key={dir} onClick={fn} aria-label={label} className="hideOnMobile"
-          style={{ position: "absolute", [side]: 16, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 36, height: 36, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", transition: "all 0.2s" }}
-          onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.28)"}
-          onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.12)"}
-        >
-          <IconC name="chevR" size={16} style={{ transform: dir === "prev" ? "rotate(180deg)" : "none" }} />
-        </button>
+        <ArrowButton key={dir} dir={dir} side={side} onClick={fn} label={label} />
       ))}
       </div>{/* end overflow:hidden slide track wrapper */}
 
@@ -293,7 +304,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <h2 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 8px", color: "var(--text)", letterSpacing: "-0.03em" }}>How It Works</h2>
-            <p style={{ fontSize: 14, color: "var(--text-3)", margin: 0 }}>Three simple steps to fresh groceries</p>
+            <p style={{ fontSize: 14, color: "var(--text-3)", margin: 0 }}>Three simple steps to snacks & drinks</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
             {[
