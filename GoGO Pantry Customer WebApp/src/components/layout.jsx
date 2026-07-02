@@ -257,22 +257,26 @@ function HeaderSearchBar({ cartItems, onAddToCart, onUpdateCart }) {
   );
 }
 
-export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, onOpenSearch, onOpenWishlist, savedCount = 0 }) {
+export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, onOpenSearch, onOpenWishlist, savedCount = 0, user, userInitials, onOpenProfile }) {
   const tabs = [
-    { id: "home",   label: "Home",   icon: "home" },
-    { id: "search", label: "Search", icon: "search" },
-    { id: "cart",   label: "Cart",   icon: "cart" },
-    { id: "saved",  label: "Saved",  icon: "heart" },
+    { id: "home",    label: "Home",              icon: "home" },
+    { id: "search",  label: "Search",             icon: "search" },
+    { id: "cart",    label: "Cart",               icon: "cart" },
+    { id: "saved",   label: "Saved",              icon: "heart" },
+    { id: "profile", label: user ? "Account" : "Sign in", icon: "user" },
   ];
 
   const handleTab = (id) => {
     if (id === "search") { onOpenSearch?.(); return; }
     if (id === "saved") { onOpenWishlist?.(); return; }
     if (id === "cart") { setPage("cart"); return; }
+    if (id === "profile") { onOpenProfile?.(); return; }
     setPage("home");
   };
 
-  const activeTab = page === "cart" ? "cart" : page === "home" ? "home" : null;
+  const activeTab = page === "cart" ? "cart"
+    : page === "orders" || page === "settings" ? "profile"
+    : page === "home" ? "home" : null;
 
   return (
     <nav
@@ -292,6 +296,7 @@ export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, 
       {tabs.map(tab => {
         const isActive = activeTab === tab.id;
         const isCart = tab.id === "cart";
+        const isProfile = tab.id === "profile";
         return (
           <button
             key={tab.id}
@@ -308,7 +313,16 @@ export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, 
             }}
           >
             <div style={{ position: "relative" }}>
-              <IconC name={tab.icon} size={22} stroke={isActive ? 2.5 : 1.8} />
+              {isProfile && user && userInitials ? (
+                <span style={{
+                  display: "grid", placeItems: "center", width: 22, height: 22, borderRadius: "50%",
+                  background: isActive ? "var(--primary)" : "var(--primary-soft)",
+                  color: isActive ? "var(--primary-ink)" : "var(--green-700)",
+                  fontSize: 9.5, fontWeight: 800, letterSpacing: "-0.02em",
+                }}>{userInitials}</span>
+              ) : (
+                <IconC name={tab.icon} size={22} stroke={isActive ? 2.5 : 1.8} />
+              )}
               {isCart && cartCount > 0 && (
                 <span style={{
                   position: "absolute", top: -6, right: -8,
@@ -355,6 +369,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
   const [showWishlist, setShowWishlist] = useState(false);
   const [topStripDismissed, setTopStripDismissed] = useState(() => localStorage.getItem('topStripDismissed') === 'true');
   const [showCartPreview, setShowCartPreview] = useState(false);
+  const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
   const [cartBounce, setCartBounce] = useState(false);
   const [dataVersion, setDataVersion] = useState(() => G.SHOPS?.length > 0 ? 1 : 0);
   const currentShop = shopId ? G.SHOPS.find(s => s.id === shopId) : null;
@@ -548,8 +563,8 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             )}
           </button>
 
-          {/* User avatar */}
-          <div ref={userMenuRef} style={{ position: "relative" }}>
+          {/* User avatar — mobile users get to their account via the bottom-nav Profile tab instead */}
+          <div ref={userMenuRef} className="hideOnMobile" style={{ position: "relative" }}>
             <button
               aria-label={user ? "Account menu" : "Sign in"}
               aria-expanded={userMenuOpen}
@@ -615,8 +630,10 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             )}
           </div>
 
-          {/* Cart button / pill, with a hover preview dropdown (desktop only — click still always goes straight to the cart page) */}
+          {/* Cart button / pill, with a hover preview dropdown (desktop only — click still always goes straight to the cart page).
+              Hidden on mobile: the bottom-nav Cart tab is the only cart entry point there. */}
           <div
+            className="hideOnMobile"
             style={{ position: "relative" }}
             onMouseEnter={() => cartCount > 0 && setShowCartPreview(true)}
             onMouseLeave={() => setShowCartPreview(false)}
@@ -710,7 +727,48 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
         onOpenSearch={() => setShowSearch(true)}
         onOpenWishlist={() => setShowWishlist(true)}
         savedCount={savedItems.size}
+        user={user}
+        userInitials={userInitials}
+        onOpenProfile={() => user ? setMobileProfileOpen(true) : onLoginClick?.()}
       />
+
+      {/* Mobile profile sheet — the bottom-nav Profile tab's equivalent of the desktop header dropdown */}
+      {mobileProfileOpen && (
+        <div
+          className="showOnMobile"
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 70, display: "flex", alignItems: "flex-end" }}
+          onClick={() => setMobileProfileOpen(false)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: "100%", background: "var(--surface)", borderRadius: "20px 20px 0 0", paddingBottom: "env(safe-area-inset-bottom, 0px)", animation: "slideInUp 0.22s var(--ease)" }}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 999, background: "var(--line)", margin: "10px auto 6px" }} />
+            <div style={{ padding: "10px 20px 16px", borderBottom: "1px solid var(--line)" }}>
+              <div style={{ fontSize: 15.5, fontWeight: 800, color: "var(--text)" }}>{user?.name || "Account"}</div>
+              <div style={{ fontSize: 13, color: "var(--text-3)", marginTop: 2 }}>{user?.email}</div>
+            </div>
+            {[
+              { label: "My orders", page: "orders" },
+              { label: "Account settings", page: "settings" },
+            ].map(({ label, page: target }) => (
+              <button
+                key={label}
+                onClick={() => { setMobileProfileOpen(false); setPage(target); }}
+                style={{ width: "100%", padding: "15px 20px", background: "transparent", border: "none", borderBottom: "1px solid var(--line)", textAlign: "left", fontSize: 14.5, fontWeight: 600, color: "var(--text)", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              onClick={() => { setMobileProfileOpen(false); onLogout(); }}
+              style={{ width: "100%", padding: "15px 20px 22px", background: "transparent", border: "none", textAlign: "left", fontSize: 14.5, fontWeight: 700, color: "var(--red-500)", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Footer ── */}
       <footer style={{ background: "oklch(0.13 0.022 152)", color: "#fff", marginTop: "auto" }}>
