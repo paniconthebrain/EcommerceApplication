@@ -2,11 +2,21 @@ const express = require('express');
 const { Op } = require('sequelize');
 const { Product, Category, Supplier, Inventory, Shop } = require('../models');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+const { verifyToken } = require('../utils/jwt');
 const { NotFoundError, ValidationError } = require('../utils/errors');
 
 const router = express.Router();
 
 // ─── helpers ────────────────────────────────────────────────────────────────
+
+// Staff (admin/staff) tokens see all statuses; anonymous or customer requests
+// only ever see 'active' products — draft/archived must never reach the storefront.
+function isStaffRequest(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return false;
+  const decoded = verifyToken(authHeader.substring(7));
+  return !!decoded && (decoded.userType === 'admin' || decoded.userType === 'staff');
+}
 
 const PRODUCT_INCLUDES = (shopId) => [
   { model: Category, attributes: ['id', 'name', 'hue'] },
@@ -149,6 +159,9 @@ router.get('/', async (req, res, next) => {
     if (search)     where.name = { [Op.iLike]: `%${search}%` };
     if (ids)        where.id   = { [Op.in]: ids.split(',').map(s => s.trim()) };
 
+    const staff = isStaffRequest(req);
+    if (!staff) where.status = 'active';
+
     if (grouped === 'true') {
       // Return only top-level products (variable parents + orphan simples)
       where.parentId = null;
@@ -161,6 +174,8 @@ router.get('/', async (req, res, next) => {
           {
             model: Product,
             as: 'variants',
+            where: staff ? undefined : { status: 'active' },
+            required: false,
             include: shopId ? [{ model: Inventory, where: { shopId }, attributes: ['stock', 'par'], required: false }] : [],
           },
           shopId ? { model: Inventory, where: { shopId }, attributes: ['stock', 'par'], required: false } : null,
@@ -191,14 +206,22 @@ router.get('/:productId', async (req, res, next) => {
   try {
     const { productId } = req.params;
     const { shopId } = req.query;
+    const staff = isStaffRequest(req);
 
     const product = await Product.findByPk(productId, {
       include: [
         ...PRODUCT_INCLUDES(shopId),
-        { model: Product, as: 'variants', include: PRODUCT_INCLUDES(shopId) },
+        {
+          model: Product,
+          as: 'variants',
+          where: staff ? undefined : { status: 'active' },
+          required: false,
+          include: PRODUCT_INCLUDES(shopId),
+        },
       ],
     });
     if (!product) throw new NotFoundError('Product not found');
+    if (!staff && product.status !== 'active') throw new NotFoundError('Product not found');
 
     const data = product.toJSON();
     data.variants = (data.variants || []).map(v => attachInventory(v, shopId));
@@ -212,8 +235,11 @@ router.get('/:productId/variants', async (req, res, next) => {
     const { productId } = req.params;
     const { shopId } = req.query;
 
+    const where = { parentId: productId };
+    if (!isStaffRequest(req)) where.status = 'active';
+
     const variants = await Product.findAll({
-      where: { parentId: productId },
+      where,
       include: PRODUCT_INCLUDES(shopId),
       order: [['name', 'ASC']],
     });
