@@ -1,26 +1,29 @@
+// Maps a category name to one of the local IconC icons below — no external
+// icon CDN involved, so category tiles render identically offline.
 export const CATEGORY_ICON_MAP = [
-  { keywords: ["produce", "vegetable", "veg", "fruit", "fresh", "green"],       icon: "material-symbols:nutrition-outline" },
-  { keywords: ["dairy", "milk", "cheese", "yogurt", "butter", "cream", "egg"],  icon: "material-symbols:water-drop-outline" },
-  { keywords: ["bakery", "bread", "bake", "pastry", "loaf"],                    icon: "material-symbols:bakery-dining-outline" },
-  { keywords: ["meat", "beef", "chicken", "pork", "poultry", "protein"],        icon: "material-symbols:kebab-dining-outline" },
-  { keywords: ["seafood", "fish", "shrimp", "prawn", "salmon"],                 icon: "material-symbols:set-meal-outline" },
-  { keywords: ["frozen", "ice", "freeze"],                                       icon: "material-symbols:ac-unit-outline" },
-  { keywords: ["beverage", "drink", "juice", "soda", "coffee", "tea", "water"], icon: "material-symbols:local-drink-outline" },
-  { keywords: ["snack", "chip", "cracker", "candy", "sweet", "chocolate"],      icon: "material-symbols:cookie-outline" },
-  { keywords: ["pantry", "dry", "grain", "cereal", "pasta", "rice", "can"],     icon: "material-symbols:grocery-outline" },
-  { keywords: ["organic", "natural", "bio", "eco"],                              icon: "material-symbols:eco-outline" },
-  { keywords: ["household", "cleaning", "laundry", "detergent", "hygiene"],     icon: "material-symbols:cleaning-services-outline" },
-  { keywords: ["health", "personal", "care", "beauty", "wellness", "vitamin"],  icon: "material-symbols:health-and-beauty-outline" },
-  { keywords: ["deli", "prepared", "ready", "meal", "lunch"],                   icon: "material-symbols:lunch-dining-outline" },
-  { keywords: ["baby", "infant", "toddler", "kids", "child"],                   icon: "material-symbols:child-care-outline" },
-  { keywords: ["pet", "dog", "cat", "animal"],                                  icon: "material-symbols:pets-outline" },
-  { keywords: ["floral", "flower", "plant"],                                     icon: "material-symbols:local-florist-outline" },
+  { keywords: ["produce", "vegetable", "veg", "fruit", "fresh", "green"],       icon: "leaf" },
+  { keywords: ["dairy", "milk", "cheese", "yogurt", "butter", "cream", "egg"],  icon: "drop" },
+  { keywords: ["bakery", "bread", "bake", "pastry", "loaf"],                    icon: "gift" },
+  { keywords: ["meat", "beef", "chicken", "pork", "poultry", "protein"],        icon: "flame" },
+  { keywords: ["seafood", "fish", "shrimp", "prawn", "salmon"],                 icon: "drop" },
+  { keywords: ["frozen", "ice", "freeze"],                                       icon: "snow" },
+  { keywords: ["beverage", "drink", "juice", "soda", "coffee", "tea", "water"], icon: "cup" },
+  { keywords: ["snack", "chip", "cracker", "candy", "sweet", "chocolate"],      icon: "star" },
+  { keywords: ["pantry", "dry", "grain", "cereal", "pasta", "rice", "can"],     icon: "box" },
+  { keywords: ["organic", "natural", "bio", "eco"],                              icon: "leaf" },
+  { keywords: ["tobacco", "cigarette", "smoke", "vape"],                         icon: "flame" },
+  { keywords: ["household", "cleaning", "laundry", "detergent", "hygiene"],     icon: "zap" },
+  { keywords: ["health", "personal", "care", "beauty", "wellness", "vitamin"],  icon: "heart" },
+  { keywords: ["deli", "prepared", "ready", "meal", "lunch"],                   icon: "tag" },
+  { keywords: ["baby", "infant", "toddler", "kids", "child"],                   icon: "sun" },
+  { keywords: ["pet", "dog", "cat", "animal"],                                  icon: "heart" },
+  { keywords: ["floral", "flower", "plant"],                                     icon: "leaf" },
 ];
 
 export function getCategoryIcon(name = "") {
   const lower = name.toLowerCase();
   const match = CATEGORY_ICON_MAP.find(({ keywords }) => keywords.some(k => lower.includes(k)));
-  return match ? match.icon : "material-symbols:shopping-basket-outline";
+  return match ? match.icon : "basket";
 }
 
 export const ICONS_CUSTOMER = {
@@ -53,6 +56,10 @@ export const ICONS_CUSTOMER = {
   gift: "M20 12v10H4V12M22 7H2v5h20V7zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z",
   share: "M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13",
   basket: "M4 9h16l-1.5 10.5a2 2 0 0 1-2 1.5H7.5a2 2 0 0 1-2-1.5L4 9ZM8 9V7a4 4 0 0 1 8 0v2M9 13v4M15 13v4",
+  drop: "M12 2.7s6.5 7.8 6.5 12.3a6.5 6.5 0 1 1-13 0C5.5 10.5 12 2.7 12 2.7Z",
+  cup: "M17 8h1.5a2.5 2.5 0 0 1 0 5H17M5 8h12v7a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8ZM8 3v2M12 3v2",
+  snow: "M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9",
+  flame: "M12 22c4.2 0 7-2.8 7-6.8 0-3-1.8-5.4-3.3-7C14.6 10 13 9.6 13 6.8c0-1.8.4-3.2-1-4.8-1 2.8-2.4 3.8-3.9 5.7C6.6 9.6 5 11.6 5 15.2c0 4 2.8 6.8 7 6.8Z",
 };
 
 export function IconC({ name, size = 20, stroke = 2, fill = "none", style }) {

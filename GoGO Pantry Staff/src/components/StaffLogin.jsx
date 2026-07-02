@@ -42,7 +42,9 @@ export default function StaffLogin({ onLogin }) {
   const field = { width: "100%", padding: "11px 14px", borderRadius: 10, border: "1px solid var(--line)", background: "var(--bg)", color: "var(--text)", fontSize: 14.5, fontFamily: "var(--font-sans)", outline: "none", boxSizing: "border-box" };
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+    // width:100% matters — #root is display:flex (for the app shell), so
+    // without it this container shrinks to content width and hugs the left edge.
+    <div style={{ minHeight: "100vh", width: "100%", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div style={{ width: "100%", maxWidth: 400 }}>
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
@@ -72,8 +74,9 @@ export default function StaffLogin({ onLogin }) {
                   style={{ ...field, paddingRight: 44 }}
                 />
                 <button type="button" onClick={() => setShowPwd(v => !v)}
+                  aria-label={showPwd ? "Hide password" : "Show password"}
                   style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", display: "grid", placeItems: "center" }}>
-                  <Icon name={showPwd ? "x" : "search"} size={17} />
+                  <Icon name={showPwd ? "eyeOff" : "eye"} size={17} />
                 </button>
               </div>
             </div>

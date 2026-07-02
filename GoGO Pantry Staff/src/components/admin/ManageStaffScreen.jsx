@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { G, API_BASE, apiFetch } from '../../globals.js';
-import { Btn, Pill, ConfirmDialog } from '../ui.jsx';
+import { Btn, Pill, ConfirmDialog, plural } from '../ui.jsx';
 import { AdminPageWrap, MgmtModal, FieldRow, inputStyle, MgmtTable } from './shared.jsx';
 
 export default function ManageStaffScreen() {
@@ -79,7 +79,7 @@ export default function ManageStaffScreen() {
       onConfirm={() => doResetPw(confirmReset.item)}
       onCancel={() => setConfirmReset({ open: false, item: null })}
     />
-    <AdminPageWrap title="Manage Staff" subtitle={`${staff.length} members`} action={<Btn size="sm" icon="plus" onClick={openCreate}>Add Staff</Btn>}>
+    <AdminPageWrap title="Manage Staff" subtitle={plural(staff.length, 'member')} action={<Btn size="sm" icon="plus" onClick={openCreate}>Add Staff</Btn>}>
       {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading…</div> : (
         <MgmtTable
           cols={["Name", "Email", "Shop", "Status"]}

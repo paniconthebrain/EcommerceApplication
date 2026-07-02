@@ -7,6 +7,12 @@ const { DataTypes } = require('sequelize');
 // removed along with the customer rather than blocking the delete.
 module.exports = {
   up: async ({ context: queryInterface }) => {
+    // On a fresh database, 001-baseline-sync's sequelize.sync() has already
+    // created this table (and its customer_id index) from the Address model,
+    // so re-creating it here would fail. Only environments that predate the
+    // Address model (e.g. production) actually need this migration to run.
+    const tables = await queryInterface.showAllTables();
+    if (tables.includes('addresses')) return;
     await queryInterface.createTable('addresses', {
       id: { type: DataTypes.UUID, primaryKey: true, allowNull: false },
       customer_id: { type: DataTypes.UUID, allowNull: false },

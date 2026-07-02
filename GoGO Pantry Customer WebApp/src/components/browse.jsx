@@ -3,7 +3,7 @@ import { G } from '../globals.js';
 import { IconC } from './icons.jsx';
 import { BtnC } from './ui.jsx';
 
-export function PriceRangeInput({ value, onChange }) {
+export function PriceRangeInput({ value, onChange, cap = 100 }) {
   const [lo, hi] = value;
   const numStyle = {
     width: "100%", padding: "9px 10px", borderRadius: 10, border: "1.5px solid var(--line)",
@@ -16,7 +16,7 @@ export function PriceRangeInput({ value, onChange }) {
         <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Min</div>
         <div style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", fontSize: 13 }}>$</span>
-          <input type="number" min={0} max={100} value={lo}
+          <input type="number" min={0} max={cap} value={lo}
             onChange={e => { const v = Math.max(0, Math.min(parseInt(e.target.value) || 0, hi - 1)); onChange([v, hi]); }}
             style={{ ...numStyle, paddingLeft: 20 }} />
         </div>
@@ -26,8 +26,8 @@ export function PriceRangeInput({ value, onChange }) {
         <div style={{ fontSize: 11, color: "var(--text-3)", marginBottom: 5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Max</div>
         <div style={{ position: "relative" }}>
           <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", fontSize: 13 }}>$</span>
-          <input type="number" min={0} max={100} value={hi}
-            onChange={e => { const v = Math.min(100, Math.max(parseInt(e.target.value) || 0, lo + 1)); onChange([lo, v]); }}
+          <input type="number" min={0} max={cap} value={hi}
+            onChange={e => { const v = Math.min(cap, Math.max(parseInt(e.target.value) || 0, lo + 1)); onChange([lo, v]); }}
             style={{ ...numStyle, paddingLeft: 20 }} />
         </div>
       </div>
@@ -35,9 +35,9 @@ export function PriceRangeInput({ value, onChange }) {
   );
 }
 
-export function FilterSidebar({ priceRange = [0, 500], onPriceChange, showInStockOnly = false, onStockToggle, showOnSaleOnly = false, onSaleToggle, resetFilters }) {
+export function FilterSidebar({ priceRange = [0, 500], onPriceChange, priceCap = 100, showInStockOnly = false, onStockToggle, showOnSaleOnly = false, onSaleToggle, resetFilters }) {
   const [showMore, setShowMore] = useState(false);
-  const activeCount = (showInStockOnly ? 1 : 0) + (showOnSaleOnly ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < 100 ? 1 : 0);
+  const activeCount = (showInStockOnly ? 1 : 0) + (showOnSaleOnly ? 1 : 0) + (priceRange[0] > 0 || priceRange[1] < priceCap ? 1 : 0);
 
   return (
     <div style={{ width: 272, flexShrink: 0, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -61,7 +61,7 @@ export function FilterSidebar({ priceRange = [0, 500], onPriceChange, showInStoc
       {/* Price range */}
       <div style={{ background: "var(--surface)", borderRadius: 14, padding: "14px 14px 12px", border: "1px solid var(--line)" }}>
         <label style={{ fontSize: 11, fontWeight: 800, color: "var(--text-2)", display: "block", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>Price Range</label>
-        <PriceRangeInput value={priceRange} onChange={onPriceChange} />
+        <PriceRangeInput value={priceRange} onChange={onPriceChange} cap={priceCap} />
       </div>
 
       {/* In stock toggle */}
@@ -462,7 +462,9 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
   const [cat, setCat] = useState(initialCat || "all");
   const [sort, setSort] = useState("popularity");
   const [search, setSearch] = useState("");
-  const [priceRange, setPriceRange] = useState([0, 100]);
+  // null = untouched → [0, priceCap]. The cap adapts to the catalog so a
+  // default range never silently hides products priced above a hardcoded max.
+  const [priceRange, setPriceRange] = useState(null);
   const [showInStockOnly, setShowInStockOnly] = useState(false);
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
@@ -479,20 +481,26 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
     return () => window.removeEventListener("dataLoaded", handler);
   }, []);
 
+  const priceCap = useMemo(() => {
+    const maxPrice = Math.max(0, ...G.PRODUCTS.map(p => p.price || 0));
+    return Math.max(100, Math.ceil(maxPrice / 10) * 10);
+  }, [dataVersion]);
+  const effectiveRange = priceRange || [0, priceCap];
+
   const products = useMemo(() => {
     let p = G.productsByCat(cat).map(x => ({ ...x, stock: G.shopStock(x.id, shopId) }));
     if (search) p = p.filter(x => x.name.toLowerCase().includes(search.toLowerCase()));
     if (showInStockOnly) p = p.filter(x => G.stockState(x.stock) !== "out");
-    p = p.filter(x => x.price >= priceRange[0] && x.price <= priceRange[1]);
+    p = p.filter(x => x.price >= effectiveRange[0] && x.price <= effectiveRange[1]);
     if (sort === "price-low") p.sort((a, b) => a.price - b.price);
     if (sort === "price-high") p.sort((a, b) => b.price - a.price);
     if (sort === "name") p.sort((a, b) => a.name.localeCompare(b.name));
     return p;
-  }, [cat, sort, search, shopId, priceRange, showInStockOnly, dataVersion]);
+  }, [cat, sort, search, shopId, priceRange, showInStockOnly, dataVersion, priceCap]);
 
   const currentCat = cat === "all" ? { name: "All Products", hue: 152 } : G.catOf(cat);
   const currentShop = G.SHOPS.find(s => s.id === shopId);
-  const resetFilters = () => { setPriceRange([0, 100]); setShowInStockOnly(false); setShowOnSaleOnly(false); setSearch(""); };
+  const resetFilters = () => { setPriceRange(null); setShowInStockOnly(false); setShowOnSaleOnly(false); setSearch(""); };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "var(--bg)" }}>
@@ -585,7 +593,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
         <div className="sidebar-desktop" style={{ minWidth: 272, paddingTop: 4 }}>
           <div style={{ position: "sticky", top: 120, display: "flex", flexDirection: "column", gap: 12 }}>
             <FilterSidebar
-              priceRange={priceRange} onPriceChange={setPriceRange}
+              priceRange={effectiveRange} onPriceChange={setPriceRange} priceCap={priceCap}
               showInStockOnly={showInStockOnly} onStockToggle={setShowInStockOnly}
               showOnSaleOnly={showOnSaleOnly} onSaleToggle={setShowOnSaleOnly}
               resetFilters={resetFilters}
@@ -666,7 +674,7 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
               </button>
             </div>
             <FilterSidebar
-              priceRange={priceRange} onPriceChange={setPriceRange}
+              priceRange={effectiveRange} onPriceChange={setPriceRange} priceCap={priceCap}
               showInStockOnly={showInStockOnly} onStockToggle={setShowInStockOnly}
               showOnSaleOnly={showOnSaleOnly} onSaleToggle={setShowOnSaleOnly}
               resetFilters={resetFilters}

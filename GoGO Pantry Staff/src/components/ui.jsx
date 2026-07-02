@@ -103,6 +103,7 @@ export function ProductSwatch({ p, size = 40, radius }) {
   );
 }
 
+export const plural = (n, word, suffix = "s") => `${n} ${word}${n === 1 ? "" : suffix}`;
 export const card = (extra) => ({ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 16, padding: 18, boxShadow: "var(--shadow-sm)", ...extra });
 export const sectionTitle = { fontSize: 15.5, fontWeight: 700, margin: 0, color: "var(--text)", letterSpacing: "-0.01em" };
 export const sectionSub = { fontSize: 12.5, margin: "2px 0 0", color: "var(--text-3)" };

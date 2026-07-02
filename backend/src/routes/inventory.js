@@ -157,7 +157,7 @@ router.get('/shops/:shopId/inventory', authMiddleware, async (req, res, next) =>
           name: product.name,
           price: product.price,
           unit: product.unit,
-          tag: product.tag,
+          tags: product.tags,
           categoryId: product.categoryId,
           supplierId: product.supplierId,
         },

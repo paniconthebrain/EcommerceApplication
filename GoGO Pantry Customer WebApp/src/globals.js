@@ -75,6 +75,17 @@ export const G = {
 
 export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
+// Legacy shop/product images are stored as backend-relative paths like
+// "/uploads/shops/x.png" (newer uploads are base64 data URIs). A relative path
+// would resolve against this app's origin (port 3001) and 404 — point it at
+// the backend instead.
+const BACKEND_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
+export function resolveAssetUrl(src) {
+  if (!src) return null;
+  if (src.startsWith("/uploads")) return `${BACKEND_ORIGIN}${src}`;
+  return src;
+}
+
 export function customerAuthHeaders() {
   const token = localStorage.getItem("customerToken");
   return token
@@ -143,6 +154,7 @@ export async function initializeAppData() {
       const tintFallbacks = [152, 25, 245, 45, 78, 215];
       G.SHOPS = shopsData.map((shop, idx) => ({
         ...shop,
+        image: resolveAssetUrl(shop.image),
         tint: (() => {
           const t = shop.tint;
           if (!t) return tintFallbacks[idx % tintFallbacks.length];
@@ -179,7 +191,7 @@ export async function initializeAppData() {
         stock: parseInt(p.stock) || 50,
         tag: p.tag || null,
         tags: Array.isArray(p.tags) ? p.tags : [],
-        image: p.featuredImage || p.featured_image || p.image || null,
+        image: resolveAssetUrl(p.featuredImage || p.featured_image || p.image || null),
         galleryImages: Array.isArray(p.galleryImages || p.gallery_images) ? (p.galleryImages || p.gallery_images) : [],
         description: p.description || p.shortDescription || p.short_description || null,
         size: p.size || null,

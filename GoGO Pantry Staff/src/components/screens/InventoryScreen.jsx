@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { G, API_BASE, apiFetch } from '../../globals.js';
-import { PageHead, ProductSwatch, Pill, StockBar, Btn, card, sectionTitle, th, td, inputStyle } from '../ui.jsx';
+import { PageHead, ProductSwatch, Pill, StockBar, Btn, card, sectionTitle, th, td, inputStyle, plural } from '../ui.jsx';
 import { Icon } from '../icons.jsx';
 
 const STATUS_LABEL = { ok: 'In stock', low: 'Low', critical: 'Critical', out: 'Out of stock', untracked: 'Not set up' };
@@ -138,7 +138,7 @@ export default function InventoryScreen({ shopId }) {
 
   return (
     <>
-      <PageHead title="Inventory" subtitle={loading ? 'Loading…' : `${inventory.length} products · ${trackedCount} tracked · ${untrackedCount} not set up · ${lowCount} need attention`}>
+      <PageHead title="Inventory" subtitle={loading ? 'Loading…' : `${plural(inventory.length, 'product')} · ${trackedCount} tracked · ${untrackedCount} not set up · ${lowCount} need${lowCount === 1 ? 's' : ''} attention`}>
         {alerts.length > 0 && (
           <Btn variant="ghost" size="sm" icon="alert" onClick={() => setShowAlerts(v => !v)}>
             {alerts.length} reorder alert{alerts.length !== 1 ? 's' : ''}

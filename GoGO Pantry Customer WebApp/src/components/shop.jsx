@@ -344,7 +344,7 @@ export function ShopCard({ shop, onSelect }) {
             </span>
           )}
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "var(--surface-2)", color: "var(--text-2)", padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
-            <IconC name="box" size={12} /> {itemCount > 0 ? `${itemCount} items` : "Check in store"}
+            <IconC name="box" size={12} /> {itemCount > 0 ? `${itemCount} item${itemCount === 1 ? "" : "s"}` : "Check in store"}
           </span>
         </div>
         <button onClick={onSelect} style={{ marginTop: "auto", width: "100%", padding: "12px", borderRadius: 11, border: "none", background: `oklch(0.45 0.15 ${hue})`, color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", transition: "all 0.15s" }}

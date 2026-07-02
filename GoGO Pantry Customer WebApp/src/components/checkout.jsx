@@ -63,7 +63,9 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
   );
 
   const subtotal = cartProducts.reduce((s, p) => s + (parseFloat(p.price) || 0) * p.qty, 0);
-  const tax = subtotal * 0.10;
+  // 8% matches both the cart page and what the backend actually charges
+  // (orders route: tax = subtotal * 0.08) — keep all three in sync.
+  const tax = subtotal * 0.08;
   const total = subtotal + tax;
 
   const days = useMemo(() => {
@@ -195,7 +197,7 @@ export function CustomerCheckout({ shopId, cartItems, onConfirm, onBack }) {
       </div>
 
       <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)" }}>
-        {[["Subtotal", G.money(subtotal)], ["GST (10%)", G.money(tax)]].map(([l, v]) => (
+        {[["Subtotal", G.money(subtotal)], ["Tax (8%)", G.money(tax)]].map(([l, v]) => (
           <div key={l} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 7 }}>
             <span style={{ color: "var(--text-2)" }}>{l}</span>
             <span style={{ color: "var(--text)" }}>{v}</span>

@@ -31,7 +31,7 @@ function getHeroStats() {
   const productCount = G.PRODUCTS.length;
   return [
     { icon: "pin",  label: `${shopCount || 0} local store${shopCount === 1 ? "" : "s"}` },
-    { icon: "box",  label: `${productCount}+ fresh items` },
+    { icon: "box",  label: `${productCount} fresh item${productCount === 1 ? "" : "s"}` },
     { icon: "zap",  label: "Pickup today" },
   ];
 }
@@ -80,7 +80,9 @@ function HeroCarousel({ onSelectShop, onBrowse }) {
       >
       <div style={{ display: "flex", transform: `translateX(-${slide * 100}%)`, transition: "transform 0.65s cubic-bezier(0.4, 0, 0.2, 1)", willChange: "transform" }}>
         {HERO_SLIDES.map((sl, i) => (
-          <div key={i} className="hero-slide-inner" style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "clamp(40px, 8vw, 72px) 20px 32px", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
+          // 68px side padding keeps the text clear of the absolutely-positioned
+          // arrow buttons; the mobile media query (arrows hidden) restores 20px.
+          <div key={i} className="hero-slide-inner" style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "clamp(40px, 8vw, 72px) 68px 32px", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
             {/* Background texture dots */}
             <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
               {[["-8%","8%",72,0.1],["-5%","55%",48,0.07],["82%","6%",64,0.09],["90%","52%",52,0.08],["55%","82%",40,0.07],["38%","-6%",56,0.08]].map(([l, t, sz, op], di) => (
@@ -249,7 +251,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <SectionHeader icon="box" iconBg="oklch(0.88 0.1 152)" iconColor="oklch(0.38 0.16 152)"
             title="Shop by Category"
-            sub={`Browse ${G.CATEGORIES.length} departments`}
+            sub={`Browse ${G.CATEGORIES.length} department${G.CATEGORIES.length === 1 ? "" : "s"}`}
           />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(128px, 1fr))", gap: 12 }}>
             {G.CATEGORIES.map(c => (
@@ -370,10 +372,10 @@ function CategoryTile({ category: c, onClick }) {
       style={{ textAlign: "center", padding: "22px 12px 18px", borderRadius: 18, background: "var(--surface)", cursor: "pointer", border: "1.5px solid var(--line)", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, boxShadow: "var(--shadow-xs)" }}
     >
       <div style={{ width: 54, height: 54, borderRadius: 15, background: `hsl(${c.hue},55%,92%)`, display: "grid", placeItems: "center" }}>
-        <span className="iconify" data-icon={getCategoryIcon(c.name)} style={{ fontSize: 26, color: `hsl(${c.hue},60%,38%)` }} />
+        <IconC name={getCategoryIcon(c.name)} size={26} style={{ color: `hsl(${c.hue},60%,38%)` }} />
       </div>
       <div style={{ fontSize: 12.5, fontWeight: 800, color: "var(--text)", lineHeight: 1.3 }}>{c.name}</div>
-      <div style={{ fontSize: 11, color: `hsl(${c.hue},50%,45%)`, fontWeight: 600 }}>{G.productsByCat(c.id).length} items</div>
+      <div style={{ fontSize: 11, color: `hsl(${c.hue},50%,45%)`, fontWeight: 600 }}>{G.productsByCat(c.id).length} item{G.productsByCat(c.id).length === 1 ? "" : "s"}</div>
     </div>
   );
 }

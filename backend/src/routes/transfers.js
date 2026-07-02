@@ -71,6 +71,14 @@ router.post('/', authMiddleware, async (req, res, next) => {
       throw new ValidationError('Source and destination shops must be different');
     }
 
+    // Same guard as order creation: a non-positive qty would pass the stock
+    // check below and corrupt both shops' stock when the transfer is applied.
+    for (const item of items) {
+      if (!item.productId || !Number.isInteger(item.qty) || item.qty < 1) {
+        throw new ValidationError('Each item needs a productId and a positive integer qty');
+      }
+    }
+
     assertAnyShopAccess(req, [fromShop, toShop]);
 
     // Verify all inventory items exist in source shop and have enough stock

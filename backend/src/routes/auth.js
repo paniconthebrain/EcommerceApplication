@@ -26,6 +26,16 @@ router.post('/login', async (req, res, next) => {
 
     const user = await User.findOne({ where: { email: loginId } });
 
+    // Lockout must be enforced BEFORE password verification — otherwise a
+    // locked account can still be brute-forced (wrong guesses would keep
+    // returning "invalid password" and only a correct guess would see the lock).
+    if (user && user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil((user.lockedUntil - new Date()) / 60000);
+      throw new AuthenticationError(
+        `Account temporarily locked. Try again in ${minutesLeft} minute(s).`
+      );
+    }
+
     // Always run bcrypt compare — prevents timing oracle / email enumeration
     const hashToCompare = user ? user.password : DUMMY_HASH;
     const isPasswordValid = await bcryptjs.compare(password, hashToCompare);
@@ -41,14 +51,6 @@ router.post('/login', async (req, res, next) => {
         await user.update(updates);
       }
       throw new AuthenticationError('Invalid username or password');
-    }
-
-    // Check account lock AFTER password compare (constant-time)
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
-      const minutesLeft = Math.ceil((user.lockedUntil - new Date()) / 60000);
-      throw new AuthenticationError(
-        `Account temporarily locked. Try again in ${minutesLeft} minute(s).`
-      );
     }
 
     if (user.status !== 'active') {

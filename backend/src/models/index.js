@@ -54,8 +54,11 @@ StockTransfer.belongsTo(User, { foreignKey: 'receivedBy', targetKey: 'id', as: '
 Order.belongsTo(Customer, { foreignKey: 'customerId', targetKey: 'id' });
 Customer.hasMany(Order, { foreignKey: 'customerId', sourceKey: 'id' });
 
-Address.belongsTo(Customer, { foreignKey: 'customerId', targetKey: 'id' });
-Customer.hasMany(Address, { foreignKey: 'customerId', sourceKey: 'id' });
+// CASCADE matches migration 005's FK: an address is a dependent row with no
+// meaning once its owning customer is gone. Declaring it here keeps the FK
+// that sequelize.sync() creates on fresh databases identical to production's.
+Address.belongsTo(Customer, { foreignKey: 'customerId', targetKey: 'id', onDelete: 'CASCADE' });
+Customer.hasMany(Address, { foreignKey: 'customerId', sourceKey: 'id', onDelete: 'CASCADE' });
 
 Order.belongsTo(Shop, { foreignKey: 'shopId', targetKey: 'id' });
 Shop.hasMany(Order, { foreignKey: 'shopId', sourceKey: 'id' });

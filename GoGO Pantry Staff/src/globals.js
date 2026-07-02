@@ -17,7 +17,6 @@ export const G = {
   // with stale/empty data.
   dataLoadError: false,
   money: (n) => "$" + (parseFloat(n) || 0).toFixed(2),
-  shopStock: (pid, sid) => 15 + ((pid.charCodeAt(1) + sid.charCodeAt(1)) % 35),
   stockState: (stock, par) => stock === 0 ? "out" : stock < par * 0.3 ? "critical" : stock < par * 0.6 ? "low" : "ok",
   catOf: (catId) => G.CATEGORIES.find(c => c.id === catId) || { id: catId, name: "Unknown", hue: 0 },
   supplierOf: (suppId) => {

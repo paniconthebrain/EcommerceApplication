@@ -149,6 +149,16 @@ router.post('/', orderLimiter, customerAuthMiddleware, async (req, res, next) =>
     if (!shopId || !items || !orderType || !timeSlot) {
       throw new ValidationError('Missing required fields: shopId, items, orderType, timeSlot');
     }
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new ValidationError('items must be a non-empty array');
+    }
+    // A non-positive qty would pass the stock check (stock < -2 is false) and
+    // then *increase* inventory at commit while shrinking the subtotal.
+    for (const item of items) {
+      if (!item.productId || !Number.isInteger(item.qty) || item.qty < 1) {
+        throw new ValidationError('Each item needs a productId and a positive integer qty');
+      }
+    }
 
     // Look up the authenticated customer
     const customer = await Customer.findByPk(req.customer.id, { transaction });

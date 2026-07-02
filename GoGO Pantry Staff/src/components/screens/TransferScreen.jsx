@@ -30,19 +30,25 @@ export default function TransferScreen({ shopId, setRoute }) {
   const fromShop = G.SHOPS.find(s => s.id === from);
   const toShop = G.SHOPS.find(s => s.id === to);
 
+  // Real stock for BOTH sides of the transfer — inventoryMap is keyed by
+  // shopId so the "to" column never shows a fabricated number.
   useEffect(() => {
-    if (!from) return;
+    const shops = [...new Set([from, to].filter(Boolean))];
+    if (!shops.length) return;
     setLoadingInv(true);
-    apiFetch(`${API_BASE}/shops/${from}/inventory`)
-      .then(res => res?.ok ? res.json() : [])
-      .then(data => {
-        const map = {};
-        data.forEach(item => { map[item.productId] = item.stock; });
-        setInventoryMap(map);
-      })
-      .catch(() => {})
+    Promise.all(shops.map(sid =>
+      apiFetch(`${API_BASE}/shops/${sid}/inventory`)
+        .then(res => res?.ok ? res.json() : [])
+        .then(data => {
+          const map = {};
+          data.forEach(item => { map[item.productId] = item.stock; });
+          return [sid, map];
+        })
+        .catch(() => [sid, {}])
+    ))
+      .then(entries => setInventoryMap(Object.fromEntries(entries)))
       .finally(() => setLoadingInv(false));
-  }, [from]);
+  }, [from, to]);
 
   useEffect(() => {
     if (!from || !to || from === to) { setSuggestions([]); return; }
@@ -55,10 +61,12 @@ export default function TransferScreen({ shopId, setRoute }) {
   const filteredProducts = useMemo(() => products
     .map(p => ({
       ...p,
-      fromStock: inventoryMap[p.id] ?? G.shopStock(p.id, from),
-      toStock: G.shopStock(p.id, to),
+      fromStock: inventoryMap[from]?.[p.id] ?? 0,
+      toStock: inventoryMap[to]?.[p.id] ?? 0,
     }))
     .filter(p => p.name.toLowerCase().includes(q.toLowerCase())), [products, from, to, q, inventoryMap]);
+
+  const sameShop = from === to;
 
   const lines = Object.entries(cart).filter(([, v]) => v > 0);
   const totalUnits = lines.reduce((s, [, v]) => s + v, 0);
@@ -180,7 +188,7 @@ export default function TransferScreen({ shopId, setRoute }) {
                             <ProductSwatch p={p} size={34} />
                             <div>
                               <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--text)' }}>{p.name}</div>
-                              <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{G.catOf(p.cat).name}</div>
+                              <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{G.catOf(p.cat || p.categoryId).name}</div>
                             </div>
                           </div>
                         </td>
@@ -244,8 +252,15 @@ export default function TransferScreen({ shopId, setRoute }) {
               <span style={{ fontSize: 14, color: 'var(--text-2)' }}>{lines.length} products · {totalUnits} units</span>
             </div>
             {err && <div style={{ color: 'var(--red-500)', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>{err}</div>}
+            {sameShop && (
+              <div style={{ color: 'var(--text-3)', fontSize: 12.5, marginBottom: 10, fontWeight: 600 }}>
+                {G.SHOPS.length < 2
+                  ? 'Transfers need a second location — add another shop first.'
+                  : 'Choose two different locations to transfer stock.'}
+              </div>
+            )}
             <Btn full icon="transfer" onClick={handleSubmit}
-              style={{ opacity: (lines.length && !submitting) ? 1 : 0.5, pointerEvents: (lines.length && !submitting) ? 'auto' : 'none' }}>
+              style={{ opacity: (lines.length && !submitting && !sameShop) ? 1 : 0.5, pointerEvents: (lines.length && !submitting && !sameShop) ? 'auto' : 'none' }}>
               {submitting ? 'Submitting…' : 'Submit transfer'}
             </Btn>
           </div>

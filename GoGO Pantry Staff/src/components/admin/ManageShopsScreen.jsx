@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { G, API_BASE, STATIC_BASE, apiFetch, initializeAppData } from '../../globals.js';
-import { Btn, Pill, ConfirmDialog } from '../ui.jsx';
+import { Btn, Pill, ConfirmDialog, plural } from '../ui.jsx';
 import { AdminPageWrap, MgmtModal, FieldRow, inputStyle, MgmtTable } from './shared.jsx';
 
 export default function ManageShopsScreen() {
@@ -106,7 +106,7 @@ export default function ManageShopsScreen() {
       onConfirm={() => doDel(confirmDel.item)}
       onCancel={() => setConfirmDel({ open: false, item: null })}
     />
-    <AdminPageWrap title="Manage Shops" subtitle={`${shops.length} locations`} action={<Btn size="sm" icon="plus" onClick={openCreate}>Add Shop</Btn>}>
+    <AdminPageWrap title="Manage Shops" subtitle={plural(shops.length, 'location')} action={<Btn size="sm" icon="plus" onClick={openCreate}>Add Shop</Btn>}>
       {loading ? <div style={{ color: "var(--text-3)", padding: 32, textAlign: "center" }}>Loading...</div> : (
         <MgmtTable
           cols={["Image", "Name", "Code", "City", "Hours", "Pickup Time", "Staff POs"]}
