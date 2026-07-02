@@ -358,7 +358,7 @@ body.theme-dark .app-header {
 .footer-links > * { min-width: 0; overflow: hidden; }
 .footer-newsletter > * { min-width: 0; }
 .header-nav { display: flex; align-items: center; gap: 2px; margin-left: 8px; }
-@media (max-width: 640px) { .header-nav { display: none !important; } }
+@media (max-width: 1024px) { .header-nav { display: none !important; } }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 640px) { .hideOnMobile { display: none !important; } }

@@ -68,6 +68,7 @@ export default function CustomerApp() {
   const [cartItems, setCartItems] = useState({});
   const [orderData, setOrderData] = useState(null);
   const [initialCat, setInitialCat] = useState(null);
+  const [initialSaleOnly, setInitialSaleOnly] = useState(false);
   const cartSyncTimer = useRef(null);
 
   const syncCartToServer = (items) => {
@@ -248,9 +249,16 @@ export default function CustomerApp() {
   const handleSelectProduct = (pid) => navigate("product", shopId, pid);
   const handleBackToBrowse = () => navigate("browse", shopId);
 
+  // Deals nav: pre-set the on-sale filter, then either jump straight to browse
+  // (shop already selected) or leave it queued for after the shop picker.
+  const handleGoToDeals = () => {
+    setInitialSaleOnly(true);
+    if (shopId) setPage("browse");
+  };
+
   const screens = {
     home: <CustomerHomepage onSelectShop={handleSelectShop} shopId={shopId} onGoToBrowse={(catId) => { setInitialCat(catId || null); setPage("browse"); }} />,
-    browse: shopId ? <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={() => navigate("home", null)} initialCat={initialCat} savedItems={savedItems} onToggleSave={handleToggleSave} onSelectProduct={handleSelectProduct} /> : null,
+    browse: shopId ? <CustomerBrowse shopId={shopId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onChangeShop={() => navigate("home", null)} initialCat={initialCat} initialSaleOnly={initialSaleOnly} savedItems={savedItems} onToggleSave={handleToggleSave} onSelectProduct={handleSelectProduct} /> : null,
     product: (shopId && productId) ? <ProductDetailPage shopId={shopId} productId={productId} cartItems={cartItems} onAddToCart={handleAddToCart} onUpdateCart={handleUpdateCart} onBack={handleBackToBrowse} onSelectProduct={handleSelectProduct} savedItems={savedItems} onToggleSave={handleToggleSave} onRequireAuth={() => { setAuthPage("login"); setShowAuth(true); }} user={user} /> : null,
     cart: <CustomerCart shopId={shopId} cartItems={cartItems} onUpdateCart={handleUpdateCart} onCheckout={handleCheckout} onContinueShopping={() => navigate("browse")} />,
     checkout: <CustomerCheckout shopId={shopId} cartItems={cartItems} onConfirm={handleConfirm} onBack={() => setPage("cart")} />,
@@ -291,6 +299,7 @@ export default function CustomerApp() {
         onNavigate={screens[page]}
         shopId={shopId}
         onSelectShop={handleSelectShop}
+        onGoToDeals={handleGoToDeals}
         savedItems={savedItems}
         onToggleSave={handleToggleSave}
         onAddToCart={handleAddToCart}

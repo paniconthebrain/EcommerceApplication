@@ -454,14 +454,14 @@ export function ProductDetailModal({ product, inCart, onClose, onAdd, onUpdateCa
   );
 }
 
-export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, onChangeShop, initialCat, savedItems, onToggleSave, onSelectProduct }) {
+export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, onChangeShop, initialCat, initialSaleOnly, savedItems, onToggleSave, onSelectProduct }) {
   const [cat, setCat] = useState(initialCat || "all");
   const [sort, setSort] = useState("popularity");
   // null = untouched → [0, priceCap]. The cap adapts to the catalog so a
   // default range never silently hides products priced above a hardcoded max.
   const [priceRange, setPriceRange] = useState(null);
   const [showInStockOnly, setShowInStockOnly] = useState(false);
-  const [showOnSaleOnly, setShowOnSaleOnly] = useState(false);
+  const [showOnSaleOnly, setShowOnSaleOnly] = useState(!!initialSaleOnly);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [dataVersion, setDataVersion] = useState(() => G.PRODUCTS?.length > 0 ? 1 : 0);
   const [priceBounds, setPriceBounds] = useState({ min: 0, max: 100 });
@@ -469,6 +469,10 @@ export function CustomerBrowse({ shopId, onAddToCart, onUpdateCart, cartItems, o
   useEffect(() => {
     if (initialCat) setCat(initialCat);
   }, [initialCat]);
+
+  useEffect(() => {
+    if (initialSaleOnly) setShowOnSaleOnly(true);
+  }, [initialSaleOnly]);
 
   useEffect(() => {
     if (G.PRODUCTS?.length > 0) setDataVersion(n => n > 0 ? n : 1);

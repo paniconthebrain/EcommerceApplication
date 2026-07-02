@@ -202,7 +202,7 @@ function HeaderSearchBar({ cartItems, onAddToCart, onUpdateCart }) {
   }, [q]);
 
   return (
-    <div ref={wrapRef} className="hideOnMobile" style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
+    <div ref={wrapRef} className="hideOnMobile" style={{ position: 'relative', flex: 1, minWidth: 0, maxWidth: 360 }}>
       <div style={{ position: 'relative' }}>
         <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', pointerEvents: 'none' }}>
           <IconC name="search" size={16} />
@@ -357,7 +357,7 @@ export function MobileBottomNav({ page, setPage, cartCount, onOpenShopSelector, 
   );
 }
 
-export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLoginClick, onNavigate, shopId, onSelectShop, savedItems = new Set(), onToggleSave, onAddToCart, onUpdateCart, cartItems = {} }) {
+export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLoginClick, onNavigate, shopId, onSelectShop, onGoToDeals, savedItems = new Set(), onToggleSave, onAddToCart, onUpdateCart, cartItems = {} }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [shopSelectorOpen, setShopSelectorOpen] = useState(false);
   const [nlEmail, setNlEmail] = useState('');
@@ -442,6 +442,15 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
     ? user.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
     : null;
 
+  const openShopPicker = () => { if (G.SHOPS.length === 1) setStorePopupShop(G.SHOPS[0]); else setShopSelectorOpen(true); };
+
+  const navItems = [
+    { id: "home", label: "Home", active: page === "home", onClick: () => setPage("home") },
+    { id: "shop", label: "Shop", active: page === "browse" || page === "product", onClick: () => (currentShop ? setPage("browse") : openShopPicker()) },
+    { id: "deals", label: "Deals", active: false, onClick: () => { onGoToDeals?.(); if (!currentShop) openShopPicker(); } },
+    { id: "about", label: "About", active: page === "about", onClick: () => setPage("about") },
+  ];
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)" }}>
 
@@ -477,12 +486,37 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
       )}
 
       {/* ── Header ── */}
-      <header className="app-header" style={{ padding: "0 20px", height: 62, display: "flex", alignItems: "center", gap: 14 }}>
+      <header className="app-header" style={{ padding: "0 20px", height: 64, display: "flex", alignItems: "center", gap: 18 }}>
         <LogoCustomer size={24} onClick={() => setPage("home")} />
+
+        {/* Primary nav — Home / Shop / Deals / About */}
+        <nav aria-label="Primary" className="header-nav hideOnMobile" style={{ display: "flex", alignItems: "center", gap: 2, background: "var(--surface-2)", borderRadius: 999, padding: 3, flexShrink: 0 }}>
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={item.onClick}
+              aria-current={item.active ? "page" : undefined}
+              style={{
+                padding: "7px 16px", borderRadius: 999, border: "none",
+                background: item.active ? "var(--primary)" : "transparent",
+                color: item.active ? "var(--primary-ink)" : "var(--text-2)",
+                fontWeight: 700, fontSize: 13, cursor: "pointer",
+                fontFamily: "var(--font-sans)", whiteSpace: "nowrap",
+                transition: "all 0.16s var(--ease)",
+              }}
+              onMouseEnter={e => { if (!item.active) e.currentTarget.style.color = "var(--text)"; }}
+              onMouseLeave={e => { if (!item.active) e.currentTarget.style.color = "var(--text-2)"; }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div style={{ flex: "0 1 24px" }} />
 
         {/* Store selector */}
         <button
-          onClick={() => { if (G.SHOPS.length === 1) { setStorePopupShop(G.SHOPS[0]); } else { setShopSelectorOpen(true); } }}
+          onClick={openShopPicker}
           className="hideOnMobile"
           style={{
             display: "flex", alignItems: "center", gap: 6, padding: "7px 12px",
@@ -516,7 +550,7 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
 
         {/* Mobile store pill — shows only on mobile */}
         <button
-          onClick={() => { if (G.SHOPS.length === 1) { setStorePopupShop(G.SHOPS[0]); } else { setShopSelectorOpen(true); } }}
+          onClick={openShopPicker}
           className="showOnMobile"
           style={{
             display: "flex", alignItems: "center", gap: 5, padding: "6px 10px",
@@ -921,20 +955,30 @@ export function CustomerShell({ page, setPage, cartCount, user, onLogout, onLogi
             {/* App col */}
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: 18 }}>Get the App</div>
-              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 16, lineHeight: 1.55 }}>Shop even faster with our mobile app. Coming soon.</p>
-              {[
-                { store: "App Store", sub: "Download on the", icon: "" },
-                { store: "Google Play", sub: "Get it on", icon: "▶" },
-              ].map(({ store, sub, icon }) => (
-                <div key={store} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "10px 14px", marginBottom: 10, cursor: "default", opacity: 0.6 }}>
-                  <span style={{ fontSize: 18 }}>{store === "App Store" ? "🍎" : "▶"}</span>
-                  <div>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", lineHeight: 1 }}>{sub}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.4 }}>{store}</div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 16, lineHeight: 1.55 }}>Shop even faster with our mobile app.</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {[
+                  {
+                    store: "App Store", sub: "Download on the",
+                    icon: <svg viewBox="0 0 24 24" width="19" height="19" fill="#fff"><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.39-2.383 4.02.006 3.19 2.79 4.31 2.951 4.62z" /></svg>,
+                  },
+                  {
+                    store: "Google Play", sub: "GET IT ON",
+                    icon: <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4.2 2.9c-.3.3-.5.8-.5 1.4v15.4c0 .6.2 1.1.5 1.4l.1.1L13 12.3v-.2L4.3 2.8l-.1.1z" fill="#00D2FF" /><path d="M16 15.3l-3-3v-.2l3-3 6.6 3.7c.7.4.7 1 0 1.4L16 15.3z" fill="#FFD107" /><path d="M16 15.3l-3.1-3.1L4.2 21.1c.3.3.9.4 1.5.1L16 15.3z" fill="#FF3A44" /><path d="M16 8.7L5.7 2.9c-.6-.4-1.2-.3-1.5.1l8.7 8.7L16 8.7z" fill="#00E177" /></svg>,
+                  },
+                ].map(({ store, sub, icon }) => (
+                  <div key={store} style={{ position: "relative" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#000", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 10, padding: "9px 14px", cursor: "default" }}>
+                      <span style={{ display: "grid", placeItems: "center", flexShrink: 0, width: 20 }}>{icon}</span>
+                      <div>
+                        <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.75)", lineHeight: 1, letterSpacing: "0.03em" }}>{sub}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.35, color: "#fff", letterSpacing: "-0.01em" }}>{store}</div>
+                      </div>
+                    </div>
+                    <span style={{ position: "absolute", top: -7, right: -6, fontSize: 9, fontWeight: 800, background: "var(--primary)", color: "#fff", padding: "2px 7px", borderRadius: 999, letterSpacing: "0.03em", boxShadow: "0 2px 6px oklch(0.55 0.17 152 / 0.5)" }}>Soon</span>
                   </div>
-                  <span style={{ marginLeft: "auto", fontSize: 10, background: "rgba(255,255,255,0.1)", padding: "2px 7px", borderRadius: 999, color: "rgba(255,255,255,0.5)", fontWeight: 700 }}>Soon</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
           </div>
