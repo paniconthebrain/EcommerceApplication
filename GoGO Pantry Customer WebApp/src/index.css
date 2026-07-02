@@ -468,9 +468,12 @@ body.theme-dark .app-header {
 .header-btn-mobile { display: none !important; }
 @media (max-width: 640px) { .header-btn-mobile { display: grid !important; } }
 
-/* Hero slide content: less vertical padding on mobile */
-@media (max-width: 640px) {
-  .hero-slide-inner { padding: 48px 20px 68px !important; min-height: 52vh !important; }
+/* Hero: stack visual under copy, center-align on small screens */
+@media (max-width: 860px) {
+  .hero-grid { grid-template-columns: 1fr !important; }
+  .hero-visual { max-width: 420px; margin: 0 auto; order: -1; }
+  .hero-copy { text-align: center; }
+  .hero-copy > div:last-child { justify-content: center; }
 }
 
 /* Promo banner: compact on mobile */

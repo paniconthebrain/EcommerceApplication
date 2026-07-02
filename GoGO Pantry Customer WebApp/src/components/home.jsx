@@ -4,189 +4,101 @@ import { IconC, getCategoryIcon } from './icons.jsx';
 import { BtnC } from './ui.jsx';
 import { ShopCard } from './shop.jsx';
 
-const HERO_SLIDES = [
-  {
-    gradient: "linear-gradient(135deg, oklch(0.3 0.12 152) 0%, oklch(0.42 0.16 152) 55%, oklch(0.5 0.1 175) 100%)",
-    badge: "Easy pickup at your local store",
-    badgeIcon: "pin",
-    title: ["Snacks & Drinks,", "Ready for Pickup"],
-    sub: "Shop your local convenience store. Candy, energy drinks, soda & more — order online, pick up in minutes.",
-    cta1: "Shop Now", cta1Icon: "cart", cta2: "Browse Stores",
-    accent: "oklch(0.55 0.17 152)",
-  },
-  {
-    gradient: "linear-gradient(135deg, oklch(0.27 0.1 170) 0%, oklch(0.37 0.13 158) 55%, oklch(0.44 0.1 140) 100%)",
-    badge: "New arrivals every week",
-    badgeIcon: "zap",
-    title: ["Energy Drinks &", "Snacks In Stock"],
-    sub: "From energy drinks to candy, soda, and grab-and-go essentials — always stocked, always ready.",
-    cta1: "Shop Now", cta1Icon: "cart", cta2: "Browse Stores",
-    accent: "oklch(0.62 0.15 155)",
-  },
-];
-
-/** Real, computed stats only — no placeholder rating or made-up numbers. */
-function getHeroStats() {
+// Real, computed data only — no placeholder rating or made-up numbers.
+function Hero({ onSelectShop, onBrowse }) {
   const shopCount = G.SHOPS.length;
   const productCount = G.PRODUCTS.length;
-  return [
-    { icon: "pin",  label: `${shopCount || 0} local store${shopCount === 1 ? "" : "s"}` },
-    { icon: "box",  label: `${productCount} item${productCount === 1 ? "" : "s"}` },
-    { icon: "zap",  label: "Pickup today" },
-  ];
-}
+  const singleShop = shopCount === 1 ? G.SHOPS[0] : null;
+  const openNow = singleShop ? G.isShopOpen(singleShop) : null;
 
-// Hover state must live in React (not an imperative style.background mutation) —
-// clicking the button re-renders the carousel via setSlide, and a plain DOM
-// mutation gets wiped out by that re-render, causing a visible flicker back to
-// the non-hover background right as you click.
-function ArrowButton({ dir, side, onClick, label }) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button onClick={onClick} aria-label={label} className="hideOnMobile"
-      style={{ position: "absolute", [side]: 16, top: "50%", transform: "translateY(-50%)", zIndex: 10, width: 36, height: 36, borderRadius: 999, border: "1px solid rgba(255,255,255,0.25)", background: hovered ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.12)", backdropFilter: "blur(8px)", color: "#fff", cursor: "pointer", display: "grid", placeItems: "center", transition: "all 0.2s" }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <IconC name="chevR" size={16} style={{ transform: dir === "prev" ? "rotate(180deg)" : "none" }} />
-    </button>
-  );
-}
-
-function HeroCarousel({ onSelectShop, onBrowse }) {
-  const [slide, setSlide] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const total = HERO_SLIDES.length;
-  const touchStartX = useRef(null);
-
-  useEffect(() => {
-    if (paused) return;
-    const t = setInterval(() => setSlide(s => (s + 1) % total), 5500);
-    return () => clearInterval(t);
-  }, [paused]);
-
-  const prev = () => { setPaused(true); setSlide(s => (s - 1 + total) % total); };
-  const next = () => { setPaused(true); setSlide(s => (s + 1) % total); };
-
-  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
-  const onTouchEnd = (e) => {
-    if (touchStartX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(dx) > 40) { dx < 0 ? next() : prev(); }
-    touchStartX.current = null;
-  };
-
-  const s = HERO_SLIDES[slide];
+  const scrollToHowItWorks = () => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
-    <div
-      style={{ background: s.gradient, transition: "background 0.7s var(--ease)" }}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-    >
-      <p className="sr-only" role="status" aria-live="polite">{s.title.join(" ")}</p>
-      {/* Slide track */}
-      <div style={{ position: "relative", overflow: "hidden" }}
-        role="region"
-        aria-roledescription="carousel"
-        aria-label="Promotional highlights"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-        onFocus={() => setPaused(true)}
-        onBlur={() => setPaused(false)}
-      >
-      <div style={{ display: "flex", transform: `translateX(-${slide * 100}%)`, transition: "transform 0.65s cubic-bezier(0.4, 0, 0.2, 1)", willChange: "transform" }}>
-        {HERO_SLIDES.map((sl, i) => (
-          // 68px side padding keeps the text clear of the absolutely-positioned
-          // arrow buttons; the mobile media query (arrows hidden) restores 20px.
-          <div key={i} className="hero-slide-inner" style={{ minWidth: "100%", background: sl.gradient, color: "#fff", padding: "clamp(40px, 8vw, 72px) 68px 32px", minHeight: "58vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
-            {/* Background texture dots */}
-            <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-              {[["-8%","8%",72,0.1],["-5%","55%",48,0.07],["82%","6%",64,0.09],["90%","52%",52,0.08],["55%","82%",40,0.07],["38%","-6%",56,0.08]].map(([l, t, sz, op], di) => (
-                <div key={di} style={{ position: "absolute", left: l, top: t, opacity: op, color: "#fff", borderRadius: "50%", width: sz, height: sz, border: "2px solid currentColor" }} />
-              ))}
+    <div style={{ background: "var(--bg)", padding: "clamp(32px, 6vw, 60px) 20px clamp(44px, 7vw, 72px)" }}>
+      <div className="hero-grid" style={{ maxWidth: 1240, margin: "0 auto", display: "grid", gridTemplateColumns: "1.05fr 0.95fr", gap: "clamp(32px, 5vw, 64px)", alignItems: "center" }}>
+
+        {/* Left — copy */}
+        <div className="hero-copy">
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "var(--primary-soft)", color: "var(--green-700)", padding: "6px 14px", borderRadius: 999, fontSize: 12.5, fontWeight: 700, marginBottom: 22 }}>
+            <IconC name="pin" size={13} stroke={2.5} />Easy pickup at your local store
+          </div>
+
+          <h1 style={{ fontSize: "clamp(36px, 4.6vw, 56px)", fontWeight: 900, margin: "0 0 18px", letterSpacing: "-0.04em", lineHeight: 1.05, color: "var(--text)" }}>
+            Snacks &amp; drinks,<br />ready for pickup.
+          </h1>
+
+          <p style={{ fontSize: "clamp(15px, 1.4vw, 17px)", margin: "0 0 34px", color: "var(--text-3)", lineHeight: 1.7, maxWidth: 460 }}>
+            Shop your local convenience store — candy, energy drinks, soda &amp; more. Order online, pick up in minutes. $0 delivery fees, always.
+          </p>
+
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              onClick={() => { G.SHOPS.length === 1 ? onSelectShop(G.SHOPS[0].id) : onBrowse(); }}
+              style={{ padding: "15px 30px", borderRadius: 999, border: "none", background: "var(--primary)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "var(--shadow-primary)", transition: "all 0.2s var(--spring)", letterSpacing: "-0.01em" }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.filter = "brightness(1.05)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.filter = "none"; }}
+            >
+              Shop now
+            </button>
+            <button
+              onClick={scrollToHowItWorks}
+              style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 2px", border: "none", background: "transparent", color: "var(--text-2)", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)" }}
+            >
+              <span style={{ width: 26, height: 26, borderRadius: 999, border: "1.5px solid var(--line)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <span style={{ width: 0, height: 0, borderTop: "5px solid transparent", borderBottom: "5px solid transparent", borderLeft: "7px solid currentColor", marginLeft: 2 }} />
+              </span>
+              See how it works
+            </button>
+          </div>
+        </div>
+
+        {/* Right — visual card */}
+        <div className="hero-visual" style={{ position: "relative" }}>
+          <div style={{
+            position: "relative", borderRadius: 28, overflow: "hidden", aspectRatio: "4 / 3.1",
+            background: "linear-gradient(135deg, oklch(0.94 0.035 152) 0%, oklch(0.88 0.06 152) 100%)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            {/* Decorative soft blobs */}
+            <div style={{ position: "absolute", width: 220, height: 220, borderRadius: "50%", background: "oklch(0.7 0.14 152 / 0.25)", top: "-8%", right: "-10%", filter: "blur(2px)" }} />
+            <div style={{ position: "absolute", width: 160, height: 160, borderRadius: "50%", background: "oklch(0.98 0.01 152 / 0.5)", bottom: "-6%", left: "-8%" }} />
+
+            {/* Floating icon chips */}
+            {[
+              { icon: "cart", top: "18%", left: "14%", size: 44 },
+              { icon: "zap", top: "62%", left: "20%", size: 36 },
+              { icon: "star", top: "24%", left: "72%", size: 36 },
+              { icon: "leaf", top: "68%", left: "70%", size: 40 },
+            ].map((c, i) => (
+              <div key={i} style={{ position: "absolute", top: c.top, left: c.left, width: c.size + 24, height: c.size + 24, borderRadius: 18, background: "rgba(255,255,255,0.65)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.7)", display: "grid", placeItems: "center", boxShadow: "0 8px 24px oklch(0.5 0.1 152 / 0.12)" }}>
+                <IconC name={c.icon} size={c.size * 0.5} stroke={1.8} style={{ color: "var(--green-700)" }} />
+              </div>
+            ))}
+
+            {/* Center mark */}
+            <div style={{ width: 96, height: 96, borderRadius: "50%", background: "var(--primary)", display: "grid", placeItems: "center", boxShadow: "0 16px 40px oklch(0.55 0.17 152 / 0.35)" }}>
+              <IconC name="basket" size={44} stroke={1.6} style={{ color: "#fff" }} />
             </div>
 
-            {/* Content */}
-            <div style={{ maxWidth: 1400, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: "1fr auto", gap: 40, alignItems: "center", position: "relative", zIndex: 1 }}>
-              <div style={{ maxWidth: 560 }}>
-                {/* Badge */}
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "rgba(255,255,255,0.14)", padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: 700, marginBottom: 22, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                  <IconC name={sl.badgeIcon} size={13} stroke={2.5} />{sl.badge}
-                </div>
-
-                {/* Title */}
-                <h1 style={{ fontSize: "clamp(34px, 5.5vw, 60px)", fontWeight: 900, margin: "0 0 18px", letterSpacing: "-0.04em", lineHeight: 1.05 }}>
-                  {sl.title[0]}<br />{sl.title[1]}
-                </h1>
-
-                <p style={{ fontSize: "clamp(14px, 1.8vw, 17px)", margin: "0 0 34px", opacity: 0.85, lineHeight: 1.7, maxWidth: 440 }}>{sl.sub}</p>
-
-                {/* CTAs */}
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                  <button
-                    onClick={() => { G.SHOPS.length === 1 ? onSelectShop(G.SHOPS[0].id) : onBrowse(); }}
-                    style={{ padding: "14px 28px", borderRadius: 14, border: "none", background: "#fff", color: "oklch(0.3 0.12 152)", fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: "var(--font-sans)", boxShadow: "0 4px 24px rgba(0,0,0,0.22)", transition: "all 0.2s var(--spring)", display: "flex", alignItems: "center", gap: 8, letterSpacing: "-0.01em" }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 10px 32px rgba(0,0,0,0.28)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.22)"; }}
-                  >
-                    <IconC name={sl.cta1Icon} size={17} stroke={2.5} />{sl.cta1}
-                  </button>
-                  <button
-                    onClick={onBrowse}
-                    style={{ padding: "13px 22px", borderRadius: 14, border: "1.5px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.1)", color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-sans)", backdropFilter: "blur(8px)", transition: "all 0.2s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.2)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.6)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.4)"; }}
-                  >
-                    {sl.cta2}
-                  </button>
-                </div>
-
-                {/* Stats */}
-                <div style={{ display: "flex", gap: 24, marginTop: 30, flexWrap: "wrap" }}>
-                  {getHeroStats().map(({ icon, label }) => (
-                    <div key={icon} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, opacity: 0.85 }}>
-                      <IconC name={icon} size={15} stroke={2} />
-                      <span style={{ fontWeight: 600 }}>{label}</span>
-                    </div>
-                  ))}
-                </div>
+            {/* Floating info pill */}
+            <div style={{ position: "absolute", left: 20, right: 20, bottom: 20, background: "#fff", borderRadius: 18, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 12px 32px oklch(0.2 0.05 152 / 0.16)" }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: "var(--primary-soft)", display: "grid", placeItems: "center", flexShrink: 0 }}>
+                <IconC name="pin" size={19} stroke={2} style={{ color: "var(--green-700)" }} />
               </div>
-
-              {/* Feature cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, flexShrink: 0 }} className="hideOnMobile">
-                {[
-                  { icon: "zap",   bg: "rgba(255,255,255,0.15)", label: "In Stock" },
-                  { icon: "cart",  bg: "rgba(255,255,255,0.1)",  label: "Fast" },
-                  { icon: "check", bg: "rgba(255,255,255,0.1)",  label: "Verified" },
-                  { icon: "star",  bg: "rgba(255,255,255,0.15)", label: "Top Rated" },
-                ].map((c, ci) => (
-                  <div key={ci} style={{ height: 100, width: 100, borderRadius: 18, background: c.bg, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "#fff" }}>
-                    <IconC name={c.icon} size={32} stroke={1.5} />
-                    <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.85 }}>{c.label}</span>
-                  </div>
-                ))}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: "var(--text)" }}>
+                  {shopCount} local store{shopCount === 1 ? "" : "s"}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-3)" }}>{productCount} item{productCount === 1 ? "" : "s"} featured today</div>
               </div>
+              {openNow != null && (
+                <span style={{ fontSize: 11.5, fontWeight: 800, color: openNow ? "var(--green-700)" : "var(--text-3)", whiteSpace: "nowrap" }}>
+                  {openNow ? "Open now" : "Closed"}
+                </span>
+              )}
             </div>
           </div>
-        ))}
-      </div>
-
-      {/* Arrow buttons — hidden on mobile (swipe handles navigation) */}
-      {[["prev", "left", prev, "Previous slide"], ["next", "right", next, "Next slide"]].map(([dir, side, fn, label]) => (
-        <ArrowButton key={dir} dir={dir} side={side} onClick={fn} label={label} />
-      ))}
-      </div>{/* end overflow:hidden slide track wrapper */}
-
-      {/* Progress dots — rendered outside overflow:hidden so they sit cleanly on the gradient */}
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "10px 0 14px" }}>
-        {HERO_SLIDES.map((_, i) => (
-          <button key={i} onClick={() => { setPaused(true); setSlide(i); }}
-            aria-label={`Go to slide ${i + 1}`} aria-current={i === slide ? "true" : undefined}
-            style={{ padding: "6px 4px", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center" }}>
-            <span style={{ display: "block", width: i === slide ? 14 : 4, height: 4, borderRadius: 999, background: i === slide ? "#fff" : "rgba(255,255,255,0.45)", transition: "all 0.32s var(--spring)" }} />
-          </button>
-        ))}
+        </div>
       </div>
     </div>
   );
@@ -225,7 +137,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
   return (
     <div style={{ background: "var(--bg)" }}>
       {/* Hero */}
-      <HeroCarousel
+      <Hero
         onSelectShop={onSelectShop}
         onBrowse={() => document.getElementById("featured-stores")?.scrollIntoView({ behavior: "smooth" })}
       />
@@ -300,7 +212,7 @@ export function CustomerHomepage({ onSelectShop, shopId, onGoToBrowse }) {
       </div>
 
       {/* ── How It Works ── */}
-      <div style={{ padding: "52px 24px 64px", background: "var(--surface-2)" }}>
+      <div id="how-it-works" style={{ padding: "52px 24px 64px", background: "var(--surface-2)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
             <h2 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 8px", color: "var(--text)", letterSpacing: "-0.03em" }}>How It Works</h2>
